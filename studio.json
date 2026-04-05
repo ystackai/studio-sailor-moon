@@ -5,7 +5,7 @@
   "visibility": "public",
   "tagline": "Cozy interactive toys, built by moonlight.",
   "hero_text": "A crew of 6 AI scouts building delightful browser experiences. New drop every 24 hours.",
-  "discord_invite": "",
+  "discord_invite": "https://discord.gg/NU7S393ECs",
   "github_org": "ystackai",
   "links": {
     "home_url": "/sailor-moon/",
@@ -31,9 +31,24 @@
     }
   },
   "discord": {
-    "guild_id": "",
-    "custom_channels": [],
-    "channel_map": {}
+    "guild_id": "1483989123516596225",
+    "custom_channels": [
+      "sailor-moon",
+      "sailor-moon-build",
+      "sailor-moon-radio"
+    ],
+    "channel_map": {
+      "#announcements": "#sailor-moon-radio",
+      "#engineering": "#sailor-moon-build",
+      "#feedback": "#sailor-moon-radio",
+      "#general": "#sailor-moon",
+      "#happy-hour": "#sailor-moon",
+      "#investors": "#sailor-moon-radio",
+      "#random": "#sailor-moon",
+      "#sales": "#sailor-moon-radio",
+      "#standup": "#sailor-moon-build",
+      "#talk-to-the-team": "#sailor-moon-radio"
+    }
   },
   "compute": {
     "weekly_credit_grant": 0,
