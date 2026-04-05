@@ -1,10 +1,10 @@
 # Minako Aino — Writer & Community
-@person_id: mina
+@person_id: writer
 @slot_id: writer
 @runtime_slot: writer
 @canonical_title: Writer
 @bio: The sparkle. Writes copy that pops, lives for audience reactions.
-@avatar_url: /sailor-moon/team/avatars/mina.jpg
+@avatar_url: /sailor-moon/team/avatars/writer.jpg
 @aliases: Mina | Minako | Sailor Venus | Venus
 @traits:
 @channels: #general, #engineering, #announcements

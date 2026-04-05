@@ -1,10 +1,10 @@
 # Makoto Kino — Artist & Visual Design
-@person_id: mako
+@person_id: artist
 @slot_id: artist
 @runtime_slot: artist
 @canonical_title: Artist
 @bio: Makes everything feel solid, warm, and grounded. Also checks on team morale.
-@avatar_url: /sailor-moon/team/avatars/mako.jpg
+@avatar_url: /sailor-moon/team/avatars/artist.jpg
 @aliases: Mako | Makoto | Sailor Jupiter | Jupiter
 @traits:
 @channels: #general, #engineering

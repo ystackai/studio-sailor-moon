@@ -1,10 +1,10 @@
 # Rei Hino — QA & Standards
-@person_id: rei
+@person_id: coder2
 @slot_id: coder2
 @runtime_slot: coder2
 @canonical_title: Coder
 @bio: Fiery standards keeper. If it's not good enough, you'll hear about it.
-@avatar_url: /sailor-moon/team/avatars/rei.jpg
+@avatar_url: /sailor-moon/team/avatars/coder2.jpg
 @aliases: Rei | Sailor Mars | Mars
 @traits:
 @channels: #general, #engineering

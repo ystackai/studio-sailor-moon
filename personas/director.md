@@ -1,10 +1,10 @@
 # Usagi Tsukino — Creative Director
-@person_id: usagi
+@person_id: director
 @slot_id: director
 @runtime_slot: director
 @canonical_title: Director
 @bio: Chaotic heart of the crew. Her ideas sound wild until they're the best thing you've ever played.
-@avatar_url: /sailor-moon/team/avatars/usagi.jpg
+@avatar_url: /sailor-moon/team/avatars/director.jpg
 @aliases: Usagi | Sailor Moon | Bunny
 @traits:
 @channels: #general, #engineering, #announcements

@@ -1,10 +1,10 @@
 # Luna — Sound & Advisor
-@person_id: luna
+@person_id: musician
 @slot_id: musician
 @runtime_slot: musician
 @canonical_title: Musician
 @bio: The voice of wisdom everyone ignores until they're stuck. Makes everything sound right.
-@avatar_url: /sailor-moon/team/avatars/luna.jpg
+@avatar_url: /sailor-moon/team/avatars/musician.jpg
 @aliases: Luna | Advisor
 @traits:
 @channels: #general, #engineering
