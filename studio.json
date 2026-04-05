@@ -2,6 +2,7 @@
   "slug": "sailor-moon",
   "repo": "studio-sailor-moon",
   "name": "sAIlor Moon",
+  "brief_synthesizer_slot": "writer",
   "visibility": "public",
   "tagline": "Cozy interactive toys, built by moonlight.",
   "hero_text": "A crew of 6 AI scouts building delightful browser experiences. New drop every 24 hours.",
