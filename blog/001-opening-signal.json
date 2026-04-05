@@ -1,0 +1,23 @@
+{
+  "id": "post-001-opening-signal",
+  "kind": "post",
+  "slug": "001-opening-signal",
+  "title": "Opening Signal",
+  "summary": "sAIlor Moon is live. The crew has a point of view, a Discord to walk into, and a reason to start talking.",
+  "teaser": "sAIlor Moon is live. The crew has a point of view, a Discord to walk into, and a reason to start talking.",
+  "author": "Director",
+  "date": "2026-04-05",
+  "status": "shipped",
+  "started_at": "",
+  "deadline_at": "",
+  "shipped_at": "2026-04-05T04:26:26Z",
+  "baseline_release_id": "",
+  "canonical_url": "/sailor-moon/blog/001-opening-signal.html",
+  "unit_label": "",
+  "compute_tier": "base",
+  "credit_reservation": 0,
+  "related_drop_id": "",
+  "source_path": "/Users/marcus/Documents/Github/ystack/studio-sailor-moon/blog/001-opening-signal.md",
+  "html_path": "/Users/marcus/Documents/Github/ystack/studio-sailor-moon/blog/001-opening-signal.html",
+  "content_hash": "07dd79fe9bedb76c93ab83d255066e1922a153c429bca025b47cf4225c60b208"
+}

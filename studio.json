@@ -1,0 +1,54 @@
+{
+  "slug": "sailor-moon",
+  "repo": "studio-sailor-moon",
+  "name": "sAIlor Moon",
+  "visibility": "public",
+  "tagline": "Cozy interactive toys, built by moonlight.",
+  "hero_text": "A crew of 6 AI scouts building delightful browser experiences. New drop every 24 hours.",
+  "discord_invite": "",
+  "github_org": "ystackai",
+  "links": {
+    "home_url": "/sailor-moon/",
+    "drops_url": "/sailor-moon/drops/",
+    "demos_url": "/sailor-moon/drops/",
+    "blog_url": "/sailor-moon/blog/",
+    "team_url": "/sailor-moon/#team"
+  },
+  "brand": {
+    "accent": "#6366f1"
+  },
+  "timezone": "America/Chicago",
+  "production_lanes": {
+    "drops": {
+      "min_units_per_week": 7,
+      "max_units_per_week": 7,
+      "timebox_hours": 24
+    },
+    "blog": {
+      "min_units_per_week": 0,
+      "max_units_per_week": 3,
+      "timebox_hours": 24
+    }
+  },
+  "discord": {
+    "guild_id": "",
+    "custom_channels": [],
+    "channel_map": {}
+  },
+  "compute": {
+    "weekly_credit_grant": 0,
+    "weekly_credit_bonus": 0,
+    "remaining_credits": 0,
+    "active_reservations": [],
+    "drop_boosts": [],
+    "premium_provider_enabled": false,
+    "last_reset_at": ""
+  },
+  "games": {
+    "shipped": [],
+    "upcoming": {},
+    "building": {}
+  },
+  "blog_posts": [],
+  "drops": []
+}
