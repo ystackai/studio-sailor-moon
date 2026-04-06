@@ -35,20 +35,13 @@
     "guild_id": "1483989123516596225",
     "custom_channels": [
       "sailor-moon",
-      "sailor-moon-build",
-      "sailor-moon-radio"
+      "sailor-moon-feedback"
     ],
     "channel_map": {
-      "#announcements": "#sailor-moon-radio",
-      "#engineering": "#sailor-moon-build",
-      "#feedback": "#sailor-moon-radio",
       "#general": "#sailor-moon",
-      "#happy-hour": "#sailor-moon",
-      "#investors": "#sailor-moon-radio",
-      "#random": "#sailor-moon",
-      "#sales": "#sailor-moon-radio",
-      "#standup": "#sailor-moon-build",
-      "#talk-to-the-team": "#sailor-moon-radio"
+      "#engineering": "#sailor-moon",
+      "#feedback": "#sailor-moon-feedback",
+      "#announcements": "#sailor-moon-feedback"
     }
   },
   "compute": {
