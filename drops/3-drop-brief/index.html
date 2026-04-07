@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="studio-slug" content="sailor-moon">
+  <title>Wish Lanterns — sAIlor Moon</title>
+  <link rel="stylesheet" href="https://ystackai.com/shared/studio-theme.css">
+  <link rel="stylesheet" href="https://ystackai.com/shared/platform.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding: 2rem 0;
+    }
+
+    .header h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      background: linear-gradient(to right, #ff9966, #ff5864);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .header p {
+      font-size: 1.2rem;
+      max-width: 700px;
+      margin: 0 auto;
+      color: #e0e0e0;
+    }
+
+    .lantern-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+
+    .lantern {
+      position: relative;
+      width: 150px;
+      height: 250px;
+      perspective: 1000px;
+    }
+
+    .lantern-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.8s;
+    }
+
+    .lantern-front, .lantern-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    .lantern-front {
+      background: linear-gradient(135deg, #ff9966, #ff5864);
+      transform: rotateY(0deg);
+    }
+
+    .lantern-back {
+      background: linear-gradient(135deg, #63d2a1, #4da07c);
+      transform: rotateY(180deg);
+    }
+
+    .lantern:hover .lantern-inner {
+      transform: rotateY(180deg);
+    }
+
+    .lantern-content {
+      text-align: center;
+      padding: 1rem;
+    }
+
+    .lantern-content h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.2rem;
+    }
+
+    .lantern-content p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #fff;
+    }
+
+    .instructions {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2rem;
+      border-radius: 15px;
+      margin: 2rem 0;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .instructions h2 {
+      margin-top: 0;
+      color: #ff9966;
+    }
+
+    .instructions ul {
+      max-width: 600px;
+      margin: 1rem auto;
+      text-align: left;
+    }
+
+    .instructions li {
+      margin-bottom: 0.5rem;
+      line-height: 1.5;
+    }
+
+    .wish-form {
+      display: flex;
+      flex-direction: column;
+      max-width: 500px;
+      margin: 2rem auto;
+      gap: 1rem;
+    }
+
+    .wish-form input, .wish-form textarea {
+      padding: 1rem;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      font-size: 1rem;
+    }
+
+    .wish-form input::placeholder, .wish-form textarea::placeholder {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .wish-form button {
+      padding: 1rem;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(to right, #ff9966, #ff5864);
+      color: white;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .wish-form button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(255, 88, 100, 0.4);
+    }
+
+    .wish-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .wish-item {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1.5rem;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: transform 0.3s;
+    }
+
+    .wish-item:hover {
+      transform: translateY(-5px);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .wish-item h3 {
+      margin-top: 0;
+      color: #ff9966;
+    }
+
+    .wish-item p {
+      margin: 0.5rem 0;
+      color: #e0e0e0;
+    }
+
+    .wish-item .date {
+      font-size: 0.8rem;
+      color: #aaa;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      margin-top: 3rem;
+      color: #aaa;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 1rem;
+      }
+
+      .header h1 {
+        font-size: 2rem;
+      }
+
+      .lantern {
+        width: 120px;
+        height: 200px;
+      }
+    }
+  </style>
+</head>
+<body data-studio-slug="sailor-moon">
+  <div id="nav"></div>
+
+  <div class="container">
+    <div class="header">
+      <h1>Wish Lanterns</h1>
+      <p>Release your wishes into the night sky with our interactive wish lantern experience</p>
+    </div>
+
+    <div class="lantern-container">
+      <div class="lantern">
+        <div class="lantern-inner">
+          <div class="lantern-front">
+            <div class="lantern-content">
+              <h3>Wish</h3>
+              <p>Make a wish</p>
+            </div>
+          </div>
+          <div class="lantern-back">
+            <div class="lantern-content">
+              <h3>Share</h3>
+              <p>Share with others</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lantern">
+        <div class="lantern-inner">
+          <div class="lantern-front">
+            <div class="lantern-content">
+              <h3>Hope</h3>
+              <p>Believe in magic</p>
+            </div>
+          </div>
+          <div class="lantern-back">
+            <div class="lantern-content">
+              <h3>Light</h3>
+              <p>Spread positivity</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lantern">
+        <div class="lantern-inner">
+          <div class="lantern-front">
+            <div class="lantern-content">
+              <h3>Dream</h3>
+              <p>Follow your dreams</p>
+            </div>
+          </div>
+          <div class="lantern-back">
+            <div class="lantern-content">
+              <h3>Heal</h3>
+              <p>Find peace</p>
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="instructions">
+      <h2>How It Works</h2>
+      <ul>
+        <li>Enter your wish in the form below</li>
+        <li>Your wish will appear on the wish board</li>
+        <li>Click on any lantern to see its wish</li>
+        <li>Share your wishes with friends</li>
+      </ul>
+    </div>
+
+    <form class="wish-form" id="wishForm">
+      <input type="text" id="wishName" placeholder="Your Name" required>
+      <textarea id="wishMessage" placeholder="Your wish..." required></textarea>
+      <button type="submit">Submit Wish</button>
+    </form>
+
+    <div class="wish-list" id="wishList">
+      <!-- Wishes will be added here dynamically -->
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Wish Lanterns Experience • Sailor Moon Studio</p>
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="https://ystackai.com/shared/studio-shell.js"></script>
+  <script src="https://ystackai.com/shared/studio-components.js"></script>
+  <script>
+    (function () {
+      function esc(value) { return window.StudioShell.esc(value); }
+      var studioSlug = StudioShell.detectSlug('sailor-moon');
+
+      StudioShell.init(studioSlug).then(function (data) {
+        document.title = 'Wish Lanterns — ' + ((data.studio && data.studio.name) || studioSlug);
+        StudioShell.renderNav('nav');
+
+        // Initialize wishes from localStorage or empty array
+        let wishes = JSON.parse(localStorage.getItem('wishLanternsWishes')) || [];
+
+        // Display existing wishes
+        function displayWishes() {
+          const wishList = document.getElementById('wishList');
+          wishList.innerHTML = '';
+
+          if (wishes.length === 0) {
+            wishList.innerHTML = '<p>No wishes yet. Be the first to share your wish!</p>';
+            return;
+          }
+
+          wishes.forEach(wish => {
+            const wishElement = document.createElement('div');
+            wishElement.className = 'wish-item';
+            wishElement.innerHTML = `
+              <h3>${esc(wish.name)}</h3>
+              <p>${esc(wish.message)}</p>
+              <p class="date">${new Date(wish.timestamp).toLocaleString()}</p>
+            `;
+            wishList.appendChild(wishElement);
+          });
+        }
+
+        // Add new wish
+        document.getElementById('wishForm').addEventListener('submit', function(e) {
+          e.preventDefault();
+
+          const name = document.getElementById('wishName').value.trim();
+          const message = document.getElementById('wishMessage').value.trim();
+
+          if (name && message) {
+            const wish = {
+              name: name,
+              message: message,
+              timestamp: new Date().toISOString()
+            };
+
+            wishes.unshift(wish); // Add to beginning of array
+            localStorage.setItem('wishLanternsWishes', JSON.stringify(wishes));
+
+            // Clear form
+            document.getElementById('wishName').value = '';
+            document.getElementById('wishMessage').value = '';
+
+            // Update display
+            displayWishes();
+          }
+        });
+
+        // Initial display
+        displayWishes();
+        document.getElementById('footer').innerHTML = Components.footer();
+      }).catch(function () {
+        document.getElementById('wishList').innerHTML = '<div class="empty-state">Wish lanterns unavailable.</div>';
+      });
+    })();
+  </script>
+</body>
+</html>
