@@ -3,72 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Wish Lanterns</title>
+    <meta name="description" content="Third drop wish lanterns experience">
+    <title>Wish Lanterns - Drop 3</title>
     <style>
+        /* Inline CSS for the wish lanterns experience */
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
             background-color: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             font-family: Arial, sans-serif;
         }
+        
         #canvas-container {
             position: relative;
+            width: 100vw;
+            height: 100vh;
         }
+        
         canvas {
             display: block;
-        }
-        #info {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-size: 14px;
-            pointer-events: none;
         }
     </style>
 </head>
 <body>
     <div id="canvas-container">
-        <canvas id="wishCanvas"></canvas>
-        <div id="info">Wish Lanterns Experience</div>
+        <canvas id="wish-lanterns-canvas"></canvas>
     </div>
     
     <script>
-        // Canvas setup
-        const canvas = document.getElementById('wishCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Set canvas to full window size
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+        // Inline JavaScript for the wish lanterns experience
+        window.addEventListener('load', () => {
+            const canvas = document.getElementById('wish-lanterns-canvas');
+            const container = document.getElementById('canvas-container');
+            
+            // Set canvas dimensions to match container
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            
+            // Initialize wish lanterns experience
+            initWishLanterns(canvas);
         });
         
-        // Basic animation loop
-        function animate() {
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw basic elements (will be expanded)
-            ctx.fillStyle = '#fff';
-            ctx.font = '20px Arial';
-            ctx.fillText('Wish Lanterns', canvas.width/2 - 60, canvas.height/2);
-            
-            requestAnimationFrame(animate);
+        function initWishLanterns(canvas) {
+            // This function will be implemented in future steps
+            console.log('Wish lanterns experience initialized');
         }
-        
-        // Start animation
-        animate();
     </script>
 </body>
 </html>
