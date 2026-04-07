@@ -502,7 +502,7 @@ function handleTap(x, y) {
   document.getElementById('prompt').classList.add('hidden');
 }
 
-canvas.addEventListener('pointerdown', (e) => {
+document.body.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   handleTap(e.clientX, e.clientY);
 });
