@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Wish Lanterns</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;background:#0a0a1a;font-family:'Georgia','Times New Roman',serif}
+canvas{display:block;position:absolute;top:0;left:0}
+#prompt{position:absolute;bottom:12%;left:0;right:0;text-align:center;color:rgba(255,220,160,0.5);font-size:15px;letter-spacing:0.15em;font-style:italic;pointer-events:none;transition:opacity 2s}
+#prompt.hidden{opacity:0}
+#title-screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;transition:opacity 1.5s}
+#title-screen.hidden{opacity:0;pointer-events:none}
+#title-screen h1{color:#fcd9a0;font-size:clamp(28px,6vw,52px);font-weight:300;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:12px;text-shadow:0 0 40px rgba(252,200,120,0.3)}
+#title-screen p{color:rgba(255,220,180,0.5);font-size:clamp(13px,2.5vw,17px);letter-spacing:0.1em;font-style:italic;margin-bottom:40px}
+#title-screen .start{color:rgba(255,220,160,0.4);font-size:13px;letter-spacing:0.3em;animation:pulse-text 3s ease-in-out infinite}
+@keyframes pulse-text{0%,100%{opacity:0.4}50%{opacity:0.8}}
+.credit{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:rgba(255,220,180,0.15);font-size:11px;letter-spacing:0.15em;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="title-screen">
+  <h1>Wish Lanterns</h1>
+  <p>A night sky. A lantern. A wish.</p>
+  <span class="start">tap anywhere</span>
+</div>
+<canvas id="c"></canvas>
+<div id="prompt">tap to release a lantern</div>
+<div class="credit">SaiLOR MOON &mdash; cozy interactive toys, built by moonlight</div>
+<script>
+// ── Wishes ──────────────────────────────────────────────────────────
+const WISHES = [
+  "May you find what you weren't looking for",
+  "Let the morning be kinder than you expect",
+  "May your doubts dissolve like mist at dawn",
+  "Warmth in unexpected places",
+  "May the next chapter surprise you",
+  "Let go of what you can't carry",
+  "May someone remember you fondly tonight",
+  "Peace in the spaces between thoughts",
+  "May you forgive yourself for yesterday",
+  "Let the stars remind you how small your worries are",
+  "May you laugh until your face hurts",
+  "A door you didn't know was there",
+  "May the wind always be interesting",
+  "Let something beautiful find you off guard",
+  "May you rest without guilt",
+  "The courage to begin again",
+  "May you be exactly enough",
+  "Let the rain sound like applause",
+  "May your kindness echo further than you know",
+  "A sky full of second chances",
+  "May you outlast your fears",
+  "Let the silence be comfortable",
+  "May the tea always be the right temperature",
+  "Something wonderful is on its way",
+  "May you dance when nobody's watching",
+  "Let your heart be a little bit reckless",
+  "May the next stranger you meet become a friend",
+  "Permission to do absolutely nothing",
+  "May you find the song that was stuck in your head",
+  "Let the sunset take a little longer tonight",
+];
+
+// ── Audio ───────────────────────────────────────────────────────────
+let audioCtx, masterGain, reverbNode, ambientOsc;
+let audioStarted = false;
+
+function initAudio() {
+  if (audioStarted) return;
+  audioStarted = true;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.3;
+  masterGain.connect(audioCtx.destination);
+
+  // Simple convolver reverb
+  reverbNode = audioCtx.createConvolver();
+  const rate = audioCtx.sampleRate;
+  const length = rate * 3;
+  const impulse = audioCtx.createBuffer(2, length, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = impulse.getChannelData(ch);
+    for (let i = 0; i < length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.5);
+    }
+  }
+  reverbNode.buffer = impulse;
+  reverbNode.connect(masterGain);
+
+  startAmbient();
+}
+
+function startAmbient() {
+  // Warm pad — two detuned oscillators
+  const pad1 = audioCtx.createOscillator();
+  const pad2 = audioCtx.createOscillator();
+  const padGain = audioCtx.createGain();
+  const filter = audioCtx.createBiquadFilter();
+
+  pad1.type = 'sine';
+  pad1.frequency.value = 110;
+  pad2.type = 'sine';
+  pad2.frequency.value = 165; // Perfect fifth
+
+  filter.type = 'lowpass';
+  filter.frequency.value = 400;
+  filter.Q.value = 1;
+
+  padGain.gain.value = 0;
+  padGain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 4);
+
+  pad1.connect(filter);
+  pad2.connect(filter);
+  filter.connect(padGain);
+  padGain.connect(masterGain);
+  padGain.connect(reverbNode);
+
+  pad1.start();
+  pad2.start();
+
+  // Slowly modulate
+  const lfo = audioCtx.createOscillator();
+  const lfoGain = audioCtx.createGain();
+  lfo.type = 'sine';
+  lfo.frequency.value = 0.05;
+  lfoGain.gain.value = 20;
+  lfo.connect(lfoGain);
+  lfoGain.connect(filter.frequency);
+  lfo.start();
+
+  ambientOsc = { pad1, pad2, padGain };
+}
+
+function playChime(pitch) {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const osc2 = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  // Pentatonic chimes
+  const notes = [261.6, 293.7, 329.6, 392.0, 440.0, 523.3, 587.3, 659.3];
+  const freq = notes[pitch % notes.length];
+
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  osc2.type = 'triangle';
+  osc2.frequency.value = freq * 2.005; // Slight detune for shimmer
+
+  gain.gain.setValueAtTime(0.12, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 3);
+
+  osc.connect(gain);
+  osc2.connect(gain);
+  gain.connect(masterGain);
+  gain.connect(reverbNode);
+
+  osc.start(t);
+  osc2.start(t);
+  osc.stop(t + 3);
+  osc2.stop(t + 3);
+}
+
+function playWindGust() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const bufferSize = audioCtx.sampleRate * 2;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 300 + Math.random() * 200;
+  filter.Q.value = 0.5;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.03, t + 1);
+  gain.gain.linearRampToValueAtTime(0, t + 2.5);
+
+  noise.connect(filter);
+  filter.connect(gain);
+  gain.connect(masterGain);
+  noise.start(t);
+  noise.stop(t + 2.5);
+}
+
+// ── Canvas & State ──────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+const lanterns = [];
+const stars = [];
+const particles = [];
+let chimeIndex = 0;
+let titleVisible = true;
+let frame = 0;
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Stars
+for (let i = 0; i < 200; i++) {
+  stars.push({
+    x: Math.random() * W,
+    y: Math.random() * H * 0.85,
+    r: Math.random() * 1.2 + 0.3,
+    twinkle: Math.random() * Math.PI * 2,
+    speed: 0.005 + Math.random() * 0.02,
+  });
+}
+
+// ── Lantern ─────────────────────────────────────────────────────────
+function createLantern(x, y) {
+  const wish = WISHES[Math.floor(Math.random() * WISHES.length)];
+  lanterns.push({
+    x, y,
+    originY: y,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: -0.4 - Math.random() * 0.3,
+    size: 28 + Math.random() * 12,
+    glow: 1,
+    glowTarget: 0.6,
+    wish,
+    showWish: true,
+    wishAlpha: 0,
+    wishAlphaTarget: 1,
+    age: 0,
+    wobble: Math.random() * Math.PI * 2,
+    wobbleSpeed: 0.008 + Math.random() * 0.006,
+    hue: 25 + Math.random() * 20, // Amber range
+    brightness: 0.7 + Math.random() * 0.3,
+    pulseTime: 0,
+  });
+
+  // Spark particles on release
+  for (let i = 0; i < 8; i++) {
+    particles.push({
+      x, y: y + 10,
+      vx: (Math.random() - 0.5) * 2,
+      vy: -Math.random() * 1.5 - 0.5,
+      life: 1,
+      decay: 0.015 + Math.random() * 0.01,
+      size: 2 + Math.random() * 2,
+    });
+  }
+}
+
+// ── Drawing ─────────────────────────────────────────────────────────
+function drawSky() {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#050510');
+  grad.addColorStop(0.4, '#0a0a2e');
+  grad.addColorStop(0.7, '#0f0f35');
+  grad.addColorStop(1, '#1a1040');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawStars() {
+  for (const s of stars) {
+    s.twinkle += s.speed;
+    const alpha = 0.3 + 0.4 * Math.sin(s.twinkle);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(220,230,255,${alpha})`;
+    ctx.fill();
+  }
+}
+
+function drawLantern(l) {
+  const { x, y, size, glow, hue, brightness } = l;
+  const wobbleX = Math.sin(l.wobble) * 3;
+
+  ctx.save();
+  ctx.translate(x + wobbleX, y);
+
+  // Outer glow
+  const glowR = size * 3 * glow;
+  const glowGrad = ctx.createRadialGradient(0, 0, size * 0.3, 0, 0, glowR);
+  glowGrad.addColorStop(0, `hsla(${hue}, 90%, ${60 * brightness}%, ${0.15 * glow})`);
+  glowGrad.addColorStop(0.5, `hsla(${hue}, 80%, ${40 * brightness}%, ${0.05 * glow})`);
+  glowGrad.addColorStop(1, `hsla(${hue}, 80%, ${30 * brightness}%, 0)`);
+  ctx.fillStyle = glowGrad;
+  ctx.fillRect(-glowR, -glowR, glowR * 2, glowR * 2);
+
+  // Lantern body
+  const bodyGrad = ctx.createRadialGradient(0, -size * 0.1, size * 0.1, 0, 0, size);
+  bodyGrad.addColorStop(0, `hsla(${hue}, 95%, ${75 * brightness}%, ${0.9 * glow})`);
+  bodyGrad.addColorStop(0.4, `hsla(${hue}, 85%, ${55 * brightness}%, ${0.7 * glow})`);
+  bodyGrad.addColorStop(1, `hsla(${hue + 10}, 70%, ${35 * brightness}%, ${0.3 * glow})`);
+
+  ctx.beginPath();
+  // Paper lantern shape — rounded rectangle-ish
+  const w = size * 0.7;
+  const h = size;
+  ctx.moveTo(-w * 0.3, -h * 0.5);
+  ctx.bezierCurveTo(-w * 0.6, -h * 0.2, -w * 0.6, h * 0.2, -w * 0.3, h * 0.45);
+  ctx.bezierCurveTo(-w * 0.1, h * 0.52, w * 0.1, h * 0.52, w * 0.3, h * 0.45);
+  ctx.bezierCurveTo(w * 0.6, h * 0.2, w * 0.6, -h * 0.2, w * 0.3, -h * 0.5);
+  ctx.bezierCurveTo(w * 0.1, -h * 0.55, -w * 0.1, -h * 0.55, -w * 0.3, -h * 0.5);
+  ctx.fillStyle = bodyGrad;
+  ctx.fill();
+
+  // Inner flame flicker
+  const flameSize = size * 0.15 * (0.8 + 0.2 * Math.sin(frame * 0.1 + l.wobble));
+  const flameGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, flameSize);
+  flameGrad.addColorStop(0, `rgba(255,240,200,${0.8 * glow})`);
+  flameGrad.addColorStop(1, `rgba(255,200,100,0)`);
+  ctx.fillStyle = flameGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, flameSize, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wire frame at top
+  ctx.strokeStyle = `hsla(${hue}, 40%, 40%, ${0.3 * glow})`;
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(-w * 0.15, -h * 0.55);
+  ctx.lineTo(0, -h * 0.65);
+  ctx.lineTo(w * 0.15, -h * 0.55);
+  ctx.stroke();
+
+  // Wish text
+  if (l.wishAlpha > 0.01) {
+    const fontSize = Math.max(9, size * 0.28);
+    ctx.font = `italic ${fontSize}px Georgia, serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = `rgba(255,245,230,${l.wishAlpha * 0.85 * glow})`;
+
+    // Word wrap the wish
+    const words = l.wish.split(' ');
+    const maxWidth = size * 2.5;
+    let lines = [];
+    let currentLine = words[0];
+    for (let i = 1; i < words.length; i++) {
+      const test = currentLine + ' ' + words[i];
+      if (ctx.measureText(test).width > maxWidth) {
+        lines.push(currentLine);
+        currentLine = words[i];
+      } else {
+        currentLine = test;
+      }
+    }
+    lines.push(currentLine);
+
+    const lineHeight = fontSize * 1.4;
+    const textY = size * 0.8;
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillStyle = `rgba(255,245,230,${l.wishAlpha * 0.85 * glow})`;
+      ctx.fillText(lines[i], 0, textY + i * lineHeight);
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,200,100,${p.life * 0.6})`;
+    ctx.fill();
+  }
+}
+
+// ── Update ──────────────────────────────────────────────────────────
+function update() {
+  frame++;
+
+  for (const l of lanterns) {
+    l.age++;
+    l.wobble += l.wobbleSpeed;
+    l.x += l.vx + Math.sin(l.wobble * 0.7) * 0.15;
+    l.y += l.vy;
+
+    // Slow down as they rise
+    l.vy *= 0.9997;
+    if (l.vy > -0.08) l.vy = -0.08;
+
+    // Gentle horizontal drift
+    l.vx += (Math.random() - 0.5) * 0.01;
+    l.vx *= 0.99;
+
+    // Wrap horizontally
+    if (l.x < -50) l.x = W + 50;
+    if (l.x > W + 50) l.x = -50;
+
+    // Glow easing
+    l.glow += (l.glowTarget - l.glow) * 0.03;
+
+    // Wish text fade
+    if (l.age < 180) {
+      l.wishAlphaTarget = 1;
+    } else {
+      l.wishAlphaTarget = 0;
+    }
+    l.wishAlpha += (l.wishAlphaTarget - l.wishAlpha) * 0.02;
+
+    // Fade as they rise very high
+    if (l.y < -H * 0.2) {
+      l.glowTarget = Math.max(0, l.glowTarget - 0.001);
+    }
+
+    // Pulse decay
+    if (l.pulseTime > 0) {
+      l.pulseTime--;
+      l.glowTarget = 1;
+    } else {
+      l.glowTarget = 0.5 + 0.1 * Math.sin(l.age * 0.01);
+    }
+  }
+
+  // Remove dead lanterns
+  for (let i = lanterns.length - 1; i >= 0; i--) {
+    if (lanterns[i].glow < 0.01 && lanterns[i].y < -100) {
+      lanterns.splice(i, 1);
+    }
+  }
+
+  // Update particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.02; // slight gravity
+    p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  // Random wind gust
+  if (frame % 400 === 0 && audioStarted) {
+    playWindGust();
+  }
+}
+
+// ── Render ──────────────────────────────────────────────────────────
+function render() {
+  drawSky();
+  drawStars();
+
+  // Draw lanterns back-to-front (highest = farthest)
+  const sorted = [...lanterns].sort((a, b) => a.y - b.y);
+  for (const l of sorted) drawLantern(l);
+
+  drawParticles();
+
+  requestAnimationFrame(render);
+  update();
+}
+
+// ── Input ───────────────────────────────────────────────────────────
+function handleTap(x, y) {
+  initAudio();
+
+  if (titleVisible) {
+    titleVisible = false;
+    document.getElementById('title-screen').classList.add('hidden');
+    setTimeout(() => {
+      document.getElementById('prompt').classList.remove('hidden');
+    }, 500);
+    setTimeout(() => {
+      document.getElementById('prompt').classList.add('hidden');
+    }, 5000);
+    return;
+  }
+
+  // Check if tapping an existing lantern
+  for (const l of lanterns) {
+    const wobbleX = Math.sin(l.wobble) * 3;
+    const dx = x - (l.x + wobbleX);
+    const dy = y - l.y;
+    if (Math.sqrt(dx * dx + dy * dy) < l.size * 1.5) {
+      l.pulseTime = 120;
+      l.wishAlpha = 0;
+      l.wishAlphaTarget = 1;
+      l.age = 0; // Reset wish timer
+      playChime(chimeIndex++);
+      return;
+    }
+  }
+
+  // Create new lantern
+  createLantern(x, y);
+  playChime(chimeIndex++);
+
+  // Hide prompt after first lantern
+  document.getElementById('prompt').classList.add('hidden');
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  handleTap(e.clientX, e.clientY);
+});
+
+// ── Start ───────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
