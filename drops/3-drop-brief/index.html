@@ -60,6 +60,16 @@ let wishAlpha = 0;
 let wishAlphaTarget = 0;
 let wishText = '';
 let lastTime = 0;
+let backgroundAudio;
+let audioInitialized = false;
+let ambientGain;
+let chimeGain;
+let lanternGain;
+let backgroundSource;
+
+// Audio context and nodes
+let audioContext;
+let masterGain;
 let animationId;
 
 // ── Canvas ──────────────────────────────────────────────────────────
@@ -87,6 +97,105 @@ function initStars() {
       twinkleSpeed: Math.random() * 0.02 + 0.005,
       twinklePhase: Math.random() * Math.PI * 2
     });
+  }
+}
+
+function initAudio() {
+  if (audioInitialized) return;
+
+  // Create audio context
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  
+  // Create master gain node for overall volume control
+  masterGain = audioContext.createGain();
+  masterGain.connect(audioContext.destination);
+  masterGain.gain.value = 0.5;
+
+  // Create separate gain nodes for different audio types
+  ambientGain = audioContext.createGain();
+  ambientGain.connect(masterGain);
+  ambientGain.gain.value = 0.3;
+
+  chimeGain = audioContext.createGain();
+  chimeGain.connect(masterGain);
+  chimeGain.gain.value = 0.5;
+
+  lanternGain = audioContext.createGain();
+  lanternGain.connect(masterGain);
+  lanternGain.gain.value = 0.4;
+
+  // Create background ambient sound
+  createAmbientSound();
+
+  // Start background audio
+  playBackgroundAudio();
+
+  audioInitialized = true;
+}
+
+function createAmbientSound() {
+  // Create subtle wind-like ambient sound using noise and filters
+  const noiseBuffer = createNoiseBuffer();
+  const noiseSource = audioContext.createBufferSource();
+  noiseSource.buffer = noiseBuffer;
+  noiseSource.loop = true;
+
+  // Apply low-pass filter for warmth
+  const filter = audioContext.createBiquadFilter();
+  filter.type = lowpass;
+  filter.frequency.value = 800;
+
+  // Apply reverb effect
+  const reverb = audioContext.createConvolver();
+  reverb.buffer = createReverbBuffer();
+
+  // Connect nodes
+  noiseSource.connect(filter);
+  filter.connect(reverb);
+  reverb.connect(ambientGain);
+
+  backgroundSource = noiseSource;
+}
+
+function createNoiseBuffer() {
+  // Create a noise buffer for ambient sound
+  const bufferSize = audioContext.sampleRate * 2; // 2 seconds
+  const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1; // Random values between -1 and 1
+  }
+
+  return buffer;
+}
+
+function createReverbBuffer() {
+  // Create a simple reverb impulse response
+  const length = audioContext.sampleRate * 2; // 2 seconds
+  const buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  // Simple exponential decay reverb
+  for (let i = 0; i < length; i++) {
+    data[i] = Math.random() * Math.exp(-i / (length / 5));
+  }
+
+  return buffer;
+}
+
+function playBackgroundAudio() {
+  if (!backgroundSource || !audioContext) return;
+
+  // Start background sound if not already playing
+  if (backgroundSource.playbackState !== 1) { // 1 = PLAYING_STATE
+    backgroundSource.start(0);
+  }
+}
+
+function stopBackgroundAudio() {
+  if (backgroundSource) {
+    backgroundSource.stop();
   }
 }
 
@@ -229,6 +338,7 @@ function render(time) {
 // ── Input ───────────────────────────────────────────────────────────
 function handleTap(x, y) {
   initAudio();
+    playBackgroundAudio();
 
   if (titleVisible) {
     titleVisible = false;
@@ -261,23 +371,64 @@ function handleTap(x, y) {
   createLantern(x, y);
   playChime(chimeIndex++);
 
+  // Play lantern release sound
+  playLanternRelease();
   // Hide prompt after first lantern
   document.getElementById('prompt').classList.add('hidden');
 }
 
 function playChime(index) {
   if (!audioContext) return;
+
+  // Create chime with multiple oscillators for richer sound
+  const oscillator1 = audioContext.createOscillator();
+  const oscillator2 = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+
+  // Connect oscillators to gain node
+  oscillator1.connect(gainNode);
+  oscillator2.connect(gainNode);
+  gainNode.connect(chimeGain);
+
+  // Different chime tones for variety
+  const baseFreq = 300 + (index % 5) * 100;
+  oscillator1.frequency.value = baseFreq;
+  oscillator2.frequency.value = baseFreq * 1.5; // Octave higher
+
+  // Use different waveforms for richer sound
+  oscillator1.type = "sine";
+  oscillator2.type = "sine";
+
+  // Apply envelope for natural decay
+  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+  // Start oscillators
+  oscillator1.start();
+  oscillator2.start();
+
+  // Stop oscillators after duration
+  oscillator1.stop(audioContext.currentTime + 0.5);
+  oscillator2.stop(audioContext.currentTime + 0.5);
+}
+
+function playLanternRelease() {
+  if (!audioContext) return;
+
+  // Create a gentle whoosh sound
   const oscillator = audioContext.createOscillator();
   const gainNode = audioContext.createGain();
   oscillator.connect(gainNode);
-  gainNode.connect(audioContext.destination);
-  
-  // Different chime tones for variety
-  const baseFreq = 300 + (index % 5) * 100;
-  oscillator.frequency.value = baseFreq;
-  oscillator.type = 'sine';
-  
-  gainNode.gain.value = 0.1;
+  gainNode.connect(lanternGain);
+
+  // Whoosh sound characteristics
+  oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+  oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.3);
+  oscillator.type = "sawtooth";
+
+  gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
   oscillator.start();
   oscillator.stop(audioContext.currentTime + 0.3);
 }
