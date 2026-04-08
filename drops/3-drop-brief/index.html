@@ -62,12 +62,14 @@ const WISHES = [
   "May you find the song that was stuck in your head",
   "Let the sunset take a little longer tonight",
 ];
-
-// ── Audio ───────────────────────────────────────────────────────────
-let audioCtx, masterGain, reverbNode, ambientOsc;
-let audioStarted = false;
-
-function initAudio() {
+// Audio state
+let windGain, windFilter, windSource;
+let chimeBuffer, windBuffer;
+let ambientFilter;
+// Audio state
+let windGain, windFilter, windSource;
+let chimeBuffer, windBuffer;
+let ambientFilter;
   if (audioStarted) return;
   audioStarted = true;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -75,6 +77,36 @@ function initAudio() {
   masterGain.gain.value = 0.3;
   masterGain.connect(audioCtx.destination);
 
+  // Create reverb
+  reverbNode = audioCtx.createConvolver();
+  const rate = audioCtx.sampleRate;
+  const length = rate * 3;
+  const impulse = audioCtx.createBuffer(2, length, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = impulse.getChannelData(ch);
+    for (let i = 0; i < length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.5);
+    }
+  }
+  reverbNode.buffer = impulse;
+  reverbNode.connect(masterGain);
+
+  // Create ambient filter
+  ambientFilter = audioCtx.createBiquadFilter();
+  ambientFilter.type = "lowpass";
+  ambientFilter.frequency.value = 800;
+  ambientFilter.Q.value = 1;
+  ambientFilter.connect(reverbNode);
+
+  // Create wind effect
+  windGain = audioCtx.createGain();
+  windGain.gain.value = 0;
+  windGain.connect(masterGain);
+
+  // Create wind buffer
+  windBuffer = createWindBuffer();
+
+  startAmbient();
   // Simple convolver reverb
   reverbNode = audioCtx.createConvolver();
   const rate = audioCtx.sampleRate;
@@ -100,6 +132,18 @@ function startAmbient() {
   const filter = audioCtx.createBiquadFilter();
 
   pad1.type = 'sine';
+  // Add subtle ambient sound to chime
+  const ambientChime = audioCtx.createOscillator();
+  ambientChime.type = "sine";
+  ambientChime.frequency.value = freq * 0.5;
+  const ambientGain = audioCtx.createGain();
+  ambientGain.gain.value = 0;
+  ambientGain.gain.linearRampToValueAtTime(0.02, t + 0.1);
+  ambientGain.gain.linearRampToValueAtTime(0, t + 1);
+  ambientChime.connect(ambientGain);
+  ambientGain.connect(masterGain);
+  ambientChime.start(t);
+  ambientChime.stop(t + 1);
   pad1.frequency.value = 110;
   pad2.type = 'sine';
   pad2.frequency.value = 165; // Perfect fifth
@@ -128,6 +172,11 @@ function startAmbient() {
   lfoGain.gain.value = 20;
   lfo.connect(lfoGain);
   lfoGain.connect(filter.frequency);
+  // Add some warmth to the wind gust
+  const warmthFilter = audioCtx.createBiquadFilter();
+  warmthFilter.type = "lowpass";
+  warmthFilter.frequency.value = 1000;
+  warmthFilter.Q.value = 1;
   lfo.start();
 
   ambientOsc = { pad1, pad2, padGain };
@@ -138,6 +187,8 @@ function playChime(pitch) {
   const t = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const osc2 = audioCtx.createOscillator();
+  filter.connect(warmthFilter);
+  warmthFilter.connect(masterGain);
   const gain = audioCtx.createGain();
 
   // Pentatonic chimes
@@ -151,8 +202,39 @@ function playChime(pitch) {
 
   gain.gain.setValueAtTime(0.12, t);
   gain.gain.exponentialRampToValueAtTime(0.001, t + 3);
+function createWindBuffer() {
+  const bufferSize = audioCtx.sampleRate * 4;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    // Create a more natural wind sound with multiple frequencies
+    const noise = Math.random() * 2 - 1;
+    const low = Math.sin(i * 0.01) * 0.3; // Low frequency rumble
+    const mid = Math.sin(i * 0.1) * 0.2;  // Mid frequency
+    data[i] = (noise * 0.3 + low + mid) * (1 - i / bufferSize);
+  }
+  return buffer;
+}
 
   osc.connect(gain);
+function playWind() {
+  if (!audioCtx) return;
+  
+  // Stop any existing wind source
+  if (windSource) {
+    windSource.stop();
+  }
+  
+  windSource = audioCtx.createBufferSource();
+  windSource.buffer = windBuffer;
+  windSource.loop = true;
+  
+  windSource.connect(windGain);
+  windSource.start();
+  
+  // Fade in wind
+  windGain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 2);
+}
   osc2.connect(gain);
   gain.connect(masterGain);
   gain.connect(reverbNode);
