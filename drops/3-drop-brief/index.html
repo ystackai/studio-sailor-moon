@@ -145,15 +145,29 @@ function createAmbientSound() {
   filter.type = lowpass;
   filter.frequency.value = 800;
 
-  // Apply reverb effect
-  const reverb = audioContext.createConvolver();
-  reverb.buffer = createReverbBuffer();
 
-  // Connect nodes
-  noiseSource.connect(filter);
-  filter.connect(reverb);
-  reverb.connect(ambientGain);
 
+  // Add subtle pitch variations to make it more natural
+  const lfo = audioContext.createOscillator();
+  lfo.type = "sine";
+  lfo.frequency.value = 0.2;
+  
+  const lfoGain = audioContext.createGain();
+  lfoGain.gain.value = 50;
+  
+  lfo.connect(lfoGain);
+  filter.frequency.connect(lfoGain);
+  
+  lfo.start();
+  
+  // Store references for cleanup
+  window.ambientSound = {
+    source: noiseSource,
+    filter: filter,
+    reverb: reverb,
+    lfo: lfo,
+    lfoGain: lfoGain
+  };
   backgroundSource = noiseSource;
 }
 
@@ -170,21 +184,33 @@ function createNoiseBuffer() {
   return buffer;
 }
 
-function createReverbBuffer() {
-  // Create a simple reverb impulse response
-  const length = audioContext.sampleRate * 2; // 2 seconds
-  const buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
-  const data = buffer.getChannelData(0);
-
-  // Simple exponential decay reverb
-  for (let i = 0; i < length; i++) {
-    data[i] = Math.random() * Math.exp(-i / (length / 5));
-  }
-
-  return buffer;
-}
+function playBackgroundAudio() {
 
 function playBackgroundAudio() {
+  if (!audioContext || !ambientGain) return;
+  
+  // Create a gentle pulsing background sound
+  const oscillator = audioContext.createOscillator();
+  oscillator.type = "sine";
+  oscillator.frequency.value = 0.1;
+  
+  const gainNode = audioContext.createGain();
+  gainNode.gain.value = 0;
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(ambientGain);
+  
+  // Apply gentle volume modulation
+  gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+  gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 1);
+  gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 3);
+  
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 3);
+  
+  // Schedule next background audio
+  setTimeout(playBackgroundAudio, 3000);
+}
   if (!backgroundSource || !audioContext) return;
 
   // Start background sound if not already playing
@@ -412,6 +438,8 @@ function playChime(index) {
   oscillator2.stop(audioContext.currentTime + 0.5);
 }
 
+
+
 function playLanternRelease() {
   if (!audioContext) return;
 
@@ -432,7 +460,6 @@ function playLanternRelease() {
   oscillator.start();
   oscillator.stop(audioContext.currentTime + 0.3);
 }
-
 document.body.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   handleTap(e.clientX, e.clientY);
