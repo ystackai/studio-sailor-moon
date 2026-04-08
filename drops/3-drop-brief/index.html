@@ -97,7 +97,7 @@
 
         .btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(255, 117, 140, 0.6);
+            box-shadow: 0 7px 20px rgba(255, 117, 140, 0.6);
         }
 
         .btn:active {
@@ -105,122 +105,49 @@
         }
 
         #instructions {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 20px;
             margin-top: 20px;
+            font-size: 0.9rem;
+            color: #aaa;
         }
 
-        #countdown {
-            font-size: 5rem;
-            font-weight: bold;
-            margin: 20px 0;
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-
-        #wish-form {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 20px;
-        }
-
-        #wish-input {
-            width: 80%;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 50px;
-            border: 2px solid #ff758c;
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            font-size: 1.1rem;
-            text-align: center;
-        }
-
-        #wish-input::placeholder {
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        #lantern-count {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 10px 15px;
-            border-radius: 20px;
-            font-size: 1.2rem;
-        }
-
-        #game-over {
-            display: none;
-            text-align: center;
-            padding: 20px;
-        }
-
-        #particles-container {
+        #game-canvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none;
         }
 
-        .particle {
+        #loading-screen {
             position: absolute;
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        #audio-toggle {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.5);
-            border: 2px solid #ff758c;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            cursor: pointer;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            flex-direction: column;
+        }
+
+        #loading-text {
             font-size: 1.5rem;
-            z-index: 20;
+            margin-bottom: 20px;
         }
 
-        #audio-toggle.muted {
-            background: rgba(255, 0, 0, 0.5);
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ff758c;
+            animation: spin 1s ease-in-out infinite;
         }
 
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2rem;
-            }
-
-            h2 {
-                font-size: 1.2rem;
-            }
-
-            p {
-                font-size: 1rem;
-            }
-
-            .btn {
-                padding: 12px 30px;
-                font-size: 1rem;
-            }
-
-            #countdown {
-                font-size: 3rem;
-            }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -231,62 +158,35 @@
             <div id="title-screen">
                 <h1>Wish Lanterns</h1>
                 <h2>Meditative Lantern-Release Experience</h2>
-                <p>Release your wishes into the night sky. Each lantern carries your deepest hopes and dreams.</p>
+                <p>Release your wishes into the night sky with this calming, interactive experience.</p>
+                <p>Click anywhere to create a lantern that floats upward, carrying your wishes.</p>
+                <button class="btn" id="start-btn">Begin Journey</button>
                 <div id="instructions">
-                    <p>Click or tap to release a wish lantern. The more you release, the more beautiful the sky becomes.</p>
-                    <p>Listen to the gentle sounds of the night as your wishes take flight.</p>
+                    <p>Click or tap to create lanterns • Watch them float upward</p>
                 </div>
-                <button id="start-btn" class="btn">Begin Your Journey</button>
             </div>
-
-            <div id="wish-form">
-                <h2>Your Wish</h2>
-                <input type="text" id="wish-input" placeholder="What is your wish?">
-                <button id="release-btn" class="btn">Release Lantern</button>
+            <div id="loading-screen">
+                <div id="loading-text">Preparing your wish experience...</div>
+                <div class="spinner"></div>
             </div>
-
-            <div id="game-over">
-                <h2>Wishes Released</h2>
-                <p>Your lanterns have flown into the night sky.</p>
-                <button id="restart-btn" class="btn">Release More Wishes</button>
-            </div>
-
-            <div id="countdown">3</div>
-
-            <div id="lantern-count">Wish Lanterns: 0</div>
-
-            <div id="audio-toggle">🔊</div>
         </div>
-        <div id="particles-container"></div>
     </div>
 
     <script>
-        // Game state and variables
-        const gameState = {
+        // Initialize game state
+        window.gameState = {
             isPlaying: false,
             lanterns: [],
             particles: [],
-            wishCount: 0,
-            audioEnabled: true,
-            audioContext: null,
-            wishInput: '',
-            canvas: null,
-            ctx: null
+            wishCount: 0
         };
 
-        // DOM Elements
-        const titleScreen = document.getElementById('title-screen');
-        const wishForm = document.getElementById('wish-form');
-        const gameOverScreen = document.getElementById('game-over');
-        const startBtn = document.getElementById('start-btn');
-        const releaseBtn = document.getElementById('release-btn');
-        const restartBtn = document.getElementById('restart-btn');
-        const wishInput = document.getElementById('wish-input');
-        const lanternCount = document.getElementById('lantern-count');
-        const countdownElement = document.getElementById('countdown');
-        const audioToggle = document.getElementById('audio-toggle');
+        // Canvas setup
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
+        const titleScreen = document.getElementById('title-screen');
+        const startBtn = document.getElementById('start-btn');
+        const loadingScreen = document.getElementById('loading-screen');
 
         // Set canvas size
         function resizeCanvas() {
@@ -294,358 +194,191 @@
             canvas.height = window.innerHeight;
         }
 
-        // Initialize game
-        function init() {
-            resizeCanvas();
-            window.addEventListener('resize', resizeCanvas);
-
-            // Event listeners
-            startBtn.addEventListener('click', startGame);
-            releaseBtn.addEventListener('click', releaseLantern);
-            restartBtn.addEventListener('click', restartGame);
-            audioToggle.addEventListener('click', toggleAudio);
-
-            // Touch and mouse events for lantern release
-            canvas.addEventListener('click', handleCanvasClick);
-            canvas.addEventListener('touchstart', handleCanvasTouch);
-
-            // Keyboard controls
-            document.addEventListener('keydown', handleKeyDown);
-
-            // Initialize audio context on first interaction
-            document.body.addEventListener('click', initAudio, { once: true });
+        // Handle canvas click
+        function handleCanvasClick(event) {
+            if (!window.gameState.isPlaying) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            createLantern(x, y);
         }
 
-        // Initialize audio context on first user interaction
-        function initAudio() {
-            if (!gameState.audioContext) {
-                gameState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // Create a new lantern
+        function createLantern(x, y) {
+            window.gameState.lanterns.push({
+                x: x,
+                y: y,
+                size: Math.random() * 10 + 10,
+                speed: Math.random() * 2 + 1,
+                color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+                alpha: 1,
+                glow: Math.random() > 0.7
+            });
+            
+            window.gameState.wishCount++;
+        }
+
+        // Create particles for visual effect
+        function createParticles(x, y) {
+            for (let i = 0; i < 5; i++) {
+                window.gameState.particles.push({
+                    x: x,
+                    y: y,
+                    size: Math.random() * 3 + 1,
+                    speedX: (Math.random() - 0.5) * 4,
+                    speedY: (Math.random() - 0.5) * 4,
+                    color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+                    life: 30
+                });
+            }
+        }
+
+        // Animation loop
+        function animate() {
+            if (!window.gameState.isPlaying) return;
+            
+            // Clear canvas with a semi-transparent overlay for trail effect
+            ctx.fillStyle = 'rgba(26, 26, 46, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw stars in background
+            drawStars();
+            
+            // Update and draw lanterns
+            updateLanterns();
+            
+            // Update and draw particles
+            updateParticles();
+            
+            requestAnimationFrame(animate);
+        }
+
+        // Draw background stars
+        function drawStars() {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let i = 0; i < 100; i++) {
+                const x = (i * 13) % canvas.width;
+                const y = (i * 7) % canvas.height;
+                const size = Math.sin(Date.now() / 1000 + i) * 0.5 + 1;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Update lantern positions
+        function updateLanterns() {
+            for (let i = window.gameState.lanterns.length - 1; i >= 0; i--) {
+                const lantern = window.gameState.lanterns[i];
+                
+                // Move lantern upward
+                lantern.y -= lantern.speed;
+                
+                // Fade out as it rises
+                lantern.alpha -= 0.002;
+                
+                // Create particles occasionally
+                if (Math.random() < 0.1) {
+                    createParticles(lantern.x, lantern.y);
+                }
+                
+                // Remove lantern if it's gone off screen or faded out
+                if (lantern.y < -50 || lantern.alpha <= 0) {
+                    window.gameState.lanterns.splice(i, 1);
+                    continue;
+                }
+                
+                // Draw lantern
+                ctx.save();
+                ctx.globalAlpha = lantern.alpha;
+                
+                // Draw glow effect
+                if (lantern.glow) {
+                    const gradient = ctx.createRadialGradient(
+                        lantern.x, lantern.y, 0,
+                        lantern.x, lantern.y, lantern.size * 2
+                    );
+                    gradient.addColorStop(0, lantern.color);
+                    gradient.addColorStop(1, 'transparent');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(lantern.x, lantern.y, lantern.size * 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Draw lantern body
+                ctx.fillStyle = lantern.color;
+                ctx.beginPath();
+                ctx.arc(lantern.x, lantern.y, lantern.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw lantern string
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(lantern.x, lantern.y + lantern.size);
+                ctx.lineTo(lantern.x, lantern.y + lantern.size + 20);
+                ctx.stroke();
+                
+                ctx.restore();
+            }
+        }
+
+        // Update particles
+        function updateParticles() {
+            for (let i = window.gameState.particles.length - 1; i >= 0; i--) {
+                const particle = window.gameState.particles[i];
+                
+                // Update position
+                particle.x += particle.speedX;
+                particle.y += particle.speedY;
+                
+                // Apply gravity
+                particle.speedY += 0.1;
+                
+                // Reduce life
+                particle.life--;
+                
+                // Remove if life is over
+                if (particle.life <= 0) {
+                    window.gameState.particles.splice(i, 1);
+                    continue;
+                }
+                
+                // Draw particle
+                ctx.globalAlpha = particle.life / 30;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
 
         // Start the game
         function startGame() {
             titleScreen.style.display = 'none';
-            wishForm.style.display = 'flex';
-            gameState.isPlaying = true;
-            countdown();
+            window.gameState.isPlaying = true;
+            animate();
         }
 
-        // Countdown before game starts
-        function countdown() {
-            let count = 3;
-            countdownElement.style.display = 'block';
-
-            const countdownInterval = setInterval(() => {
-                count--;
-                countdownElement.textContent = count;
-
-                if (count <= 0) {
-                    clearInterval(countdownInterval);
-                    countdownElement.style.display = 'none';
-                    // Start the main game loop
-                    requestAnimationFrame(gameLoop);
-                }
-            }, 1000);
+        // Initialize
+        function init() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            canvas.addEventListener('click', handleCanvasClick);
+            startBtn.addEventListener('click', startGame);
+            
+            // Hide loading screen after a short delay
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                titleScreen.style.display = 'flex';
+            }, 1500);
         }
 
-        // Handle canvas click
-        function handleCanvasClick(event) {
-            if (gameState.isPlaying && !gameOverScreen.style.display) {
-                const rect = canvas.getBoundingClientRect();
-                const x = event.clientX - rect.left;
-                const y = event.clientY - rect.top;
-                releaseLanternAt(x, y);
-            }
-        }
-
-        // Handle touch event
-        function handleCanvasTouch(event) {
-            if (gameState.isPlaying && !gameOverScreen.style.display) {
-                event.preventDefault();
-                const rect = canvas.getBoundingClientRect();
-                const touch = event.touches[0];
-                const x = touch.clientX - rect.left;
-                const y = touch.clientY - rect.top;
-                releaseLanternAt(x, y);
-            }
-        }
-
-        // Release a lantern at specific coordinates
-        function releaseLanternAt(x, y) {
-            if (gameState.wishCount < 10) {
-                gameState.wishCount++;
-                lanternCount.textContent = `Wish Lanterns: ${gameState.wishCount}`;
-
-                // Create a new lantern
-                const lantern = {
-                    x: x,
-                    y: y,
-                    radius: 10,
-                    speed: 0.5,
-                    targetY: 0,
-                    glowIntensity: 0.8,
-                    color: getRandomColor(),
-                    hasWish: gameState.wishCount <= 3,
-                    wishText: gameState.wishInput || `Wish ${gameState.wishCount}`,
-                    particles: [],
-                    isAnimating: true
-                };
-
-                gameState.lanterns.push(lantern);
-
-                // Create particles
-                createParticles(lantern.x, lantern.y, lantern.color);
-
-                // Play sound
-                playLanternSound();
-
-                // Show wish input for first few lanterns
-                if (gameState.wishCount <= 3) {
-                    wishInput.focus();
-                }
-            } else if (gameState.wishCount === 10) {
-                // Game over when 10 lanterns released
-                gameOver();
-            }
-        }
-
-        // Release a lantern at current mouse position
-        function releaseLantern() {
-            if (gameState.wishCount < 10) {
-                // Use center of canvas for simplicity
-                releaseLanternAt(canvas.width / 2, canvas.height / 2);
-                wishInput.value = '';
-            }
-        }
-
-        // Game over
-        function gameOver() {
-            gameState.isPlaying = false;
-            gameOverScreen.style.display = 'block';
-        }
-
-        // Restart game
-        function restartGame() {
-            gameState.lanterns = [];
-            gameState.particles = [];
-            gameState.wishCount = 0;
-            gameState.wishInput = '';
-            lanternCount.textContent = 'Wish Lanterns: 0';
-            gameOverScreen.style.display = 'none';
-            wishForm.style.display = 'flex';
-            wishInput.value = '';
-            startGame();
-        }
-
-        // Toggle audio
-        function toggleAudio() {
-            gameState.audioEnabled = !gameState.audioEnabled;
-            audioToggle.classList.toggle('muted', !gameState.audioEnabled);
-        }
-
-        // Handle keyboard events
-        function handleKeyDown(event) {
-            if (event.key === 'Enter' && gameState.isPlaying) {
-                if (wishInput.value.trim()) {
-                    gameState.wishInput = wishInput.value.trim();
-                    releaseLantern();
-                }
-            }
-        }
-
-        // Get random color for lanterns
-        function getRandomColor() {
-            const colors = [
-                '#FF6B6B', // Red
-                '#4ECDC4', // Teal
-                '#FFD166', // Yellow
-                '#6A0572', // Purple
-                '#1A936F', // Green
-                '#FF9A8B'  // Peach
-            ];
-            return colors[Math.floor(Math.random() * colors.length)];
-        }
-
-        // Create particles for lantern effect
-        function createParticles(x, y, color) {
-            for (let i = 0; i < 30; i++) {
-                const particle = {
-                    x: x,
-                    y: y,
-                    size: Math.random() * 3 + 1,
-                    speedX: (Math.random() - 0.5) * 2,
-                    speedY: (Math.random() - 0.5) * 2,
-                    color: color,
-                    life: 100,
-                    decay: Math.random() * 0.02 + 0.01
-                };
-                gameState.particles.push(particle);
-            }
-        }
-
-        // Play sound when lantern is released
-        function playLanternSound() {
-            if (!gameState.audioEnabled || !gameState.audioContext) return;
-
-            try {
-                const oscillator = gameState.audioContext.createOscillator();
-                const gainNode = gameState.audioContext.createGain();
-
-                oscillator.connect(gainNode);
-                gainNode.connect(gameState.audioContext.destination);
-
-                oscillator.type = 'sine';
-                oscillator.frequency.value = 220 + Math.random() * 220;
-                gainNode.gain.value = 0.1;
-
-                oscillator.start();
-                oscillator.stop(gameState.audioContext.currentTime + 0.5);
-            } catch (e) {
-                console.log('Audio playback failed:', e);
-            }
-        }
-
-        // Update game state
-        function update() {
-            // Update lanterns
-            for (let i = gameState.lanterns.length - 1; i >= 0; i--) {
-                const lantern = gameState.lanterns[i];
-
-                if (lantern.isAnimating) {
-                    // Move lantern upwards
-                    lantern.y -= lantern.speed;
-
-                    // Add some horizontal movement
-                    lantern.x += Math.sin(lantern.y * 0.01) * 0.5;
-
-                    // Fade out as it rises
-                    lantern.glowIntensity -= 0.005;
-
-                    // Remove lantern when it's out of view
-                    if (lantern.y < -50 || lantern.glowIntensity <= 0) {
-                        gameState.lanterns.splice(i, 1);
-                    }
-                }
-
-                // Update particles
-                for (let j = lantern.particles.length - 1; j >= 0; j--) {
-                    const p = lantern.particles[j];
-                    p.x += p.speedX;
-                    p.y += p.speedY;
-                    p.life -= p.decay;
-
-                    if (p.life <= 0) {
-                        lantern.particles.splice(j, 1);
-                    }
-                }
-            }
-
-            // Update particles
-            for (let i = gameState.particles.length - 1; i >= 0; i--) {
-                const p = gameState.particles[i];
-                p.x += p.speedX;
-                p.y += p.speedY;
-                p.life -= p.decay;
-
-                if (p.life <= 0) {
-                    gameState.particles.splice(i, 1);
-                }
-            }
-        }
-
-        // Render game
-        function render() {
-            // Clear canvas with a semi-transparent overlay for trail effect
-            ctx.fillStyle = 'rgba(10, 10, 30, 0.1)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Draw stars
-            drawStars();
-
-            // Draw lanterns
-            for (const lantern of gameState.lanterns) {
-                drawLantern(lantern);
-            }
-
-            // Draw particles
-            for (const particle of gameState.particles) {
-                drawParticle(particle);
-            }
-        }
-
-        // Draw a lantern
-        function drawLantern(lantern) {
-            // Draw glow
-            const gradient = ctx.createRadialGradient(
-                lantern.x, lantern.y, 0,
-                lantern.x, lantern.y, lantern.radius * 3
-            );
-            gradient.addColorStop(0, lantern.color);
-            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-            ctx.beginPath();
-            ctx.arc(lantern.x, lantern.y, lantern.radius * 3, 0, Math.PI * 2);
-            ctx.fillStyle = gradient;
-            ctx.fill();
-
-            // Draw lantern body
-            ctx.beginPath();
-            ctx.arc(lantern.x, lantern.y, lantern.radius, 0, Math.PI * 2);
-            ctx.fillStyle = lantern.color;
-            ctx.fill();
-
-            // Draw lantern highlight
-            ctx.beginPath();
-            ctx.arc(lantern.x - lantern.radius * 0.3, lantern.y - lantern.radius * 0.3, lantern.radius * 0.3, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.fill();
-
-            // Draw wish text if this lantern has a wish
-            if (lantern.hasWish) {
-                ctx.font = '12px Arial';
-                ctx.fillStyle = 'white';
-                ctx.textAlign = 'center';
-                ctx.fillText(lantern.wishText, lantern.x, lantern.y - 20);
-            }
-        }
-
-        // Draw a particle
-        function drawParticle(particle) {
-            ctx.beginPath();
-            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-            ctx.fillStyle = particle.color;
-            ctx.fill();
-        }
-
-        // Draw stars in background
-        function drawStars() {
-            // Draw a few stars for background effect
-            for (let i = 0; i < 100; i++) {
-                const x = (i * 13) % canvas.width;
-                const y = (i * 7) % canvas.height;
-                const size = Math.sin(Date.now() * 0.001 + i) * 0.5 + 1;
-                const opacity = Math.sin(Date.now() * 0.0005 + i) * 0.5 + 0.5;
-
-                ctx.beginPath();
-                ctx.arc(x, y, size, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-                ctx.fill();
-            }
-        }
-
-        // Main game loop
-        function gameLoop() {
-            if (!gameState.isPlaying) return;
-
-            update();
-            render();
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Initialize the game when the page loads
-        window.addEventListener('load', init);
+        // Start the initialization
+        init();
     </script>
 </body>
 </html>
