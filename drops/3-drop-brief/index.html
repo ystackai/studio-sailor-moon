@@ -225,8 +225,6 @@
 
         // Create a new lantern
         function createLantern(x, y) {
-            // Update ambient sound with interaction
-            updateAmbientSound();
             lanterns.push(new Lantern(x, y));
             lanternCount++;
             countElement.textContent = lanternCount;
@@ -288,7 +286,25 @@
         }
 
         // Audio synthesis functions
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                audioStatus.textContent = 'Initialized';
                 masterGain = audioContext.createGain();
+                masterGain.connect(audioContext.destination);
+            }
+                masterGain = audioContext.createGain();
+                masterGain.connect(audioContext.destination);
+        }
+                masterGain = audioContext.createGain();
+                masterGain.connect(audioContext.destination);
+
+        function playSound() {
+            if (!audioContext) {
+                initAudio();
+            }
+
+            // Create audio nodes
             const oscillator1 = audioContext.createOscillator();
             const oscillator2 = audioContext.createOscillator();
             const oscillator3 = audioContext.createOscillator();
@@ -299,6 +315,77 @@
             oscillator1.type = 'sine';
             oscillator2.type = 'sine';
             oscillator3.type = 'sawtooth';
+            oscillator1.frequency.setValueAtTime(220, audioContext.currentTime);
+            oscillator2.frequency.setValueAtTime(330, audioContext.currentTime);
+            oscillator3.frequency.setValueAtTime(110, audioContext.currentTime);
+
+            // Configure filter
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(800, audioContext.currentTime);
+
+            // Configure gain envelope
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
+            gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.3);
+            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
+
+            // Connect nodes
+            oscillator1.connect(filter); oscillator2.connect(filter); oscillator3.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            // Start oscillator
+            oscillator1.start(audioContext.currentTime); oscillator2.start(audioContext.currentTime); oscillator3.start(audioContext.currentTime);
+            oscillator1.stop(audioContext.currentTime + 0.5); oscillator2.stop(audioContext.currentTime + 0.5); oscillator3.stop(audioContext.currentTime + 0.5);
+
+            // Update status
+            audioStatus.textContent = 'Playing';
+            isPlaying = true;
+
+            // Reset status after sound finishes
+            setTimeout(() => {
+                audioStatus.textContent = 'Ready';
+                isPlaying = false;
+            }, 500);
+        }
+
+        function stopSound() {
+            if (oscillator1 || oscillator2 || oscillator3) {
+                oscillator1.stop(); oscillator2.stop(); oscillator3.stop();
+                oscillator1 = null; oscillator2 = null; oscillator3 = null;
+                audioStatus.textContent = 'Stopped';
+            }
+        }
+
+        function resetAudio() {
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+                audioStatus.textContent = 'Reset';
+                isPlaying = false;
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('click', (e) => {
+            const rect = particleCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            createLantern(x, y);
+            playSound();
+        });
+
+        document.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = particleCanvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            createLantern(x, y);
+            playSound();
+        });
+
+        playButton.addEventListener('click', () => {
             playSound();
         });
 
@@ -307,8 +394,6 @@
         });
 
         resetButton.addEventListener('click', () => {
-            // Reset ambient sound
-            createAmbientSound();
             resetAudio();
             lanterns = [];
             lanternCount = 0;
