@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing Your Regret</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #000000;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Courier New', monospace;
+            color: white;
+        }
+
+        /* Vignette effect */
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 40%, rgba(0, 0, 0, 0.8) 100%);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Main content */
+        .container {
+            text-align: center;
+            position: relative;
+            z-index: 20;
+        }
+
+        .win-message {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            opacity: 0.8;
+        }
+
+        /* Loading bar */
+        .loading-bar-container {
+            width: 80vw;
+            height: 40px;
+            background-color: rgba(128, 128, 128, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0 auto;
+            position: relative;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+
+        .loading-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #444, #888, #444);
+            position: relative;
+            transform-origin: right center;
+            animation: loadingBar 4s linear infinite;
+        }
+
+        .loading-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes loadingBar {
+            0% {
+                transform: scaleX(1);
+                background-position: 0% 50%;
+            }
+            100% {
+                transform: scaleX(0);
+                background-position: 100% 50%;
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        /* Processing regret text */
+        .processing-text {
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            opacity: 0.7;
+        }
+
+        /* Cursor reflection */
+        .cursor-reflection {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 30;
+            opacity: 0.8;
+            mix-blend-mode: difference;
+        }
+
+        /* Hidden cursor */
+        .hidden-cursor {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            cursor: none;
+            z-index: 40;
+        }
+
+        /* Shiver effect */
+        .shiver {
+            animation: shiver 0.01s;
+        }
+
+        @keyframes shiver {
+            0% { transform: translate(0, 0); }
+            50% { transform: translate(0, 1px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        /* Error message */
+        .error-message {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 0.8rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="vignette"></div>
+    <div class="container">
+        <div class="win-message">VICTORY</div>
+        <div class="loading-bar-container">
+            <div class="loading-bar"></div>
+        </div>
+        <div class="processing-text">Processing your regret</div>
+    </div>
+    <div class="hidden-cursor" id="hiddenCursor"></div>
+    <div class="cursor-reflection" id="cursorReflection"></div>
+    <div class="error-message">404: Cursor not found</div>
+
+    <script>
+        // Game logic will be implemented here
+    </script>
+</body>
+</html>
