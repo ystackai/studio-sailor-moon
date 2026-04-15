@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Processing Your Regret</title>
+  <style>
+    /* Game Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000000;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+      cursor: none; /* Hide default cursor */
+    }
+
+    #game-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: white;
+      z-index: 1000;
+    }
+
+    #vignette {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.8) 70%, #000000 100%);
+      z-index: 1;
+    }
+
+    #win-trigger {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 40px;
+      background: #000;
+      border: 2px solid #fff;
+      color: #fff;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 10;
+      transition: all 0.3s;
+    }
+
+    #win-trigger:hover {
+      background: #fff;
+      color: #000;
+    }
+
+    #loading-bar-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 50px;
+      background: rgba(255,255,255,0.1);
+      z-index: 5;
+      display: none;
+    }
+
+    #loading-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 0%;
+      background: rgba(255,255,255,0.3);
+      transform: translateX(0);
+      transition: width 0.1s linear;
+    }
+
+    #processing-text {
+      position: fixed;
+      bottom: 60px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 18px;
+      color: rgba(255,255,255,0.7);
+      z-index: 6;
+      display: none;
+    }
+
+    #cursor-reflection {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 20;
+      display: none;
+    }
+
+    #error-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      color: red;
+      z-index: 1001;
+      display: none;
+    }
+
+    /* Animation */
+    .warped {
+      animation: warp 0.5s infinite alternate;
+    }
+
+    @keyframes warp {
+      0% { transform: scale(1); }
+      25% { transform: scale(1.05, 0.95); }
+      50% { transform: scale(0.95, 1.05); }
+      75% { transform: scale(1.05, 1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .shiver {
+      animation: shiver 0.01s 1;
+    }
+
+    @keyframes shiver {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(0, 0); }
+    }
+
+    .cursor-delay {
+      transition: transform 0.5s ease;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <h1>Processing Your Regret</h1>
+    <p>Click to win, but prepare for the consequences</p>
+    <button id="win-trigger">Click to Win</button>
+  </div>
+
+  <div id="vignette"></div>
+  <div id="loading-bar-container">
+    <div id="loading-bar"></div>
+  </div>
+  <div id="processing-text">processing your regret</div>
+  <div id="cursor-reflection"></div>
+  <div id="error-message">404 - Cursor not found</div>
+
+  <script>
+    // Game variables
+    let audioContext;
+    let isWinTriggered = false;
+    let cursorReflection = document.getElementById('cursor-reflection');
+    let loadingBarContainer = document.getElementById('loading-bar-container');
+    let loadingBar = document.getElementById('loading-bar');
+    let processingText = document.getElementById('processing-text');
+    let errorMessage = document.getElementById('error-message');
+
+    // Initialize audio context on first interaction
+    function initAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    // Play lightbulb pop sound effect
+    function playPopSound() {
+      if (!audioContext) initAudio();
+
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.05);
+    }
+
+    // Play rewind tape sound effect
+    function playRewindSound() {
+      if (!audioContext) initAudio();
+
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(500, audioContext.currentTime + 1);
+
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 1);
+    }
+
+    // Handle victory trigger
+    document.getElementById('win-trigger').addEventListener('click', function() {
+      if (isWinTriggered) return;
+
+      isWinTriggered = true;
+
+      // Hide win button
+      this.style.display = 'none';
+
+      // Play pop sound
+      playPopSound();
+
+      // Freeze for 3 seconds
+      setTimeout(function() {
+        // Black out screen
+        document.body.style.backgroundColor = '#000000';
+
+        // Show loading bar and processing text
+        loadingBarContainer.style.display = 'block';
+        processingText.style.display = 'block';
+
+        // Start backward loading animation
+        animateLoadingBar();
+
+        // Disable normal cursor and show reflection
+        document.body.style.cursor = 'none';
+        cursorReflection.style.display = 'block';
+
+        // Show error message when trying to interact
+        document.addEventListener('mousemove', function(e) {
+          if (isWinTriggered) {
+            errorMessage.style.display = 'block';
+            errorMessage.style.left = e.clientX + 'px';
+            errorMessage.style.top = e.clientY + 'px';
+          }
+        });
+
+        // Disable input for the rest of the experience
+        document.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        });
+
+        // Make the cursor reflection follow mouse with delay
+        document.addEventListener('mousemove', function(e) {
+          if (isWinTriggered) {
+            cursorReflection.style.left = (e.clientX - 10) + 'px';
+            cursorReflection.style.top = (e.clientY - 10) + 'px';
+          }
+        });
+      }, 3000);
+    });
+
+    // Animate loading bar backward
+    function animateLoadingBar() {
+      let progress = 0;
+      const loadingInterval = setInterval(function() {
+        if (progress >= 100) {
+          clearInterval(loadingInterval);
+          return;
+        }
+
+        // Increment progress
+        progress += 0.5;
+
+        // Update loading bar width (backward animation)
+        loadingBar.style.width = (100 - progress) + '%';
+
+        // Play rewind sound with rising pitch
+        if (progress % 5 === 0) {
+          playRewindSound();
+        }
+      }, 50);
+
+      // Add shiver effect on frame boundary
+      setTimeout(function() {
+        document.body.classList.add('shiver');
+        setTimeout(function() {
+          document.body.classList.remove('shiver');
+        }, 10);
+      }, 1000);
+    }
+
+    // Add visual effects
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add warping effect to loading bar
+      loadingBar.classList.add('warped');
+
+      // Add vignette effect
+      document.getElementById('vignette').classList.add('warped');
+
+      // Add shiver effect to the entire body
+      setTimeout(function() {
+        document.body.classList.add('shiver');
+        setTimeout(function() {
+          document.body.classList.remove('shiver');
+        }, 10);
+      }, 500);
+    });
+  </script>
+</body>
+</html>
