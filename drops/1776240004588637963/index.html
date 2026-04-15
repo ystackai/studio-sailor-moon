@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing Your Regret</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a1a;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #ship-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 80px;
+            background: linear-gradient(145deg, #f8c86a, #d4a75a);
+            border: 3px solid #c78a3d;
+            border-radius: 10px;
+            color: #8b4513;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 0 20px rgba(248, 200, 106, 0.5);
+            transition: all 0.1s ease;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        #ship-button:hover {
+            background: linear-gradient(145deg, #ffd88a, #e4b76a);
+            box-shadow: 0 0 30px rgba(255, 216, 138, 0.7);
+        }
+
+        #ship-button:active {
+            transform: translate(-50%, -50%) scale(0.98);
+        }
+
+        #ship-button::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transform: translateX(-100%);
+        }
+
+        #ship-button:hover::before {
+            transform: translateX(100%);
+            transition: transform 0.5s ease;
+        }
+
+        #shards-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .shard {
+            position: absolute;
+            background: linear-gradient(145deg, #f8c86a, #d4a75a);
+            border: 1px solid #c78a3d;
+            box-shadow: 0 0 10px rgba(248, 200, 106, 0.5);
+            opacity: 0.9;
+        }
+
+        #cursor-trail {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(248, 200, 106, 0.3);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+        }
+
+        #fps-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #f8c86a;
+            font-size: 16px;
+            z-index: 20;
+        }
+
+        #failure-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #f8c86a;
+            font-size: 32px;
+            text-align: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease;
+            z-index: 15;
+        }
+
+        #game-title {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: #f8c86a;
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(248, 200, 106, 0.7);
+            z-index: 15;
+        }
+
+        #gravity-well {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(248, 200, 106, 0.3) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .glass-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(248, 200, 106, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(248, 200, 106, 0.1) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        #game-instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: #f8c86a;
+            font-size: 16px;
+            z-index: 15;
+        }
+
+        #click-count {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #f8c86a;
+            font-size: 16px;
+            z-index: 15;
+        }
+
+        .cursor-squelch {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 3;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-title">Processing Your Regret</div>
+        <div id="click-count">Clicks: 0</div>
+        <div id="fps-display">FPS: 60</div>
+        <div id="ui-overlay">
+            <div id="ship-button">CONFIRM SHIP</div>
+            <div id="gravity-well"></div>
+            <div class="glass-effect"></div>
+        </div>
+        <div id="shards-container"></div>
+        <div id="cursor-trail"></div>
+        <div id="failure-message">REGRET HAS CLAIMED YOU</div>
+        <div id="game-instructions">Click the button before the UI shatters...</div>
+    </div>
+
+    <script>
+        // Game state
+        const gameState = {
+            shards: [],
+            clickCount: 0,
+            fps: 60,
+            frameCount: 0,
+            lastTimestamp: 0,
+            cursorX: 0,
+            cursorY: 0,
+            buttonHitbox: { x: 0, y: 0, width: 0, height: 0 },
+            buttonSize: 200,
+            buttonShrinkFactor: 1,
+            gameOver: false,
+            inputRejected: false,
+            shardCount: 0,
+            cursorTrail: [],
+            cursorTrailLength: 10,
+            lastClickTime: 0,
+            failureTriggered: false,
+            audioContext: null,
+            audioEnabled: false
+        };
+
+        // DOM elements
+        const gameContainer = document.getElementById('game-container');
+        const shipButton = document.getElementById('ship-button');
+        const shardsContainer = document.getElementById('shards-container');
+        const cursorTrail = document.getElementById('cursor-trail');
+        const fpsDisplay = document.getElementById('fps-display');
+        const clickCountDisplay = document.getElementById('click-count');
+        const gravityWell = document.getElementById('gravity-well');
+        const failureMessage = document.getElementById('failure-message');
+        const uiOverlay = document.getElementById('ui-overlay');
+
+        // Initialize game
+        function initGame() {
+            // Set up button hitbox
+            updateButtonHitbox();
+            
+            // Set up event listeners
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('click', handleClick);
+            window.addEventListener('resize', handleResize);
+            
+            // Initialize audio context
+            try {
+                gameState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                gameState.audioEnabled = true;
+            } catch (e) {
+                console.warn("Audio not supported");
+            }
+            
+            // Start game loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Handle mouse move
+        function handleMouseMove(e) {
+            gameState.cursorX = e.clientX;
+            gameState.cursorY = e.clientY;
+            
+            // Update gravity well position
+            gravityWell.style.left = (gameState.cursorX - 50) + 'px';
+            gravityWell.style.top = (gameState.cursorY - 50) + 'px';
+            
+            // Update cursor trail
+            gameState.cursorTrail.push({ x: gameState.cursorX, y: gameState.cursorY });
+            if (gameState.cursorTrail.length > gameState.cursorTrailLength) {
+                gameState.cursorTrail.shift();
+            }
+        }
+
+        // Handle click
+        function handleClick(e) {
+            if (gameState.gameOver || gameState.inputRejected) return;
+            
+            gameState.clickCount++;
+            clickCountDisplay.textContent = `Clicks: ${gameState.clickCount}`;
+            
+            // Check if click was on the button
+            const rect = shipButton.getBoundingClientRect();
+            const buttonRect = {
+                x: rect.left,
+                y: rect.top,
+                width: rect.width,
+                height: rect.height
+            };
+            
+            if (e.clientX >= buttonRect.x && e.clientX <= buttonRect.x + buttonRect.width &&
+                e.clientY >= buttonRect.y && e.clientY <= buttonRect.y + buttonRect.height) {
+                
+                // Successful click
+                shipButton.style.background = 'linear-gradient(145deg, #8bc34a, #689f38)';
+                shipButton.style.boxShadow = '0 0 30px rgba(139, 195, 74, 0.7)';
+                setTimeout(() => {
+                    shipButton.style.background = 'linear-gradient(145deg, #f8c86a, #d4a75a)';
+                    shipButton.style.boxShadow = '0 0 20px rgba(248, 200, 106, 0.5)';
+                }, 200);
+                
+                // Play success sound if available
+                playClickSound();
+                
+                // Add visual feedback for button press
+                shipButton.style.transform = 'translate(-50%, -50%) scale(0.98)';
+                setTimeout(() => {
+                    shipButton.style.transform = 'translate(-50%, -50%)';
+                }, 100);
+                
+                // Reset the game to make it harder
+                resetButton();
+            } else {
+                // Missed click - add damage
+                addDamage();
+                playMissSound();
+            }
+            
+            gameState.lastClickTime = Date.now();
+        }
+
+        // Add damage to UI
+        function addDamage() {
+            // Create shards
+            createShards(5);
+            
+            // Reduce button size
+            gameState.buttonShrinkFactor = Math.max(0.2, gameState.buttonShrinkFactor - 0.05);
+            updateButtonSize();
+            
+            // Increase FPS degradation
+            gameState.fps = Math.max(10, gameState.fps - 2);
+            fpsDisplay.textContent = `FPS: ${Math.floor(gameState.fps)}`;
+            
+            // Check if game should end
+            if (gameState.buttonShrinkFactor <= 0.2) {
+                endGame();
+            }
+        }
+
+        // Create shards
+        function createShards(count) {
+            for (let i = 0; i < count; i++) {
+                const shard = document.createElement('div');
+                shard.className = 'shard';
+                
+                // Random shard properties
+                const size = Math.random() * 30 + 10;
+                const x = Math.random() * window.innerWidth;
+                const y = Math.random() * window.innerHeight;
+                const rotation = Math.random() * 360;
+                
+                shard.style.width = size + 'px';
+                shard.style.height = size + 'px';
+                shard.style.left = x + 'px';
+                shard.style.top = y + 'px';
+                shard.style.transform = `rotate(${rotation}deg)`;
+                
+                // Add to container and game state
+                shardsContainer.appendChild(shard);
+                gameState.shards.push({
+                    element: shard,
+                    x: x,
+                    y: y,
+                    width: size,
+                    height: size,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    rotation: rotation,
+                    rotationSpeed: (Math.random() - 0.5) * 5,
+                    opacity: 0.9
+                });
+                
+                gameState.shardCount++;
+            }
+        }
+
+        // Update button hitbox
+        function updateButtonHitbox() {
+            const rect = shipButton.getBoundingClientRect();
+            gameState.buttonHitbox = {
+                x: rect.left,
+                y: rect.top,
+                width: rect.width,
+                height: rect.height
+            };
+        }
+
+        // Update button size
+        function updateButtonSize() {
+            const newSize = gameState.buttonSize * gameState.buttonShrinkFactor;
+            shipButton.style.width = newSize + 'px';
+            shipButton.style.height = (newSize * 0.4) + 'px';
+            
+            // Update hitbox
+            updateButtonHitbox();
+        }
+
+        // Reset button to full size
+        function resetButton() {
+            gameState.buttonShrinkFactor = 1;
+            updateButtonSize();
+        }
+
+        // Handle resize
+        function handleResize() {
+            updateButtonHitbox();
+        }
+
+        // Game loop
+        function gameLoop(timestamp) {
+            if (gameState.gameOver) return;
+            
+            // Calculate FPS
+            if (gameState.lastTimestamp) {
+                const delta = timestamp - gameState.lastTimestamp;
+                gameState.fps = Math.min(60, Math.max(10, 60000 / delta));
+                fpsDisplay.textContent = `FPS: ${Math.floor(gameState.fps)}`;
+            }
+            gameState.lastTimestamp = timestamp;
+            
+            // Update shards
+            updateShards();
+            
+            // Update cursor trail
+            updateCursorTrail();
+            
+            // Check input rejection based on FPS
+            checkInputRejection();
+            
+            // Continue loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Update shards
+        function updateShards() {
+            for (let i = 0; i < gameState.shards.length; i++) {
+                const shard = gameState.shards[i];
+                
+                // Update position
+                shard.x += shard.vx;
+                shard.y += shard.vy;
+                shard.rotation += shard.rotationSpeed;
+                
+                // Apply gravity towards center
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                const dx = centerX - shard.x;
+                const dy = centerY - shard.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 0) {
+                    const force = 0.01;
+                    shard.vx += dx * force;
+                    shard.vy += dy * force;
+                }
+                
+                // Apply some friction
+                shard.vx *= 0.98;
+                shard.vy *= 0.98;
+                
+                // Update element
+                shard.element.style.left = shard.x + 'px';
+                shard.element.style.top = shard.y + 'px';
+                shard.element.style.transform = `rotate(${shard.rotation}deg)`;
+                
+                // Remove shards that are off-screen or have low opacity
+                if (shard.x < -100 || shard.x > window.innerWidth + 100 ||
+                    shard.y < -100 || shard.y > window.innerHeight + 100) {
+                    shard.element.remove();
+                    gameState.shards.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+
+        // Update cursor trail
+        function updateCursorTrail() {
+            cursorTrail.style.left = (gameState.cursorX - 10) + 'px';
+            cursorTrail.style.top = (gameState.cursorY - 10) + 'px';
+            
+            // Update trail elements
+            for (let i = 0; i < gameState.cursorTrail.length; i++) {
+                const point = gameState.cursorTrail[i];
+                const trailElement = document.createElement('div');
+                trailElement.className = 'cursor-trail-point';
+                trailElement.style.position = 'absolute';
+                trailElement.style.width = '4px';
+                trailElement.style.height = '4px';
+                trailElement.style.background = 'rgba(248, 200, 106, 0.3)';
+                trailElement.style.borderRadius = '50%';
+                trailElement.style.left = (point.x - 2) + 'px';
+                trailElement.style.top = (point.y - 2) + 'px';
+                trailElement.style.zIndex = '4';
+                document.body.appendChild(trailElement);
+                
+                // Remove after a short delay
+                setTimeout(() => {
+                    if (trailElement.parentNode) {
+                        trailElement.parentNode.removeChild(trailElement);
+                    }
+                }, 500);
+            }
+        }
+
+        // Check input rejection
+        function checkInputRejection() {
+            // When FPS drops below threshold, reject input
+            if (gameState.fps <= 10 && !gameState.inputRejected) {
+                gameState.inputRejected = true;
+                playFailureSound();
+                triggerFailure();
+            } else if (gameState.fps > 10 && gameState.inputRejected) {
+                gameState.inputRejected = false;
+            }
+        }
+
+        // Trigger failure state
+        function triggerFailure() {
+            if (gameState.failureTriggered) return;
+            gameState.failureTriggered = true;
+            
+            failureMessage.style.opacity = '1';
+            
+            // Create more shards for visual effect
+            createShards(20);
+            
+            // Add input rejection effect
+            const squelchEffect = document.createElement('div');
+            squelchEffect.className = 'cursor-squelch';
+            squelchEffect.style.background = 'radial-gradient(circle, rgba(248, 200, 106, 0.3) 0%, transparent 70%)';
+            gameContainer.appendChild(squelchEffect);
+            
+            setTimeout(() => {
+                if (squelchEffect.parentNode) {
+                    squelchEffect.parentNode.removeChild(squelchEffect);
+                }
+            }, 1000);
+        }
+
+        // End game
+        function endGame() {
+            gameState.gameOver = true;
+            failureMessage.textContent = "REGRET HAS CLAIMED YOU";
+            failureMessage.style.opacity = '1';
+            playFailureSound();
+        }
+
+        // Play click sound
+        function playClickSound() {
+            if (!gameState.audioEnabled || !gameState.audioContext) return;
+            
+            try {
+                const oscillator = gameState.audioContext.createOscillator();
+                const gainNode = gameState.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(gameState.audioContext.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.value = 523.25; // C5 note
+                gainNode.gain.value = 0.3;
+                
+                oscillator.start();
+                oscillator.stop(gameState.audioContext.currentTime + 0.1);
+            } catch (e) {
+                console.warn("Failed to play click sound");
+            }
+        }
+
+        // Play miss sound
+        function playMissSound() {
+            if (!gameState.audioEnabled || !gameState.audioContext) return;
+            
+            try {
+                const oscillator = gameState.audioContext.createOscillator();
+                const gainNode = gameState.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(gameState.audioContext.destination);
+                
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.value = 110; // A2 note
+                gainNode.gain.value = 0.4;
+                
+                oscillator.start();
+                oscillator.stop(gameState.audioContext.currentTime + 0.3);
+            } catch (e) {
+                console.warn("Failed to play miss sound");
+            }
+        }
+
+        // Play failure sound
+        function playFailureSound() {
+            if (!gameState.audioEnabled || !gameState.audioContext) return;
+            
+            try {
+                const oscillator = gameState.audioContext.createOscillator();
+                const gainNode = gameState.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(gameState.audioContext.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.value = 65.41; // A1 note
+                gainNode.gain.value = 0.6;
+                
+                oscillator.start();
+                oscillator.stop(gameState.audioContext.currentTime + 1.0);
+            } catch (e) {
+                console.warn("Failed to play failure sound");
+            }
+        }
+
+        // Start the game
+        window.onload = initGame;
+    </script>
+</body>
+</html>
