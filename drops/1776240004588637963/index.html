@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Processing Your Regret</title>
+  <style>
+    /* Game Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000000;
+      overflow: hidden;
+      font-family: 'Courier New', monospace;
+      cursor: none; /* Hide default cursor */
+      position: relative;
+    }
+
+    #game-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: white;
+      z-index: 1000;
+      perspective: 1000px;
+    }
+
+    #vignette {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.8) 70%, #000000 100%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    #win-trigger {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 40px;
+      background: #000;
+      border: 2px solid #fff;
+      color: #fff;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 10;
+      transition: all 0.3s;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(255,255,255,0.5);
+    }
+
+    #win-trigger:hover {
+      background: #fff;
+      color: #000;
+      box-shadow: 0 0 20px rgba(255,255,255,0.8);
+    }
+
+    #loading-bar-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 50px;
+      background: rgba(255,255,255,0.1);
+      z-index: 5;
+      display: none;
+    }
+
+    #loading-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 0%;
+      background: rgba(255,255,255,0.3);
+      transform: translateX(0);
+      transition: width 0.1s linear;
+    }
+
+    #processing-text {
+      position: fixed;
+      bottom: 60px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 18px;
+      color: rgba(255,255,255,0.7);
+      z-index: 6;
+      display: none;
+    }
+
+    #cursor-reflection {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: rgba(255,255,255,0.5);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 20;
+      display: none;
+      box-shadow: 0 0 10px rgba(255,255,255,0.8);
+    }
+
+    #error-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      color: red;
+      z-index: 1001;
+      display: none;
+    }
+
+    /* Glass shard effect */
+    .shard {
+      position: absolute;
+      background: rgba(255, 193, 7, 0.7); /* Warm amber color */
+      border: 1px solid rgba(255, 223, 134, 0.5); /* Lighter amber border */
+      box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+      transform-origin: center;
+      z-index: 50;
+      pointer-events: none;
+      filter: blur(0.5px);
+      opacity: 0.8;
+    }
+
+    /* Input friction effect */
+    #cursor-trail {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: rgba(255, 193, 7, 0.3);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 15;
+      transform: translate(-50%, -50%);
+      filter: blur(2px);
+      opacity: 0.6;
+    }
+
+    /* Fracture effect */
+    .fractured {
+      animation: fracture 0.3s ease-out forwards;
+    }
+
+    @keyframes fracture {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0.8); opacity: 0; }
+    }
+
+    /* Shiver animation */
+    .shiver {
+      animation: shiver 0.05s infinite alternate;
+    }
+
+    @keyframes shiver {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(2px, 2px); }
+    }
+
+    /* Vignette distortion */
+    .vignette-distort {
+      animation: vignette-distort 0.2s infinite alternate;
+    }
+
+    @keyframes vignette-distort {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.02, 0.98); }
+    }
+
+    /* Screen shake */
+    .shake {
+      animation: shake 0.1s infinite alternate;
+    }
+
+    @keyframes shake {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(3px, 3px); }
+    }
+
+    /* Cursor squelch effect */
+    .squelch {
+      animation: squelch 0.2s infinite alternate;
+    }
+
+    @keyframes squelch {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0.8, 1.2); opacity: 0.7; }
+    }
+
+    /* Confirm button shrinking */
+    .confirm-button-shrink {
+      animation: shrink 0.1s infinite alternate;
+    }
+
+    @keyframes shrink {
+      0% { transform: scale(1); }
+      100% { transform: scale(0.95); }
+    }
+
+    /* Audio rejection effect */
+    .audio-rejection {
+      animation: audio-rejection 0.1s infinite alternate;
+    }
+
+    @keyframes audio-rejection {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(180deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <h1>Processing Your Regret</h1>
+    <p>Click to win, but prepare for the consequences</p>
+    <button id="win-trigger">Click to Win</button>
+  </div>
+
+  <div id="vignette"></div>
+  <div id="loading-bar-container">
+    <div id="loading-bar"></div>
+  </div>
+  <div id="processing-text">processing your regret</div>
+  <div id="cursor-reflection"></div>
+  <div id="cursor-trail"></div>
+  <div id="error-message">404 - Cursor not found</div>
+
+  <script>
+    // Game variables
+    let audioContext;
+    let isWinTriggered = false;
+    let cursorReflection = document.getElementById('cursor-reflection');
+    let cursorTrail = document.getElementById('cursor-trail');
+    let loadingBarContainer = document.getElementById('loading-bar-container');
+    let loadingBar = document.getElementById('loading-bar');
+    let processingText = document.getElementById('processing-text');
+    let errorMessage = document.getElementById('error-message');
+    let vignette = document.getElementById('vignette');
+    let winTrigger = document.getElementById('win-trigger');
+    let gameContainer = document.getElementById('game-container');
+    
+    // Fracture mechanics
+    let fractureCount = 0;
+    let shardCount = 0;
+    let cursorFriction = 0;
+    let isFailureState = false;
+    let lastFrameTime = 0;
+    let frameCount = 0;
+    let fps = 60;
+    let confirmButton = null;
+    
+    // Track mouse position
+    let mouseX = 0;
+    let mouseY = 0;
+    
+    // Initialize audio context on first interaction
+    function initAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    // Play lightbulb pop sound effect
+    function playPopSound() {
+      if (!audioContext) initAudio();
+
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.05);
+    }
+
+    // Play wet squelch sound effect
+    function playSquelchSound() {
+      if (!audioContext) initAudio();
+
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(50 + Math.random() * 50, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(10 + Math.random() * 20, audioContext.currentTime + 0.2);
+
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.2);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.2);
+    }
+
+    // Play structural thud sound effect
+    function playThudSound() {
+      if (!audioContext) initAudio();
+
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(30 + Math.random() * 30, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(5 + Math.random() * 10, audioContext.currentTime + 0.5);
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    }
+
+    // Play sad violin sound effect
+    function playSadViolinSound() {
+      if (!audioContext) initAudio();
+
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      const filter = audioContext.createBiquadFilter();
+
+      oscillator.connect(filter);
+      filter.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.setValueAtTime(100, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 1);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(500, audioContext.currentTime);
+      filter.Q.setValueAtTime(1, audioContext.currentTime);
+
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 1);
+    }
+
+    // Create glass shard
+    function createShard(x, y, size) {
+      const shard = document.createElement('div');
+      shard.className = 'shard';
+      shard.style.width = size + 'px';
+      shard.style.height = size + 'px';
+      shard.style.left = (x - size/2) + 'px';
+      shard.style.top = (y - size/2) + 'px';
+      
+      // Random rotation for authenticity
+      const rotation = Math.random() * 360;
+      shard.style.transform = `rotate(${rotation}deg)`;
+      
+      document.body.appendChild(shard);
+      
+      // Animate shard movement
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 50 + Math.random() * 100;
+      const duration = 1000 + Math.random() * 1000;
+      
+      shard.animate(
+        [
+          { transform: `translate(0, 0) rotate(${rotation}deg)` },
+          { transform: `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px) rotate(${rotation + 30}deg)` }
+        ],
+        {
+          duration: duration,
+          easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        }
+      );
+      
+      // Remove shard after animation
+      setTimeout(() => {
+        if (shard.parentNode) {
+          shard.parentNode.removeChild(shard);
+        }
+      }, duration);
+      
+      return shard;
+    }
+
+    // Handle fracture when user misses interaction
+    function triggerFracture(x, y) {
+      fractureCount++;
+      playThudSound();
+      
+      // Create shards
+      const shardCount = 5 + Math.floor(Math.random() * 10);
+      for (let i = 0; i < shardCount; i++) {
+        const size = 5 + Math.random() * 20;
+        createShard(x, y, size);
+      }
+      
+      // Add visual effects
+      vignette.classList.add('shiver');
+      vignette.classList.add('vignette-distort');
+      
+      // Add screen shake
+      gameContainer.classList.add('shake');
+      
+      // Remove effects after animation
+      setTimeout(() => {
+        vignette.classList.remove('shiver');
+        vignette.classList.remove('vignette-distort');
+        gameContainer.classList.remove('shake');
+      }, 500);
+      
+      // Increase friction
+      cursorFriction = Math.min(cursorFriction + 0.1, 0.9);
+      
+      // Add fracture effect to win button if it exists
+      if (winTrigger && !isWinTriggered) {
+        winTrigger.classList.add('fractured');
+        setTimeout(() => {
+          winTrigger.classList.remove('fractured');
+        }, 300);
+      }
+      
+      // Add visual feedback for cursor
+      cursorTrail.style.left = (x - 5) + 'px';
+      cursorTrail.style.top = (y - 5) + 'px';
+      cursorTrail.style.opacity = 0.6;
+      
+      setTimeout(() => {
+        cursorTrail.style.opacity = 0;
+      }, 200);
+    }
+
+    // Handle victory trigger
+    document.getElementById('win-trigger').addEventListener('click', function() {
+      if (isWinTriggered) return;
+
+      isWinTriggered = true;
+      confirmButton = this;
+
+      // Hide win button
+      this.style.display = 'none';
+
+      // Play pop sound
+      playPopSound();
+
+      // Freeze for 3 seconds
+      setTimeout(function() {
+        // Black out screen
+        document.body.style.backgroundColor = '#000000';
+
+        // Show loading bar and processing text
+        loadingBarContainer.style.display = 'block';
+        processingText.style.display = 'block';
+
+        // Start backward loading animation
+        animateLoadingBar();
+
+        // Disable normal cursor and show reflection
+        document.body.style.cursor = 'none';
+        cursorReflection.style.display = 'block';
+
+        // Show error message when trying to interact
+        document.addEventListener('mousemove', function(e) {
+          if (isWinTriggered) {
+            errorMessage.style.display = 'block';
+            errorMessage.style.left = e.clientX + 'px';
+            errorMessage.style.top = e.clientY + 'px';
+          }
+        });
+
+        // Disable input for the rest of the experience
+        document.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        });
+
+        // Make the cursor reflection follow mouse with delay
+        document.addEventListener('mousemove', function(e) {
+          if (isWinTriggered) {
+            cursorReflection.style.left = (e.clientX - 10) + 'px';
+            cursorReflection.style.top = (e.clientY - 10) + 'px';
+          }
+        });
+        
+        // Start fracture system
+        startFractureSystem();
+      }, 3000);
+    });
+
+    // Start the fracture system
+    function startFractureSystem() {
+      // Create a "Confirm Ship" button that will be the only pristine element
+      const confirmShipButton = document.createElement('button');
+      confirmShipButton.id = 'confirm-ship-button';
+      confirmShipButton.textContent = 'CONFIRM SHIP';
+      confirmShipButton.style.position = 'absolute';
+      confirmShipButton.style.top = '50%';
+      confirmShipButton.style.left = '50%';
+      confirmShipButton.style.transform = 'translate(-50%, -50%)';
+      confirmShipButton.style.padding = '15px 30px';
+      confirmShipButton.style.background = '#ffd93d'; // Warm amber color
+      confirmShipButton.style.border = '2px solid #ff9800';
+      confirmShipButton.style.color = '#000';
+      confirmShipButton.style.fontSize = '20px';
+      confirmShipButton.style.cursor = 'pointer';
+      confirmShipButton.style.zIndex = '100';
+      confirmShipButton.style.borderRadius = '4px';
+      confirmShipButton.style.boxShadow = '0 0 20px rgba(255, 217, 61, 0.7)';
+      confirmShipButton.style.transition = 'all 0.1s';
+      confirmShipButton.style.pointerEvents = 'auto';
+      
+      document.body.appendChild(confirmShipButton);
+      
+      // Add click handler to confirm ship button
+      confirmShipButton.addEventListener('click', function() {
+        // Play final sound
+        playPopSound();
+        
+        // Show victory effect
+        confirmShipButton.style.background = '#4CAF50';
+        confirmShipButton.style.color = '#fff';
+        confirmShipButton.textContent = 'SHIP CONFIRMED';
+        
+        // Add victory animation
+        confirmShipButton.classList.add('shiver');
+        confirmShipButton.classList.add('shake');
+        
+        // Disable further interactions
+        document.body.style.pointerEvents = 'none';
+      });
+      
+      // Mouse move handler to track cursor and create effects
+      document.addEventListener('mousemove', function(e) {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        
+        // Move cursor trail
+        cursorTrail.style.left = (e.clientX - 5) + 'px';
+        cursorTrail.style.top = (e.clientY - 5) + 'px';
+        
+        // Add squelch effect when cursor moves
+        if (cursorFriction > 0.1) {
+          cursorTrail.style.display = 'block';
+          cursorTrail.style.opacity = Math.min(0.8, cursorFriction * 0.8);
+        } else {
+          cursorTrail.style.display = 'none';
+        }
+        
+        // Track cursor position for potential fracture
+        if (isWinTriggered && !isFailureState) {
+          // Simulate increasing difficulty to hit the button
+          const buttonRect = confirmShipButton.getBoundingClientRect();
+          const buttonCenterX = buttonRect.left + buttonRect.width / 2;
+          const buttonCenterY = buttonRect.top + buttonRect.height / 2;
+          
+          const distance = Math.sqrt(
+            Math.pow(e.clientX - buttonCenterX, 2) + 
+            Math.pow(e.clientY - buttonCenterY, 2)
+          );
+          
+          // If cursor is far from button, trigger fracture
+          if (distance > 50) {
+            triggerFracture(e.clientX, e.clientY);
+          }
+        }
+      });
+      
+      // Start frame rate monitoring
+      function update() {
+        const now = performance.now();
+        const delta = now - lastFrameTime;
+        
+        // Calculate FPS
+        if (delta > 0) {
+          fps = Math.min(60, Math.round(1000 / delta));
+        }
+        
+        lastFrameTime = now;
+        frameCount++;
+        
+        // Check if we should enter failure state
+        if (fps < 10 && !isFailureState) {
+          enterFailureState();
+        }
+        
+        // Apply friction effect to cursor movement
+        if (cursorFriction > 0 && isWinTriggered) {
+          // Slow down the cursor trail
+          cursorTrail.style.opacity = Math.min(0.8, cursorFriction * 0.8);
+          cursorTrail.style.filter = `blur(${cursorFriction * 2}px)`;
+        }
+        
+        // Continue animation
+        requestAnimationFrame(update);
+      }
+      
+      update();
+    }
+
+    // Enter failure state when FPS drops below 10
+    function enterFailureState() {
+      isFailureState = true;
+      playSadViolinSound();
+      
+      // Add audio rejection effect
+      document.body.classList.add('audio-rejection');
+      
+      // Add visual effects to confirm button
+      const confirmShipButton = document.getElementById('confirm-ship-button');
+      if (confirmShipButton) {
+        confirmShipButton.classList.add('confirm-button-shrink');
+        confirmShipButton.classList.add('squelch');
+        
+        // Shrink button over time
+        let buttonSize = 1;
+        const shrinkInterval = setInterval(() => {
+          buttonSize -= 0.02;
+          if (buttonSize <= 0.2) {
+            buttonSize = 0.2;
+            clearInterval(shrinkInterval);
+          }
+          confirmShipButton.style.transform = `translate(-50%, -50%) scale(${buttonSize})`;
+        }, 50);
+      }
+      
+      // Add severe screen shake
+      gameContainer.classList.add('shake');
+      vignette.classList.add('shake');
+      
+      // Add more visual effects
+      document.body.style.filter = 'hue-rotate(180deg)';
+      
+      // Prevent interaction after a while
+      setTimeout(() => {
+        document.body.style.pointerEvents = 'none';
+        document.body.classList.remove('audio-rejection');
+      }, 3000);
+    }
+
+    // Animate loading bar backward
+    function animateLoadingBar() {
+      let progress = 0;
+      const loadingInterval = setInterval(function() {
+        if (progress >= 100) {
+          clearInterval(loadingInterval);
+          return;
+        }
+
+        // Increment progress
+        progress += 0.5;
+
+        // Update loading bar width (backward animation)
+        loadingBar.style.width = (100 - progress) + '%';
+
+        // Play rewind sound with rising pitch
+        if (progress % 5 === 0) {
+          playThudSound();
+        }
+      }, 50);
+
+      // Add shiver effect on frame boundary
+      setTimeout(function() {
+        document.body.classList.add('shiver');
+        setTimeout(function() {
+          document.body.classList.remove('shiver');
+        }, 10);
+      }, 1000);
+    }
+
+    // Add visual effects
+    document.addEventListener('DOMContentLoaded', function() {
+      // Add warping effect to loading bar
+      loadingBar.classList.add('warped');
+
+      // Add vignette effect
+      document.getElementById('vignette').classList.add('warped');
+
+      // Add shiver effect to the entire body
+      setTimeout(function() {
+        document.body.classList.add('shiver');
+        setTimeout(function() {
+          document.body.classList.remove('shiver');
+        }, 10);
+      }, 500);
+    });
+  </script>
+</body>
+</html>
