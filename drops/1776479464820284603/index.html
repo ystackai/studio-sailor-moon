@@ -22,9 +22,15 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
 <div id="hint">drag downward to open the trapdoor</div>
 <script>
 (() => {
-     // ════════════════════════════════════════════
-     // CANVAS SETUP
-     // ════════════════════════════════════════════
+
+   // ════════════════════════════════════════════
+   // SYNC CONTRACT (single render pass)
+   // Physics → trigger → audio mute → visual fade all execute
+   // within one rAF callback. Frame counter is the single clock.
+   // Visual fade uses cubic ease-out over 10 frames to match
+   // the acoustic decay envelope of the muted drone (~170ms).
+   // ════════════════════════════════════════════
+
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d');
   const hint = document.getElementById('hint');
@@ -36,49 +42,58 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
     generateCrumbTexture();
     generateStars();
     renderStarBackground();
-     }
+   }
   window.addEventListener('resize', resize);
 
-     // ════════════════════════════════════════════
-     // DRAG PHYSICS STATE (atomically updated)
-     // ════════════════════════════════════════════
-  const THRESHOLD = 120;              // px drag distance to trigger trap
-  const FRICTION = 0.88;             // velocity damping per frame
-  const SPRING_K = 0.06;            // spring pull-back force
-  const DAMPING = 0.90;             // spring damping
+   // ════════════════════════════════════════════
+   // DRAG PHYSICS — molasses-like exponential drag
+   //
+   // Molasses coefficient: mu = mu0 + (muMax - mu0) * (d/D)^2
+   // where d = displacement from center, D = threshold.
+   // At center: near-zero resistance. At threshold: ~20x drag.
+   // Creates "tension curve" — easy to start pulling, increasingly
+   // sticky as you approach the point of no return.
+   // ════════════════════════════════════════════
+  const THRESHOLD    = 120;     // px drag distance to trigger trap
+  const BASE_DRAG    = 0.85;    // baseline friction (always applied)
+  const MAX_DRAG     = 0.97;    // max friction near threshold (~20x effective drag)
+
+   // Spring params
+  const SPRING_K     = 0.06;
+  const DAMPING      = 0.90;
 
   let drag = {
     active: false,
-    originX: 0, originY: 0,        // where pointer pressed
-    cx: 0, cy: 0,                  // current finger/mouse pos
-    vx: 0, vy: 0,                  // velocity for physics (px/frame)
-    displacement: 0                // distance from origin (scalar, signed down +ve)
-     };
+    originX: 0, originY: 0,
+    cx: 0, cy: 0,
+    vx: 0, vy: 0,
+    displacement: 0
+   };
 
   let centerX = W / 2;
   let centerY = H / 2;
 
-     // ════════════════════════════════════════════
-     // TRAP STATE — single boolean source of truth
-     // ════════════════════════════════════════════
+   // ════════════════════════════════════════════
+   // TRAP STATE — single source of truth
+   // ════════════════════════════════════════════
   const trapState = {
-    triggered: false,                // has the threshold been crossed?
-    decayRate: 0.04,                 // how fast crumb particles settle after trigger
-     };
+    triggered: false,
+    decayRate: 0.04,
+   };
 
-   // Frame counter for synced visual fade — incremented only in render loop
-  let frame = 0;
-  let triggerFrame = 0;             // frame index when trap fired (for fade timing)
+  let frame       = 0;
+  let triggerFrame = 0;         // rAF frame index when trap fired
+  const FADE_FRAMES = 10;       // visual fade duration in frames (~167ms @ 60fps)
 
-     // ════════════════════════════════════════════
-     // PERFORMANCE: detect mobile (Pixel 5 target)
-     // ════════════════════════════════════════════
+   // ════════════════════════════════════════════
+   // PERFORMANCE — Pixel 5 target
+   // ════════════════════════════════════════════
   const isMobile = /Mobi|Android/i.test(navigator.userAgent);
   const CRUMB_COUNT = isMobile ? 32 : 64;
 
-     // ════════════════════════════════════════════
-     // STAR FIELD (background) — pre-rendered to avoid per-frame sin() calls on mobile
-     // ════════════════════════════════════════════
+   // ════════════════════════════════════════════
+   // STAR FIELD — pre-rendered background tile
+   // ════════════════════════════════════════════
   let stars = [];
   let starBgCanvas, starBgCtx;
 
@@ -87,15 +102,14 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
     const count = Math.floor((W * H) / 4000);
     for (let i = 0; i < count; i++) {
       stars.push({
-        x: Math.random() * W,
-        y: Math.random() * H,
+        x: Math.random() * W, y: Math.random() * H,
         r: 0.5 + Math.random() * 1.2,
         a: 0.3 + Math.random() * 0.5,
         twinkleSpeed: 0.005 + Math.random() * 0.015,
         phase: Math.random() * Math.PI * 2
-         });
-       }
+       });
      }
+   }
 
   function renderStarBackground() {
     starBgCanvas = document.createElement('canvas');
@@ -108,12 +122,12 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
       starBgCtx.beginPath();
       starBgCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
       starBgCtx.fill();
-       }
      }
+   }
 
-     // ════════════════════════════════════════════
-     // CRUMB TEXTURE OVERLAY — procedural pre-render
-     // ════════════════════════════════════════════
+   // ════════════════════════════════════════════
+   // CRUMB TEXTURE — procedural pre-render
+   // ════════════════════════════════════════════
   let crumbCanvas, crumbCtx;
 
   function generateCrumbTexture() {
@@ -130,8 +144,7 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
       crumbCtx.beginPath();
       crumbCtx.arc(x, y, r, 0, Math.PI * 2);
       crumbCtx.fill();
-       }
-         // add some larger irregular crumbs
+     }
     for (let i = 0; i < CRUMB_COUNT / 3; i++) {
       const x = Math.random() * crumbCanvas.width;
       const y = Math.random() * crumbCanvas.height;
@@ -139,58 +152,57 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
       const alpha = 0.02 + Math.random() * 0.06;
       crumbCtx.fillStyle = `rgba(200,180,150,${alpha})`;
       crumbCtx.beginPath();
-         // irregular polygon
       for (let j = 0; j < 5; j++) {
         const angle = (j / 5) * Math.PI * 2 + Math.random() * 0.3;
         const pr = r * (0.6 + Math.random() * 0.4);
         if (j === 0) crumbCtx.moveTo(x + Math.cos(angle) * pr, y + Math.sin(angle) * pr);
         else crumbCtx.lineTo(x + Math.cos(angle) * pr, y + Math.sin(angle) * pr);
-         }
+       }
       crumbCtx.closePath();
       crumbCtx.fill();
-       }
      }
+   }
 
-     // ════════════════════════════════════════════
-     // FLOATING ORB (interactive visual anchor)
-     // ════════════════════════════════════════════
+   // ════════════════════════════════════════════
+   // FLOATING ORB
+   // ════════════════════════════════════════════
   let orb = {
-    x: 0, y: 0,                 // rendered position (physics-driven)
-    r: 36,                       // radius
+    x: 0, y: 0,
+    r: 36,
     glowPhase: 0,
-    triggeredGlow: 0,            // extra glow intensity when trap fires
-    shakeX: 0, shakeY: 0         // trap shake offset
-     };
+    triggeredGlow: 0,
+    shakeX: 0, shakeY: 0
+   };
 
-     // ════════════════════════════════════════════
-     // CRUMB PARTICLES (spawning on trigger) — reduced on mobile
-     // ════════════════════════════════════════════
+   // ════════════════════════════════════════════
+   // CRUMB PARTICLES
+   // ════════════════════════════════════════════
   let crumbs = [];
 
   function spawnCrumbTrapParticles() {
     const count = isMobile
-      ? Math.min(60, Math.floor((W * H) / 12000))
-      : Math.min(120, Math.floor((W * H) / 6000));
+       ? Math.min(60, Math.floor((W * H) / 12000))
+       : Math.min(120, Math.floor((W * H) / 6000));
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 0.5 + Math.random() * 3;
       crumbs.push({
         x: orb.x, y: orb.y,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 1,          // bias upward initially
+        vy: Math.sin(angle) * speed - 1,
         r: 1 + Math.random() * 3,
         alpha: 0.6 + Math.random() * 0.4,
         decay: 0.003 + Math.random() * 0.008,
         gravity: 0.02 + Math.random() * 0.04,
-         });
-       }
+       });
      }
+   }
 
-     // ════════════════════════════════════════════
-     // AUDIO — Web Audio API (triggered atomically)
-     // Drone gains hoisted to module scope so silence
-     // can fire in the same rAF frame as physics & visuals.
-     // ════════════════════════════════════════════
+   // ════════════════════════════════════════════
+   // AUDIO — Web Audio API
+   // All audio scheduling happens inside triggerTrap(),
+   // which runs in the same rAF as physics & visuals.
+   // ════════════════════════════════════════════
   let audioCtx, masterGain;
   let droneOsc1, droneGain1, droneOsc2, droneGain2;
   let audioReady = false;
@@ -203,11 +215,9 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
       masterGain.gain.value = 0.5;
       masterGain.connect(audioCtx.destination);
       audioReady = true;
-
-         // Start subtle ambient drone
       startDrone();
-       } catch (e) { /* audio not available, trap still works visually */ }
-     }
+     } catch (e) { /* audio unavailable, trap still works */ }
+   }
 
   function startDrone() {
     if (!audioCtx) return;
@@ -221,7 +231,6 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
     droneGain1.connect(masterGain);
     droneOsc1.start();
 
-         // Second harmonic
     droneOsc2 = audioCtx.createOscillator();
     droneGain2 = audioCtx.createGain();
     droneOsc2.type = 'sine';
@@ -231,28 +240,30 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
     droneOsc2.connect(droneGain2);
     droneGain2.connect(masterGain);
     droneOsc2.start();
-     }
+   }
 
-     // Sudden silence of ambient drone — fires in same rAF frame as
-     // physics freeze and visual fade for zero-drift sync.
+   // ═── MUTE DRONE — fires SAME FRAME as physics freeze ──
+   // Exponential ramp to silence matching visual fade duration.
   function muteDrone() {
     if (!audioCtx || !droneGain1) return;
     const t = audioCtx.currentTime;
-         // Exponential ramp to silence (~80ms at 60fps ≈ 5 frames)
-    droneGain1.gain.cancelScheduledValues(t);
-    droneGain1.gain.setValueAtTime(Math.max(droneGain1.gain.value, 0.0001), t);
-    droneGain1.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
-    droneGain2.gain.cancelScheduledValues(t);
-    droneGain2.gain.setValueAtTime(Math.max(droneGain2.gain.value, 0.0001), t);
-    droneGain2.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
-     }
+    const dur = 0.17;   // ~10 frames @ 60fps, matches FADE_FRAMES
 
-     // Trap trigger sound — layered: low thump + high crackle + noise sweep
+    droneGain1.gain.cancelScheduledValues(t);
+    droneGain1.gain.setValueAtTime(droneGain1.gain.value, t);
+    droneGain1.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    droneGain2.gain.cancelScheduledValues(t);
+    droneGain2.gain.setValueAtTime(droneGain2.gain.value, t);
+    droneGain2.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+   }
+
+   // Trap impact sound — layered: sub-bass thump + noise burst + shimmer
   function playTrapSound() {
     if (!audioCtx) return;
     const t = audioCtx.currentTime;
 
-         // Low thump (sub-bass impact)
+     // Sub-bass thump
     const thump = audioCtx.createOscillator();
     const thumpGain = audioCtx.createGain();
     thump.type = 'sine';
@@ -265,19 +276,18 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
     thump.start(t);
     thump.stop(t + 0.8);
 
-         // Mid "crack" — short noise burst
+     // Noise crackle
     const bufSize = audioCtx.sampleRate * 0.15;
     const noiseBuf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
-    const noiseData = noiseBuf.getChannelData(0);
+    const nd = noiseBuf.getChannelData(0);
     for (let i = 0; i < bufSize; i++) {
-      noiseData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 3);
-       }
+      nd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 3);
+     }
     const noiseSrc = audioCtx.createBufferSource();
     noiseSrc.buffer = noiseBuf;
     const noiseGain = audioCtx.createGain();
     noiseGain.gain.setValueAtTime(0.25, t);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
-         // Bandpass to make it snappy
     const bp = audioCtx.createBiquadFilter();
     bp.type = 'bandpass';
     bp.frequency.value = 800;
@@ -287,7 +297,7 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
     noiseGain.connect(masterGain);
     noiseSrc.start(t);
 
-         // High shimmer — ascending tone
+     // Shimmer
     const shim = audioCtx.createOscillator();
     const shimGain = audioCtx.createGain();
     shim.type = 'triangle';
@@ -299,48 +309,43 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
     shimGain.connect(masterGain);
     shim.start(t);
     shim.stop(t + 0.5);
-     }
+   }
 
-     // ════════════════════════════════════════════
-     // TRIGGER — THE ONE-STEP ATOMIC STATE CHANGE
-     // All three systems update in the same frame:
-     //    1. Physics: freeze orb, apply shake
-     //    2. Audio: mute ambient drone + play impact sound
-     //    3. Visual: spawn crumb particles (no CSS overlays)
-     // ════════════════════════════════════════════
+   // ════════════════════════════════════════════
+   // TRIGGER — atomic three-way state update
+   // Physics freeze, audio mute+impact, crumb spawn —
+   // all execute in one rAF frame. No intermediate renders.
+   // ════════════════════════════════════════════
   function triggerTrap() {
     if (trapState.triggered) return;
     trapState.triggered = true;
 
-         // Frame counter snapshot — visual fade starts from 0 this frame
+     // Frame counter snapshot — visual fade starts from frame 0 here
     triggerFrame = frame;
 
-         // Physics freeze — lock the orb in trap position
+     // Physics freeze — lock orb, apply initial shake
     drag.vx = 0;
     drag.vy = 0;
-    orb.shakeX = 4;      // initial shake amplitude
+    orb.shakeX = 4;
     orb.shakeY = 4;
 
-         // Spawn crumb particles
+     // Spawn crumb particles (handled in physics loop, spawned here)
     spawnCrumbTrapParticles();
 
-         // Audio silence — ambient drone cuts, impact sound fires
+     // Audio: mute ambient drone + play impact — same frame as physics freeze
     muteDrone();
     playTrapSound();
 
     hint.textContent = 'the trapdoor has opened';
     hint.style.color = 'rgba(255,180,100,0.6)';
-     }
+   }
 
-     // ════════════════════════════════════════════
-     // INPUT HANDLING
-     // ════════════════════════════════════════════
-  let pointerDown = false;
-
+   // ════════════════════════════════════════════
+   // INPUT HANDLING — pointer events
+   // ════════════════════════════════════════════
   canvas.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    initAudio();                 // user gesture unlocks Web Audio API
-    pointerDown = true;
+    initAudio();
     drag.active = true;
     drag.originX = centerX + (e.clientX - centerX);
     drag.originY = centerY + (e.clientY - centerY);
@@ -351,37 +356,49 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
     orb.x = centerX;
     orb.y = centerY;
     hint.classList.add('hidden');
-     }, { passive: false });
+   }, { passive: false });
 
   canvas.addEventListener('pointermove', (e) => {
     if (!drag.active) return;
     const newCx = e.clientX;
     const newCy = e.clientY;
-         // Compute delta from previous frame
     drag.vx += (newCx - drag.cx);
     drag.vy += (newCy - drag.cy);
     drag.cx = newCx;
     drag.cy = newCy;
-     }, { passive: false });
+   }, { passive: false });
 
   canvas.addEventListener('pointerup', (e) => {
     if (!drag.active) return;
-    pointerDown = false;
     drag.active = false;
-         // Don't release the orb — it stays in trap position after trigger,
-         // or springs back partially if threshold not met.
-     }, { passive: false });
+   }, { passive: false });
 
-     // ════════════════════════════════════════════
-     // PHYSICS UPDATE — runs every frame
-     // ════════════════════════════════════════════
+   // ════════════════════════════════════════════
+   // PHYSICS UPDATE — molasses drag per frame
+   //
+   // Drag coefficient mu(d) varies from BASE_DRAG at center to
+   // MAX_DRAG at threshold. Quadratic interpolation:
+   //   t = d/D   (0→1 normalized distance)
+   //   mu = BASE_DRAG + (MAX_DRAG - BASE_DRAG) * t^2
+   //
+   // Effect: pulling back feels almost normal near center,
+   // but becomes increasingly "stuck" like pulling through
+   // molasses. At ~70% of threshold the drag is ~3x stronger;
+   // at threshold it's ~20x stronger — the "point of no return".
+   // ════════════════════════════════════════════
+
+   // Molasses drag: quadratic interpolation of friction coefficient
+  function molassesDrag(t) {
+    const t2 = t * t;                              // quadratic interp factor
+    return BASE_DRAG + (MAX_DRAG - BASE_DRAG) * t2;  // mu at this displacement
+   }
+
   function updatePhysics() {
     if (trapState.triggered) {
-         // Post-trigger: decaying shake + crumbling particles
+       // Post-trigger: decaying shake + crumbling particles
       orb.shakeX *= 0.92;
       orb.shakeY *= 0.92;
 
-         // Slowly pull crumbs down with slight gravity + drift
       for (let i = crumbs.length - 1; i >= 0; i--) {
         const c = crumbs[i];
         c.x += c.vx;
@@ -390,87 +407,95 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
         c.vx *= 0.99;
         c.alpha -= c.decay;
         if (c.alpha <= 0) crumbs.splice(i, 1);
-         }
-      return;
        }
+      return;
+     }
 
-         // Dragging: accumulate velocity with spring physics
-    const targetX = drag.originX;
-    const targetY = drag.originY + drag.vy * SPRING_K;
-
-         // Apply spring force toward origin (spring pulls back)
+     // Spring pull-back toward center
     const dx = centerX - orb.x;
     const dy = centerY - orb.y;
-    drag.vx *= FRICTION;      // friction damping
-    drag.vy *= FRICTION;
 
-         // Spring pull-back
+    drag.vx *= BASE_DRAG;        // baseline friction always applied
+    drag.vy *= BASE_DRAG;
+
     orb.x += drag.vx * 0.5;
     orb.y += drag.vy * 0.5;
     orb.x += dx * SPRING_K;
     orb.y += dy * DAMPING * 0.3;
 
-         // Compute displacement from center (how far the user dragged)
+     // Compute displacement from center (how far user dragged)
     const ddx = centerX - orb.x;
     const ddy = centerY - orb.y;
     drag.displacement = Math.sqrt(ddx * ddx + ddy * ddy);
 
-         // Clamp displacement so orb doesn't fly off screen
+     // Clamp so orb doesn't fly off screen
     const maxDisp = Math.min(W, H) * 0.4;
     if (drag.displacement > maxDisp) {
       const scale = maxDisp / drag.displacement;
       orb.x = centerX + (orb.x - centerX) * scale;
       orb.y = centerY + (orb.y - centerY) * scale;
       drag.displacement = maxDisp;
-       }
-
-         // Check threshold — trigger if displacement exceeds threshold
-    if (drag.displacement >= THRESHOLD) {
-      triggerTrap();
-       }
      }
 
-     // ════════════════════════════════════════════
-     // RENDER — draws everything every frame
-     // Single requestAnimationFrame loop: physics first, then draw.
-     // All visual state (including trap darkness + crumb overlay fade) is
-     // frame-counted from triggerFrame so fade starts at 0 this exact frame.
-     // SYNC CONTRACT: visual fade over 8 frames (~133ms @ 60fps) matches
-     // audio drone mute ramp of ~80ms (5 frames). Both fire in same rAF.
-     // ════════════════════════════════════════════
+     // ── Molasses drag: applies quadratic drag based on displacement ──
+     // This is the key viscous-feeling physics — resistance builds up
+     // non-linearly as you move away from center, creating tension.
+    const t = Math.min(1, drag.displacement / THRESHOLD);   // normalized [0,1]
+    const mu = molassesDrag(t);                              // variable friction
+    drag.vx *= mu;                                           // extra viscous damping
+    drag.vy *= mu;
+
+     // Check threshold — trigger if displacement exceeds limit
+    if (drag.displacement >= THRESHOLD) {
+      triggerTrap();
+     }
+   }
+
+   // ════════════════════════════════════════════
+   // RENDER — single rAF loop: physics → draw
+   // ── SYNC CONTRACT ──
+   // Frame counter is the single clock. Visual fade starts at
+   // triggerFrame (same frame as trap triggers). Cubic ease-out
+   // over FADE_FRAMES matches audio drone mute ramp duration.
+   // ════════════════════════════════════════════
+
+   // Cubic ease-out: f(0)=0, f(1)=1 — creates smooth "crash" feel
+  function cubicEaseOut(t) {
+    return 1 - Math.pow(1 - t, 3);
+   }
 
   function render() {
     frame++;
 
-         // ── Physics first (all state updates) ──
+     // ── Physics first (all state updates, single call) ──
     updatePhysics();
 
-         // Clear
+     // Clear
     ctx.fillStyle = '#050508';
     ctx.fillRect(0, 0, W, H);
 
-         // Stars — use pre-rendered background on mobile for perf
+     // Stars — pre-rendered background tile on mobile for perf
     if (isMobile && starBgCanvas) {
       ctx.drawImage(starBgCanvas, 0, 0);
-    } else {
+     } else {
       for (const s of stars) {
         const twinkle = 0.5 + 0.5 * Math.sin(frame * s.twinkleSpeed + s.phase);
         ctx.fillStyle = `rgba(255,255,255,${s.a * twinkle})`;
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
         ctx.fill();
-         }
-    }
+       }
+     }
 
-         // Apply shake to orb position (only if triggered)
+     // Apply shake to orb position (only when triggered)
     let drawX = orb.x;
     let drawY = orb.y;
     if (trapState.triggered && orb.shakeX > 0.1) {
       drawX += (Math.random() - 0.5) * orb.shakeX;
       drawY += (Math.random() - 0.5) * orb.shakeY;
-       }
+     }
 
-         // Draw trap threshold indicator ring (subtle, near threshold = more visible)
+     // Draw trap threshold indicator ring (approach warning)
     if (!trapState.triggered && drag.displacement > THRESHOLD * 0.3) {
       const ringProgress = drag.displacement / THRESHOLD;
       const ringAlpha = (ringProgress - 0.3) / 0.7;
@@ -480,15 +505,14 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
       ctx.arc(centerX, centerY, THRESHOLD, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ringProgress);
       ctx.stroke();
 
-         // Full circle outline at threshold
       ctx.strokeStyle = `rgba(255,140,80,${ringAlpha * 0.08})`;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(centerX, centerY, THRESHOLD, 0, Math.PI * 2);
       ctx.stroke();
-       }
+     }
 
-         // Draw orb glow layers (outer to inner)
+     // Draw orb glow layers (outer to inner)
     const triggerGlow = trapState.triggered ? 0.4 : 0;
     for (let layer = 3; layer >= 0; layer--) {
       const radius = orb.r + layer * 12 + triggerGlow * layer * 20;
@@ -498,44 +522,41 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
       ctx.beginPath();
       ctx.arc(drawX, drawY, radius, 0, Math.PI * 2);
       ctx.fill();
-       }
+     }
 
-         // Draw orb core — solid color when triggered (gradient avoided for perf)
+     // Draw orb core
     if (trapState.triggered) {
       const warmth = Math.min(1, frame * 0.005);
       const r = 255;
       const g = Math.floor(200 - warmth * 100);
       const b = Math.floor(150 - warmth * 130);
       ctx.fillStyle = `rgba(${r},${g},${b},0.9)`;
-       } else {
+     } else {
       ctx.fillStyle = 'rgba(150,220,255,0.8)';
-       }
+     }
     ctx.beginPath();
     ctx.arc(drawX, drawY, orb.r, 0, Math.PI * 2);
     ctx.fill();
 
-         // Draw crumb particles (visual trap overlay elements)
+     // Draw crumb particles
     for (const c of crumbs) {
       ctx.fillStyle = `rgba(255,235,180,${c.alpha})`;
       ctx.beginPath();
       ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
       ctx.fill();
-       }
+     }
 
-         // Draw crumb texture overlay — alpha fades with trap frame count
-         // Synced: same elapsed counter as visual fade, starts at full alpha
-         // then drops to 0 over the fade window so texture disappears as
-         // the room darkens. Both start at triggerFrame (same rAF tick).
+     // Crumb texture overlay — fades with trap frame count
     if (trapState.triggered && crumbs.length > 0) {
-      const elapsed = frame - triggerFrame;
-      const texFadeOut = Math.max(0, 1 - elapsed / 8);  // 0→1 in 8 frames
+      const elapsed = Math.min(frame - triggerFrame, FADE_FRAMES);
+      const texFadeOut = cubicEaseOut(elapsed / FADE_FRAMES);
       const baseAlpha = Math.min(0.15, trapState.decayRate * crumbs.length * 0.002);
       ctx.globalAlpha = baseAlpha * texFadeOut;
       ctx.drawImage(crumbCanvas, 0, 0, W, H);
       ctx.globalAlpha = 1;
-       }
+     }
 
-         // Connection line from center to orb (shows drag displacement)
+     // Connection line (shows drag displacement before trigger)
     if (!trapState.triggered && drag.active) {
       ctx.strokeStyle = 'rgba(255,255,255,0.15)';
       ctx.lineWidth = 1;
@@ -545,9 +566,9 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
       ctx.lineTo(drawX, drawY);
       ctx.stroke();
       ctx.setLineDash([]);
-       }
+     }
 
-         // Vignette overlay (intensifies as drag approaches threshold)
+     // Vignette intensifies as drag approaches threshold
     if (!trapState.triggered) {
       const vigAlpha = 0.3 + (drag.displacement / THRESHOLD) * 0.2;
       const vigGrad = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.25, W/2, H/2, Math.max(W,H)*0.7);
@@ -555,26 +576,24 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
       vigGrad.addColorStop(1, `rgba(0,0,0,${vigAlpha})`);
       ctx.fillStyle = vigGrad;
       ctx.fillRect(0, 0, W, H);
-       }
-
-         // ── Trap visual fade — canvas-only, frame-counted from triggerFrame ──
-         // SYNC CONTRACT: ramps to full over exactly 8 frames (~133ms @ 60fps),
-         // matching the audio drone mute ramp of ~80ms (5 frames). Both fire
-         // in the same rAF tick — no drift between physics freeze, audio cut,
-         // and visual darkness.
-    if (trapState.triggered) {
-      const elapsed = frame - triggerFrame;
-      const intensity = Math.min(1, elapsed / 8);   // full fade at 8 frames
-      ctx.fillStyle = `rgba(40,10,0,${intensity * 0.9})`;
-      ctx.fillRect(0, 0, W, H);
-       }
-
-    requestAnimationFrame(render);
      }
 
-     // ════════════════════════════════════════════
-     // INITIALIZATION — start at center
-     // ════════════════════════════════════════════
+     // ── Trap visual fade — cubic ease-out over FADE_FRAMES frames ──
+     // SYNC: triggers same frame as physics freeze + audio mute.
+     // Cubic curve matches acoustic decay envelope for perceptual lock.
+    if (trapState.triggered) {
+      const elapsed = Math.min(frame - triggerFrame, FADE_FRAMES);
+      const intensity = cubicEaseOut(elapsed / FADE_FRAMES);
+      ctx.fillStyle = `rgba(40,10,0,${intensity * 0.9})`;
+      ctx.fillRect(0, 0, W, H);
+     }
+
+    requestAnimationFrame(render);
+   }
+
+   // ════════════════════════════════════════════
+   // INITIALIZATION
+   // ════════════════════════════════════════════
   resize();
   orb.x = centerX;
   orb.y = centerY;
