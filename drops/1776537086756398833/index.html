@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>The Heavy Void</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;background:#06060c;font-family:'Courier New',monospace}
+canvas{display:block;position:absolute;top:0;left:0}
+#void-overlay{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:10;transition:none}
+#ui{position:fixed;bottom:24px;left:0;right:0;text-align:center;z-index:20;pointer-events:none}
+#prompt{font-size:13px;color:rgba(180,170,255,0.45);letter-spacing:0.1em;opacity:0;transition:opacity 1s}
+#prompt.show{opacity:1}
+#name{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;pointer-events:none;font-size:11px;color:rgba(180,170,255,0.15);letter-spacing:0.25em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="void-overlay"></div>
+<div id="name">the hiccough</div>
+<div id="ui"><div id="prompt">drag toward the cloud&#8230;</div></div>
+<script>
+(()=>{
+
+// HEAVY VOID — Delta-time independent physics solver
+// High-damping drag force field → collision haptics → spring recovery
+// Optimized for Pixel 5: no heavy geometry, minimal GC pressure
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha: false });
+const overlay = document.getElementById('void-overlay');
+const promptEl = document.getElementById('prompt');
+
+// ── Performance targets ──────────────
+const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+const TARGET_FPS = 60;
+const FRAME_DT = 1 / TARGET_FPS;
+const MAX_DT = 1 / 20; // clamp to prevent spiral-of-death
+
+// ── Canvas sizing ────────────────────
+let W, H, dpr;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  centerX = W / 2;
+  centerY = H / 2;
+}
+window.addEventListener('resize', resize);
+
+// ── Physics Constants (molasses feel) ──
+const VOID_RADIUS       = 60;        // radius of The Hiccough/Cloud
+const DRAG_THRESHOLD    = 250;       // px from center where drag intensifies
+const MIN_DRAG          = 0.92;      // baseline damping at distance
+const MAX_DRAG          = 0.965;     // near-maximum damping at threshold
+const DRAG_CURVE        = 2.5;       // exponent: steeper curve = more sudden resistance
+
+// Recovery spring
+const SPRING_K          = 0.045;     // spring constant (yielding but not floating)
+const SPRING_DAMP       = 0.88;      // spring damping per step
+
+// Collision
+const COLLISION_DIST    = VOID_RADIUS + 16;
+const IMPACT_DIM        = 0.35;      // max screen dimming at collision
+const RECOVERY_SPEED    = 0.035;     // overlay fade-back rate per step
+
+// ── State ────────────────────────────
+let centerX, centerY;
+let interaction = {
+  x: W / 2 || 400, y: H / 2 || 300,
+  vx: 0, vy: 0,
+  px: 0, py: 0,
+  dragging: false,
+  colliding: false,
+  impactPhase: false,
+  impactFrame: -1,
+};
+
+let voidState = {
+  dimAmount: 0,
+  settleY: 0,
+  settled: false,
+  settleTimer: 0,
+};
+
+let triggered = false;
+
+// ── Audio Engine (Web Audio API) ─────
+let audioCtx = null;
+let impactNoiseSrc = null;
+let dragSwooshSrc = null;
+let swooshGainNode = null;
+let creakOscNode = null;
+let creakGainNode = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Impact: brown noise thud
+    const impactSrc = audioCtx.createBufferSource();
+    const iBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.6, audioCtx.sampleRate);
+    const iD = iBuf.getChannelData(0);
+    for (let i = 0; i < iD.length; i++) {
+      const white = Math.random() * 2 - 1;
+      iD[i] = (i === 0 ? white : iD[i-1] * 0.97 + white * 0.03) * 0.4;
+    }
+    impactSrc.buffer = iBuf;
+    const iGain = audioCtx.createGain();
+    iGain.gain.setValueAtTime(1, audioCtx.currentTime);
+    iGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+    const iLP = audioCtx.createBiquadFilter();
+    iLP.type = 'lowpass';
+    iLP.frequency.value = 180;
+    iLP.Q.value = 1.5;
+    impactSrc.connect(iLP).connect(iGain).connect(audioCtx.destination);
+    impactSrc.start();
+    impactNoiseSrc = impactSrc;
+
+    // Sub-bass oscillator: ~42Hz sine, felt more than heard
+    const sub = audioCtx.createOscillator();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(42, audioCtx.currentTime);
+    sub.frequency.exponentialRampToValueAtTime(28, audioCtx.currentTime + 0.5);
+    const sg = audioCtx.createGain();
+    sg.gain.setValueAtTime(0.6, audioCtx.currentTime);
+    sg.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.7);
+    const subLP = audioCtx.createBiquadFilter();
+    subLP.type = 'lowpass';
+    subLP.frequency.value = 80;
+    sub.connect(subLP).connect(sg).connect(audioCtx.destination);
+    sub.start();
+
+    // Drag swoosh: filtered noise, wet and thick
+    const swooshBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+    const sd = swooshBuf.getChannelData(0);
+    for (let i = 0; i < sd.length; i++) sd[i] = Math.random() * 2 - 1;
+    dragSwooshSrc = audioCtx.createBufferSource();
+    dragSwooshSrc.buffer = swooshBuf;
+    dragSwooshSrc.loop = true;
+    swooshGainNode = audioCtx.createGain();
+    swooshGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    const sLP = audioCtx.createBiquadFilter();
+    sLP.type = 'lowpass';
+    sLP.frequency.value = 350;
+    sLP.Q.value = 2;
+    const sBP = audioCtx.createBiquadFilter();
+    sBP.type = 'bandpass';
+    sBP.frequency.value = 180;
+    sBP.Q.value = 4;
+    dragSwooshSrc.connect(sLP).connect(sBP).connect(swooshGainNode).connect(audioCtx.destination);
+    dragSwooshSrc.start();
+
+    // Creak: sawtooth oscillators, sounds like compressed plush toy
+    creakOscNode = audioCtx.createOscillator();
+    creakOscNode.type = 'sawtooth';
+    creakOscNode.frequency.value = 85;
+    creakGainNode = audioCtx.createGain();
+    creakGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+    const clp = audioCtx.createBiquadFilter();
+    clp.type = 'lowpass';
+    clp.frequency.value = 250;
+    creakOscNode.connect(clp).connect(creakGainNode).connect(audioCtx.destination);
+    creakOscNode.start();
+
+  } catch(e) {
+    console.warn('Web Audio not available:', e);
+  }
+}
+
+function updateDragAudio(dt) {
+  if (!swooshGainNode || !audioCtx) return;
+  const speed = Math.sqrt(interaction.vx * interaction.vx + interaction.vy * interaction.vy) / (dt * 60);
+  const t = audioCtx.currentTime;
+  const vol = Math.min(speed / 80, 1) * 0.25;
+  swooshGainNode.gain.linearRampToValueAtTime(vol, t + 0.02);
+}
+
+function updateCreak(dt) {
+  if (!creakGainNode || !audioCtx || !interaction.colliding) return;
+  const t = audioCtx.currentTime;
+  const intensity = voidState.dimAmount;
+  creakGainNode.gain.linearRampToValueAtTime(intensity * 0.12, t + 0.03);
+  if (creakOscNode) {
+    creakOscNode.frequency.linearRampToValueAtTime(80 - intensity * 30, t + 0.05);
+  }
+}
+
+function playImpactHaptic() {
+  if (navigator.vibrate) {
+    navigator.vibrate([80, 40, 120, 30, 200]);
+  }
+}
+
+// ── Particles — lightweight point sprites ──
+const PARTICLE_COUNT = isMobile ? 50 : 90;
+let particles = [];
+
+function spawnParticle() {
+  const angle = Math.random() * Math.PI * 2;
+  const dist = VOID_RADIUS + 5 + Math.random() * 120;
+  return {
+    x: centerX + Math.cos(angle) * dist,
+    y: centerY + Math.sin(angle) * dist,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: (Math.random() - 0.5) * 0.3,
+    life: 1,
+    decay: 0.004 + Math.random() * 0.008,
+    size: 1 + Math.random() * 2.5,
+    hue: 240 + Math.random() * 40 - 20,
+  };
+}
+
+function initParticles() {
+  particles = [];
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const p = spawnParticle();
+    p.life = Math.random();
+    particles.push(p);
+  }
+}
+
+// ── Input handling ───────────────────
+function pointerDown(x, y) {
+  initAudio();
+  interaction.dragging = true;
+  interaction.x = x;
+  interaction.y = y;
+  interaction.px = x;
+  interaction.py = y;
+  interaction.vx = 0;
+  interaction.vy = 0;
+  promptEl.classList.remove('show');
+}
+
+function pointerMove(x, y) {
+  if (!interaction.dragging) return;
+  interaction.px = interaction.x;
+  interaction.py = interaction.y;
+  interaction.x = x;
+  interaction.y = y;
+}
+
+function pointerUp() {
+  if (!interaction.colliding) {
+    interaction.dragging = false;
+  }
+}
+
+canvas.addEventListener('mousedown', e => pointerDown(e.clientX, e.clientY));
+canvas.addEventListener('mousemove', e => pointerMove(e.clientX, e.clientY));
+canvas.addEventListener('mouseup', pointerUp);
+canvas.addEventListener('mouseleave', pointerUp);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); pointerDown(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); pointerMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+canvas.addEventListener('touchend', pointerUp);
+
+// ── Show prompt on idle ──────────────
+let idleTimer = 0;
+function checkIdle(dt) {
+  if (!interaction.dragging && !interaction.colliding) {
+    idleTimer += dt;
+    if (idleTimer > 2 && !promptEl.classList.contains('show')) {
+      promptEl.classList.add('show');
+    }
+  } else {
+    idleTimer = 0;
+    promptEl.classList.remove('show');
+  }
+}
+
+// ── Physics step — fixed timestep ───
+function physicsStep(dt) {
+
+  const prevX = interaction.x;
+  const prevY = interaction.y;
+
+  if (interaction.dragging && !interaction.colliding) {
+    // Approach drag: high-damping force field
+    const dx = centerX - interaction.x;
+    const dy = centerY - interaction.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Damping curve: exponential near center
+    const t = Math.max(0, 1 - dist / DRAG_THRESHOLD);
+    const dragCoeff = MIN_DRAG + (MAX_DRAG - MIN_DRAG) * Math.pow(t, DRAG_CURVE);
+
+    // Apply dt-independent damping
+    const newVx = interaction.vx * dragCoeff;
+    const newVy = interaction.vy * dragCoeff;
+
+    // Add gentle drift toward the dragged point
+    const targetDx = interaction.x - prevX;
+    const targetDy = interaction.y - prevY;
+
+    interaction.vx = newVx + targetDx * 0.15;
+    interaction.vy = newVy + targetDy * 0.15;
+
+    // Integrate position (normalized to 60fps reference)
+    interaction.x += interaction.vx * dt * 60;
+    interaction.y += interaction.vy * dt * 60;
+
+    // Clamp to screen bounds
+    interaction.x = Math.max(20, Math.min(W - 20, interaction.x));
+    interaction.y = Math.max(20, Math.min(H - 20, interaction.y));
+
+    // Collision detection
+    const ndx = centerX - interaction.x;
+    const ndy = centerY - interaction.y;
+    const nDist = Math.sqrt(ndx * ndx + ndy * ndy);
+
+    if (nDist <= COLLISION_DIST && !interaction.impactPhase) {
+      interaction.colliding = true;
+      interaction.impactPhase = true;
+      interaction.impactFrame = frameCount;
+      triggered = true;
+      triggerImpact(nDist);
+    }
+
+    // Super-damping once touching
+    if (interaction.colliding) {
+      const contactDepth = 1 - (nDist / COLLISION_DIST);
+      const superDrag = 0.93 + contactDepth * 0.06;
+
+      interaction.vx *= superDrag;
+      interaction.vy *= superDrag;
+
+      // Gentle pull toward center (hug pulls you in)
+      const pullStrength = 0.02 * contactDepth;
+      interaction.vx += (centerX - interaction.x) * pullStrength * dt * 60;
+      interaction.vy += (centerY - interaction.y) * pullStrength * dt * 60;
+
+      // Keep inside collision radius
+      if (nDist > 2) {
+        const ratio = COLLISION_DIST / nDist;
+        interaction.x = centerX + (interaction.x - centerX) * ratio;
+        interaction.y = centerY + (interaction.y - centerY) * ratio;
+      }
+    }
+
+  } else if (!interaction.dragging && interaction.colliding) {
+    // Recovery spring: settle into the hug
+    const dx = centerX - interaction.x;
+    const dy = centerY - interaction.y;
+
+    interaction.vx += dx * SPRING_K * dt * 60;
+    interaction.vy += dy * SPRING_K * dt * 60;
+
+    interaction.vx *= SPRING_DAMP;
+    interaction.vy *= SPRING_DAMP;
+
+    interaction.x += interaction.vx * dt * 60;
+    interaction.y += interaction.vy * dt * 60;
+
+    const settleDist = Math.sqrt(dx * dx + dy * dy);
+    const settleSpeed = Math.sqrt(interaction.vx * interaction.vx + interaction.vy * interaction.vy);
+    if (settleDist < 5 && settleSpeed < 0.3) {
+      voidState.settled = true;
+    }
+
+    // Fade out collision state after long idle in hug
+    if (voidState.settled) {
+      voidState.settleTimer += dt;
+      if (voidState.settleTimer > 3) {
+        interaction.colliding = false;
+        interaction.impactPhase = false;
+        voidState.dimAmount *= 0.95;
+        voidState.settled = false;
+        voidState.settleY *= 0.97;
+      }
+    }
+  }
+
+  // Update impact fade-out
+  if (!interaction.impactPhase && voidState.dimAmount > 0) {
+    voidState.dimAmount -= RECOVERY_SPEED * dt * 60;
+    if (voidState.dimAmount < 0) voidState.dimAmount = 0;
+  }
+
+  // Settle displacement (hug squeeze effect)
+  if (interaction.colliding || interaction.impactPhase) {
+    const compressAmt = Math.sin(Date.now() * 0.002) * 3 + 4;
+    voidState.settleY += (compressAmt - voidState.settleY) * 0.05 * dt * 60;
+  } else {
+    voidState.settleY *= 0.95;
+  }
+
+  // Audio updates
+  updateDragAudio(dt);
+  updateCreak(dt);
+}
+
+// ── Impact sequence ──────────────────
+function triggerImpact(closestDist) {
+  voidState.dimAmount = IMPACT_DIM;
+  playImpactHaptic();
+}
+
+// ── Fixed-timestep accumulator ───────
+let frameCount = 0;
+let lastTimestamp = 0;
+let dtAccumulator = FRAME_DT;
+const PHYSICS_DT_TARGET = FRAME_DT;
+
+// ── Background canvas ────────────────
+let bgCanvas, bgCtx;
+
+function generateBackground() {
+  bgCanvas = document.createElement('canvas');
+  bgCanvas.width = W * dpr;
+  bgCanvas.height = H * dpr;
+  bgCtx = bgCanvas.getContext('2d');
+  bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const grad = bgCtx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(W, H) * 0.7);
+  grad.addColorStop(0, '#12101f');
+  grad.addColorStop(0.5, '#0a0914');
+  grad.addColorStop(1, '#06060c');
+  bgCtx.fillStyle = grad;
+  bgCtx.fillRect(0, 0, W, H);
+
+  for (let i = 0; i < 80; i++) {
+    const sx = Math.random() * W;
+    const sy = Math.random() * H;
+    const sa = 0.1 + Math.random() * 0.25;
+    bgCtx.fillStyle = `rgba(180,170,255,${sa})`;
+    bgCtx.fillRect(sx, sy, 1, 1);
+  }
+}
+
+// ── Render: The Hiccough (cloud asset) ──
+function renderVoid(t) {
+  const pulse = Math.sin(t * 0.001) * 4;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  // Outer glow layers
+  const glowR = VOID_RADIUS + pulse + 30;
+  const outerGlow = ctx.createRadialGradient(centerX, centerY + voidState.settleY * 0.3, VOID_RADIUS * 0.5, centerX, centerY + voidState.settleY * 0.3, glowR);
+  outerGlow.addColorStop(0, 'rgba(120, 80, 200, 0.15)');
+  outerGlow.addColorStop(0.6, 'rgba(80, 40, 160, 0.06)');
+  outerGlow.addColorStop(1, 'rgba(40, 20, 100, 0)');
+  ctx.fillStyle = outerGlow;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY + voidState.settleY * 0.3, glowR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main cloud body — organic blob
+  ctx.globalCompositeOperation = 'source-over';
+
+  const coreGrad = ctx.createRadialGradient(
+    centerX - 8, centerY + voidState.settleY * 0.3 - 5, VOID_RADIUS * 0.1,
+    centerX, centerY + voidState.settleY * 0.3, VOID_RADIUS + pulse * 0.5
+  );
+  coreGrad.addColorStop(0, '#d4c8f0');
+  coreGrad.addColorStop(0.3, '#a090d0');
+  coreGrad.addColorStop(0.7, '#6048a0');
+  coreGrad.addColorStop(1, '#2a1850');
+
+  ctx.fillStyle = coreGrad;
+  ctx.beginPath();
+
+  const blobPoints = 12;
+  for (let i = 0; i <= blobPoints; i++) {
+    const a = (i / blobPoints) * Math.PI * 2;
+    const wobble = Math.sin(a * 3 + t * 0.0015) * 4 + Math.cos(a * 5 + t * 0.001) * 2;
+    const r = VOID_RADIUS + pulse * 0.5 + wobble;
+    const bx = centerX + Math.cos(a) * r;
+    const by = centerY + voidState.settleY * 0.3 + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(bx, by);
+    else ctx.lineTo(bx, by);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Highlight spot — the "hiccough" puff
+  const hlGrad = ctx.createRadialGradient(
+    centerX - 15, centerY + voidState.settleY * 0.3 - 18, 0,
+    centerX - 12, centerY + voidState.settleY * 0.3 - 15, 25
+  );
+  hlGrad.addColorStop(0, 'rgba(240, 230, 255, 0.5)');
+  hlGrad.addColorStop(1, 'rgba(240, 230, 255, 0)');
+  ctx.fillStyle = hlGrad;
+  ctx.beginPath();
+  ctx.arc(centerX - 12, centerY + voidState.settleY * 0.3 - 15, 25, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Label (barely visible)
+  if (!interaction.dragging && !voidState.settled) {
+    ctx.fillStyle = 'rgba(180, 170, 255, 0.08)';
+    ctx.font = '10px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('the hiccough', centerX, centerY + VOID_RADIUS + 30);
+  }
+
+  ctx.restore();
+}
+
+// ── Render: Particles ────────────────
+function renderParticles(t) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+
+    // Attraction to void center
+    const dx = centerX - p.x;
+    const dy = centerY - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist > 1) {
+      const attract = 0.15 / (dist * 0.1);
+      p.vx += (dx / dist) * attract;
+      p.vy += (dy / dist) * attract;
+    }
+
+    // Molasses drag on particles
+    const dragFactor = interaction.dragging ? 0.94 : 0.98;
+    p.vx *= dragFactor;
+    p.vy *= dragFactor;
+
+    p.x += p.vx;
+    p.y += p.vy;
+
+    // Life cycle
+    p.life -= p.decay;
+    if (p.life <= 0) {
+      Object.assign(p, spawnParticle());
+    }
+
+    // Point sprite
+    const alpha = p.life * (voidState.settled ? 0.15 : 0.4);
+    ctx.fillStyle = `hsla(${p.hue}, 60%, 70%, ${alpha})`;
+    ctx.fillRect(p.x, p.y, p.size, p.size);
+  }
+
+  ctx.restore();
+}
+
+// ── Render: Drag trail & proximity glow ──
+function renderDragTrail() {
+  if (!interaction.dragging || interaction.colliding) return;
+
+  const speed = Math.sqrt(interaction.vx * interaction.vx + interaction.vy * interaction.vy);
+  const intensity = Math.min(speed / 60, 1);
+
+  if (intensity < 0.05) return;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  const dx = interaction.x - interaction.px;
+  const dy = interaction.y - interaction.py;
+  const trailLen = Math.sqrt(dx * dx + dy * dy);
+
+  if (trailLen > 2) {
+    for (let i = 0; i < Math.min(trailLen, 30); i++) {
+      const tt = i / trailLen;
+      const px = interaction.px + dx * tt;
+      const py = interaction.py + dy * tt;
+      const a = (1 - tt) * intensity * 0.25;
+      const s = 2 + intensity * 4;
+      ctx.fillStyle = `rgba(140, 100, 220, ${a})`;
+      ctx.fillRect(px, py, s, s);
+    }
+  }
+
+  // Finger proximity glow near void
+  const distToVoid = Math.sqrt((centerX - interaction.x) ** 2 + (centerY - interaction.y) ** 2);
+  if (distToVoid < DRAG_THRESHOLD) {
+    const proximity = 1 - distToVoid / DRAG_THRESHOLD;
+    const fogR = 30 + proximity * 50;
+    const fogGrad = ctx.createRadialGradient(interaction.x, interaction.y, 0, interaction.x, interaction.y, fogR);
+    fogGrad.addColorStop(0, `rgba(140, 100, 220, ${proximity * 0.15})`);
+    fogGrad.addColorStop(1, 'rgba(140, 100, 220, 0)');
+    ctx.fillStyle = fogGrad;
+    ctx.beginPath();
+    ctx.arc(interaction.x, interaction.y, fogR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// ── Main render loop ─────────────────
+function loop(timestamp) {
+  requestAnimationFrame(loop);
+
+  if (lastTimestamp === 0) { lastTimestamp = timestamp; return; }
+
+  const rawDt = (timestamp - lastTimestamp) / 1000;
+  lastTimestamp = timestamp;
+
+  const dt = Math.min(rawDt, MAX_DT);
+  frameCount++;
+
+  // Fixed-timestep accumulator for deterministic physics
+  dtAccumulator += dt;
+  let steps = 0;
+  while (dtAccumulator >= PHYSICS_DT_TARGET && steps < 4) {
+    physicsStep(PHYSICS_DT_TARGET);
+    dtAccumulator -= PHYSICS_DT_TARGET;
+    steps++;
+  }
+  if (dtAccumulator > PHYSICS_DT_TARGET * 2) dtAccumulator = 0;
+
+  checkIdle(dt);
+
+  // ── Render pass ────────────────────
+  ctx.drawImage(bgCanvas, 0, 0, W, H);
+
+  // Dim overlay — the "void" closing in
+  if (voidState.dimAmount > 0.005) {
+    ctx.fillStyle = `rgba(2, 1, 8, ${voidState.dimAmount})`;
+    ctx.fillRect(0, 0, W, H);
+
+    // Peripheral darkening vignette during impact
+    if (voidState.dimAmount > 0.15) {
+      const vigAlpha = (voidState.dimAmount - 0.15) * 0.8;
+      const vigGrad = ctx.createRadialGradient(centerX, centerY, VOID_RADIUS, centerX, centerY, Math.max(W, H) * 0.7);
+      vigGrad.addColorStop(0, 'rgba(2, 1, 8, 0)');
+      vigGrad.addColorStop(1, `rgba(2, 1, 8, ${vigAlpha})`);
+      ctx.fillStyle = vigGrad;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    overlay.style.opacity = voidState.dimAmount * 0.5;
+  } else {
+    overlay.style.opacity = '0';
+  }
+
+  renderVoid(timestamp);
+  renderParticles(timestamp);
+  renderDragTrail();
+
+  // Settled hug glow
+  if (voidState.settled) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const hugPulse = Math.sin(timestamp * 0.0015) * 3;
+    const hugGrad = ctx.createRadialGradient(centerX, centerY + voidState.settleY * 0.3, 0, centerX, centerY + voidState.settleY * 0.3, VOID_RADIUS + 40 + hugPulse);
+    hugGrad.addColorStop(0, 'rgba(200, 160, 255, 0.08)');
+    hugGrad.addColorStop(0.5, 'rgba(160, 120, 240, 0.03)');
+    hugGrad.addColorStop(1, 'rgba(120, 80, 200, 0)');
+    ctx.fillStyle = hugGrad;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY + voidState.settleY * 0.3, VOID_RADIUS + 40 + hugPulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    if (voidState.settleTimer > 1) {
+      const textAlpha = Math.min((voidState.settleTimer - 1) * 0.3, 0.25);
+      ctx.fillStyle = `rgba(180, 170, 255, ${textAlpha})`;
+      ctx.font = '11px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText('being held', centerX, centerY + VOID_RADIUS + 40);
+    }
+  }
+}
+
+// ── Init ─────────────────────────────
+resize();
+initParticles();
+generateBackground();
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
