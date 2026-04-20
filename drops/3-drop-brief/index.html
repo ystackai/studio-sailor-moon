@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Third drop wish lanterns experience">
+    <title>Wish Lanterns - Drop 3</title>
+    <style>
+        /* Inline CSS for the wish lanterns experience */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="wish-lanterns-canvas"></canvas>
+    </div>
+    
+    <script>
+        // Inline JavaScript for the wish lanterns experience
+        window.addEventListener('load', () => {
+            const canvas = document.getElementById('wish-lanterns-canvas');
+            const container = document.getElementById('canvas-container');
+            
+            // Set canvas dimensions to match container
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            
+            // Initialize wish lanterns experience
+            initWishLanterns(canvas);
+        });
+        
+        function initWishLanterns(canvas) {
+            // This function will be implemented in future steps
+            console.log('Wish lanterns experience initialized');
+        }
+    </script>
+</body>
+</html>
