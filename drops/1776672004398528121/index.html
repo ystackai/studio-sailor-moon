@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Warm Embrace</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;background:#0b0806;font-family:'Georgia','Times New Roman',serif;color:#f5e6d3}
+canvas{display:block;position:absolute;top:0;left:0;width:100%;height:100%}
+
+/* ── Intro Overlay ───────────────────────────── */
+#intro-overlay{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0b0806;padding:2rem;text-align:center;transition:opacity 1.8s ease}
+#intro-overlay.hidden{opacity:0;pointer-events:none}
+#intro-overlay h1{font-size:clamp(32px,7vw,56px);font-weight:300;letter-spacing:0.18em;text-transform:uppercase;color:#fcd9a0;text-shadow:0 0 60px rgba(252,200,120,0.3);margin-bottom:1rem}
+#intro-overlay .subtitle{font-size:clamp(14px,2.8vw,18px);color:rgba(245,210,160,0.6);letter-spacing:0.12em;font-style:italic;max-width:340px;line-height:1.7;margin-bottom:2.5rem}
+#intro-overlay .start-hint{font-size:12px;letter-spacing:0.25em;color:rgba(252,200,120,0.35);animation:pulse-text 3s ease-in-out infinite}
+@keyframes pulse-text{0%,100%{opacity:0.3}50%{opacity:0.7}}
+
+/* ── Status Bar ──────────────────────────────── */
+#status-bar{position:fixed;top:max(16px,env(safe-area-inset-top));left:0;right:0;z-index:50;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 1rem;pointer-events:none;opacity:0;transition:opacity 0.8s}
+#status-bar.visible{opacity:1}
+#status-text{font-size:clamp(13px,2.5vw,16px);color:rgba(245,210,160,0.7);letter-spacing:0.12em;font-weight:300;text-align:center;text-shadow:0 0 20px rgba(245,200,120,0.2)}
+#temp-display{font-size:clamp(11px,2vw,14px);color:rgba(245,200,160,0.45);letter-spacing:0.08em;font-variant-numeric:tabular-nums}
+
+/* ── Cozy Cloud Tooltip ──────────────────────── */
+#cozy-cloud{position:fixed;bottom:max(18%,calc(90px + env(safe-area-inset-bottom)));left:50%;transform:translateX(-50%);z-index:40;background:radial-gradient(ellipse at center,rgba(245,210,160,0.1),transparent 70%);padding:12px 28px;border-radius:30px;pointer-events:none;opacity:0;transition:opacity 1s ease;text-align:center}
+#cozy-cloud.visible{opacity:1}
+#cozy-cloud p{font-size:clamp(12px,2.2vw,15px);color:rgba(245,210,160,0.55);letter-spacing:0.08em;font-style:italic;white-space:nowrap}
+
+/* ── Bottom Bar ──────────────────────────────── */
+#bottom-bar{position:fixed;bottom:max(16px,env(safe-area-inset-bottom));left:0;right:0;z-index:40;display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 1rem;pointer-events:none;opacity:0;transition:opacity 0.8s}
+#bottom-bar.visible{opacity:1}
+#thermal-state-label{font-size:clamp(11px,2vw,13px);color:rgba(252,200,120,0.4);letter-spacing:0.15em;text-transform:uppercase;transition:color 0.6s}
+#boba-status{font-size:clamp(10px,1.8vw,12px);color:rgba(245,210,160,0.3);letter-spacing:0.08em}
+
+/* ── Bloom Layer (CSS radial) ────────────────── */
+#bloom-layer{position:fixed;inset:0;z-index:5;pointer-events:none;background:radial-gradient(ellipse at 50% 60%,rgba(245,180,80,0),transparent 60%);transition:background 0.3s}
+
+/* ── Device Frame (Pixel 5 mockup) ───────────── */
+#device-frame{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:15;width:min(260px,60vw);height:min(420px,70vw);border-radius:36px;border:2px solid rgba(245,200,120,0.08);background:rgba(15,10,6,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 0 40px rgba(245,180,80,0),0 20px 60px rgba(0,0,0,0.5);transition:border-color 0.5s,box-shadow 0.5s;padding:1.5rem;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#device-frame.locked{border-color:rgba(245,180,80,0.35);animation:border-pulse 2.5s ease-in-out infinite}
+@keyframes border-pulse{0%,100%{box-shadow:0 0 40px rgba(245,180,80,0.15),0 20px 60px rgba(0,0,0,0.5)}50%{box-shadow:0 0 60px rgba(245,180,80,0.3),0 20px 60px rgba(0,0,0,0.5)}}
+
+#device-content{text-align:center}
+#bear-art{font-size:clamp(48px,10vw,72px);line-height:1;margin-bottom:0.5rem;filter:drop-shadow(0 0 0px rgba(245,180,80,0));transition:filter 0.5s}
+#device-label{font-size:clamp(11px,2vw,13px);color:rgba(245,210,160,0.35);letter-spacing:0.1em;font-style:italic}
+
+/* ── Touch Zone ──────────────────────────────── */
+#touch-zone{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;width:min(300px,70vw);height:min(460px,76vw);border-radius:48px;border:1.5px dashed rgba(245,200,120,0.06);pointer-events:auto;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#touch-zone::after{content:'hold & bring closer';font-size:clamp(11px,2vw,13px);color:rgba(245,210,160,0.2);letter-spacing:0.15em;transition:opacity 0.8s}
+#touch-zone.holding::after{content:'…'}
+
+/* ── Vignette ─────────────────────────────────── */
+.vignette{position:fixed;inset:0;z-index:8;pointer-events:none;background:radial-gradient(circle at center,transparent 40%,rgba(0,0,0,0.7) 100%)}
+
+/* ── Boba Canvas ─────────────────────────────── */
+#boba-canvas{position:absolute;z-index:25;pointer-events:none}
+
+/* ── Footer ───────────────────────────────────── */
+.footer-note{position:fixed;bottom:max(6px,env(safe-area-inset-bottom));left:0;right:0;text-align:center;color:rgba(245,210,160,0.12);font-size:9px;letter-spacing:0.12em;z-index:30;pointer-events:none}
+</style>
+</head>
+<body>
+
+<div id="bloom-layer"></div>
+<div class="vignette"></div>
+
+<!-- Intro Overlay -->
+<div id="intro-overlay">
+  <h1>Warm Embrace</h1>
+  <p class="subtitle">Hold the warmth. Let it bloom.<br>Safe to hold &mdash; the heat never bites.</p>
+  <span class="start-hint">tap anywhere to begin</span>
+</div>
+
+<!-- Canvas -->
+<canvas id="c"></canvas>
+
+<!-- Device Frame (Pixel 5) -->
+<div id="device-frame">
+  <div id="device-content">
+    <div id="bear-art">&#129384;</div>
+    <div id="device-label">basking</div>
+  </div>
+</div>
+
+<!-- Touch Zone -->
+<div id="touch-zone"></div>
+
+<!-- Status Bar -->
+<div id="status-bar">
+  <div id="status-text">Warm Embrace</div>
+  <div id="temp-display">36.5&deg;C</div>
+</div>
+
+<!-- Cozy Cloud -->
+<div id="cozy-cloud"><p id="cloud-text">everything is warm and fine here</p></div>
+
+<!-- Boba Cup Canvas (injected by JS) -->
+
+<!-- Bottom Bar -->
+<div id="bottom-bar">
+  <div id="thermal-state-label">touch to engage warmth</div>
+  <div id="boba-status"></div>
+</div>
+
+<div class="footer-note">sailor moon &mdash; cozy interactive toys, held close with care</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ======================================================
+   WARM EMBRACE &mdash; Thermal Interactive Toy
+   Pixel 5 Optimized | 60fps Delta-Time Physics
+   Hard Thermal Clamp: 62.0C (never exceeded)
+   ====================================================== */
+
+// ── DOM refs ───────────────────────────────────
+var $ = function(id){ return document.getElementById(id); };
+var canvas = $("c");
+var ctx = canvas.getContext("2d");
+var bloomLayer = $("bloom-layer");
+var deviceFrame = $("device-frame");
+var bearArt = $("bear-art");
+var deviceLabel = $("device-label");
+var touchZone = $("touch-zone");
+var statusBar = $("status-bar");
+var statusText = $("status-text");
+var tempDisplay = $("temp-display");
+var cozyCloud = $("cozy-cloud");
+var cloudText = $("cloud-text");
+var bottomBar = $("bottom-bar");
+var thermalStateLabel = $("thermal-state-label");
+var bobaStatus = $("boba-status");
+var introOverlay = $("intro-overlay");
+var bobaCupCanvas;
+
+// ── Constants ──────────────────────────────────
+var TEMP_HARD_CLAMP = 62.0;
+var TEMP_START      = 36.5;
+var HEAT_RATE       = 8.5;
+var COOL_RATE       = 3.2;
+var BOBA_SIP_INTERVAL = 1.8;
+var SIP_DURATION    = 600;
+var VIBRATION_COOLDOWN = 800;
+var CLOUD_DELAY     = 4500;
+
+// ── Cozy Cloud Messages ────────────────────────
+var COZY_MESSAGES = {
+  approach: [
+    "the warmth is gently rising",
+    "you are doing so good holding it close",
+    "feel how soft that heat feels?",
+    "every degree is a little hug",
+    "the bear is getting cozy with you"
+  ],
+  warming: [
+    "so warm, so safe",
+    "that warmth is right where it should be",
+    "golden and glowy",
+    "you feel that? like a tiny sun in your hands",
+    "basking in the best way"
+  ],
+  lock: [
+    "embraced &mdash; perfectly warm",
+    "warmth locked in its happy place",
+    "the bear is having the time of its life",
+    "safe. warm. exactly right."
+  ],
+  relaxation: [
+    "everything is warm and fine here",
+    "sip your boba, you earned it",
+    "let the warmth settle in",
+    "perfectly cozy, perfectly safe",
+    "there is nothing to do but be warm"
+  ],
+  cooling: [
+    "the warmth slowly fades gently",
+    "resting a little now",
+    "cool enough to keep holding",
+    "soft and still"
+  ]
+};
+
+// ── Thermal State ──────────────────────────────
+var temp = TEMP_START;
+var isEngaged     = false;
+var isLocked      = false;
+var isRelaxing    = false;
+var heatInput     = 0;
+
+// ── Boba State ─────────────────────────────────
+var sipTimer       = 0;
+var sipAnimProgress = -999;
+var bobasDrunk     = 0;
+
+// ── Particles ──────────────────────────────────
+var ambientParticles = [];
+
+// ── Bloom ──────────────────────────────────────
+var bloomIntensity = 0;
+
+// ── Audio State ────────────────────────────────
+var audioCtx     = null;
+var masterGain   = null;
+var hissNode     = null;
+var hissGain     = null;
+var sippingSoundActive = false;
+
+// ── Haptics ────────────────────────────────────
+var lastVibrationTime = 0;
+
+// ── Cloud Timer ────────────────────────────────
+var cloudTimer = 0;
+var cloudMessageTimer = null;
+
+// ════════════════════════════════════════════════
+// AUDIO ENGINE &mdash; Web Audio API
+// ════════════════════════════════════════════════
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.5;
+  masterGain.connect(audioCtx.destination);
+
+  // Steam Hiss: layered low-frequency white noise (pinkish)
+  var bufferSize = audioCtx.sampleRate * 2;
+  var hissBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  var hissData = hissBuffer.getChannelData(0);
+  var b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+
+  for (var i = 0; i < bufferSize; i++) {
+    var white = Math.random() * 2 - 1;
+    b0 = 0.99886*b0 + white*0.0555179;
+    b1 = 0.99332*b1 + white*0.0750759;
+    b2 = 0.96900*b2 + white*0.1538520;
+    b3 = 0.86650*b3 + white*0.3104856;
+    b4 = 0.55000*b4 + white*0.5329522;
+    b5 = -0.7616*b5 - white*0.0168980;
+    hissData[i] = (b0+b1+b2+b3+b4+b5+b6+white*0.5362) * 0.06;
+    b6 = white * 0.115926;
+  }
+
+  hissNode = audioCtx.createBufferSource();
+  hissNode.buffer = hissBuffer;
+  hissNode.loop = true;
+
+  var hissFilter = audioCtx.createBiquadFilter();
+  hissFilter.type = "lowpass";
+  hissFilter.frequency.value = 800;
+  hissFilter.Q.value = 0.5;
+
+  hissGain = audioCtx.createGain();
+  hissGain.gain.value = 0;
+
+  hissNode.connect(hissFilter);
+  hissFilter.connect(hissGain);
+  hissGain.connect(masterGain);
+  hissNode.start();
+}
+
+function setHissVolume(vol) {
+  if (!hissGain || !audioCtx) return;
+  var now = audioCtx.currentTime;
+  hissGain.gain.setTargetAtTime(Math.max(0, Math.min(1, vol)), now, 0.15);
+}
+
+// Ting: crisp 100ms choral lock sound (high-freq sine, soft attack/release)
+function playTing() {
+  if (!audioCtx) return;
+  var now = audioCtx.currentTime;
+  var freqs = [440, 554.37, 659.25, 880];
+  var tings = [];
+
+  for (var fi = 0; fi < freqs.length; fi++) {
+    var osc = audioCtx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = freqs[fi];
+
+    var g = audioCtx.createGain();
+    var vol = 0.15 / (fi + 1);
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(vol, now + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.100);
+
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(now);
+    osc.stop(now + 0.12);
+    tings.push(osc);
+  }
+
+  return tings;
+}
+
+// Boba Sip: gentle glug sound
+function playBobaSip() {
+  if (!audioCtx || isLocked) return;
+  var now = audioCtx.currentTime;
+
+  var osc = audioCtx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(180, now);
+  osc.frequency.exponentialRampToValueAtTime(90, now + 0.25);
+
+  var g = audioCtx.createGain();
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(0.12, now + 0.04);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+  var bufSize = audioCtx.sampleRate * 0.15;
+  var noiseBuf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  var nd = noiseBuf.getChannelData(0);
+  for (var ni = 0; ni < bufSize; ni++) {
+    nd[ni] = (Math.random()*2-1) * 0.3;
+  }
+
+  var noiseSrc = audioCtx.createBufferSource();
+  noiseSrc.buffer = noiseBuf;
+  var noiseFilter = audioCtx.createBiquadFilter();
+  noiseFilter.type = "bandpass";
+  noiseFilter.frequency.value = 350;
+  noiseFilter.Q.value = 2;
+  var noiseGain = audioCtx.createGain();
+  noiseGain.gain.setValueAtTime(0.08, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+  noiseSrc.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(masterGain);
+  noiseSrc.start(now);
+  noiseSrc.stop(now + 0.2);
+
+  osc.connect(g);
+  g.connect(masterGain);
+  osc.start(now);
+  osc.stop(now + 0.4);
+}
+
+function silenceBobaSips() {
+  sippingSoundActive = false;
+}
+
+// ════════════════════════════════════════════════
+// HAPTIC ENGINE &mdash; Web Vibration API
+// ════════════════════════════════════════════════
+
+function triggerGentleVibration(duration) {
+  if (!navigator.vibrate) return;
+  navigator.vibrate([duration, 150, duration]);
+}
+
+function hapticTick() {
+  var now = performance.now();
+  if (now - lastVibrationTime < VIBRATION_COOLDOWN) return;
+  lastVibrationTime = now;
+
+  if (isLocked) {
+    triggerGentleVibration(120);
+  } else if (isEngaged && temp > TEMP_START + 5) {
+    triggerGentleVibration(40);
+  }
+}
+
+// ════════════════════════════════════════════════
+// THERMAL PHYSICS ENGINE (Delta-Time Independent)
+// ════════════════════════════════════════════════
+
+function updateThermalPhysics(dt) {
+  dt = Math.min(dt, 0.1);
+
+  if (isEngaged && !isLocked) {
+    var effectiveRate = HEAT_RATE * Math.max(0.15, heatInput);
+    temp += effectiveRate * dt;
+
+    // HARD CLAMP at 62 degrees C
+    if (temp >= TEMP_HARD_CLAMP) {
+      temp = TEMP_HARD_CLAMP;
+      enterLockState();
+    }
+  } else if (!isLocked) {
+    temp -= COOL_RATE * dt;
+    if (temp < TEMP_START) {
+      temp = TEMP_START;
+      isEngaged = false;
+      heatInput = 0;
+    }
+  } else if (isLocked && !isRelaxing) {
+    isRelaxing = true;
+  }
+
+  // Bloom intensity maps to headroom to clamp
+  var headroom = TEMP_HARD_CLAMP - temp;
+  bloomIntensity = Math.max(0, Math.min(1, 1 - (headroom / (TEMP_HARD_CLAMP - TEMP_START))));
+}
+
+// ════════════════════════════════════════════════
+// STATE TRANSITIONS
+// ════════════════════════════════════════════════
+
+function enterLockState() {
+  isLocked = true;
+  playTing();
+  triggerGentleVibration(200);
+  silenceBobaSips();
+
+  deviceFrame.classList.add("locked");
+  statusText.textContent = "Warm Embrace &mdash; Locked";
+  deviceLabel.textContent = "embraced fully warm";
+  thermalStateLabel.textContent = "fully warm relaxed now";
+
+  showCozyCloud(COZY_MESSAGES.lock);
+
+  setTimeout(function() {
+    isRelaxing = true;
+    bobaStatus.textContent = bobasDrunk + " boba(s) enjoyed";
+  }, 800);
+}
+
+function setEngagement(engaged, pressure) {
+  if (engaged && !isEngaged) {
+    isEngaged = true;
+    heatInput = Math.max(0.15, pressure);
+    thermalStateLabel.textContent = "warming up";
+  } else if (engaged && isEngaged && !isLocked) {
+    heatInput = Math.max(heatInput, Math.max(0.15, pressure));
+  } else if (!engaged && isEngaged) {
+    isEngaged = false;
+    heatInput = 0;
+    thermalStateLabel.textContent = "touch to engage warmth";
+  }
+}
+
+// ════════════════════════════════════════════════
+// COZY CLOUD SYSTEM
+// ════════════════════════════════════════════════
+
+function showCozyCloud(messages) {
+  var arr = typeof messages === "string" ? [messages] : messages;
+  var msg = arr[Math.floor(Math.random() * arr.length)];
+
+  cozyCloud.classList.remove("visible");
+  clearTimeout(cloudMessageTimer);
+  cloudMessageTimer = setTimeout(function() {
+    cloudText.textContent = msg;
+    cozyCloud.classList.add("visible");
+  }, 400);
+
+  setTimeout(function() {
+    cozyCloud.classList.remove("visible");
+  }, CLOUD_DELAY);
+}
+
+function updateCozyCloud(dt) {
+  cloudTimer += dt;
+  if (cloudTimer >= CLOUD_DELAY && !isLocked) {
+    cloudTimer = 0;
+    var phase, messages;
+    if (!isEngaged) {
+      phase = "cooling";
+      messages = COZY_MESSAGES.cooling;
+    } else if (bloomIntensity > 0.6) {
+      phase = "warming";
+      messages = COZY_MESSAGES.warming;
+    } else if (bloomIntensity > 0.25) {
+      phase = "approach";
+      messages = COZY_MESSAGES.approach;
+    } else {
+      return;
+    }
+    showCozyCloud(messages);
+  }
+}
+
+// ════════════════════════════════════════════════
+// BOBA SIPPING ANIMATION (Canvas)
+// ════════════════════════════════════════════════
+
+function updateBobaSipping(dt) {
+  if (!isRelaxing && !isEngaged) return;
+
+  sipTimer += dt;
+
+  if (sipTimer >= BOBA_SIP_INTERVAL) {
+    sipTimer = 0;
+    sipAnimProgress = 0;
+    bobasDrunk++;
+    playBobaSip();
+    bobaStatus.textContent = bobasDrunk + " boba(s) enjoyed";
+
+    if (bobasDrunk > 0 && bobasDrunk % 5 === 0) {
+      showCozyCloud(["that is a lot of boba! sip so proud", "you are such a good sipping friend"]);
+    }
+  }
+
+  if (sipAnimProgress >= 0 && sipAnimProgress < SIP_DURATION / 1000) {
+    sipAnimProgress += dt;
+  }
+}
+
+// ════════════════════════════════════════════════
+// RENDERING
+// ════════════════════════════════════════════════
+
+function resize() {
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width  = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function drawBackground() {
+  var w = window.innerWidth;
+  var h = window.innerHeight;
+
+  var bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, "#0d0a07");
+  bg.addColorStop(0.5, "#0b0806");
+  bg.addColorStop(1, "#090604");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  if (bloomIntensity > 0.01) {
+    var cx = w / 2;
+    var cy = h * 0.55;
+    var radius = Math.max(w, h) * (0.35 + bloomIntensity * 0.4);
+
+    var glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    var r = Math.floor(245 * bloomIntensity + 80);
+    var g = Math.floor(160 * bloomIntensity + 40);
+    var b = Math.floor(60 * bloomIntensity + 10);
+    var a = bloomIntensity * 0.35;
+
+    glow.addColorStop(0, "rgba("+r+","+g+","+b+","+a+")");
+    glow.addColorStop(0.3, "rgba("+Math.floor(r*0.7)+","+Math.floor(g*0.6)+","+Math.floor(b*0.4)+","+(a*0.5)+")");
+    glow.addColorStop(0.7, "rgba("+Math.floor(r*0.4)+","+Math.floor(g*0.35)+","+Math.floor(b*0.2)+","+(a*0.15)+")");
+    glow.addColorStop(1, "transparent");
+
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  // CSS bloom layer
+  var cssR = Math.floor(245 * bloomIntensity + 50);
+  var cssG = Math.floor(160 * bloomIntensity + 30);
+  var cssB = Math.floor(60 * bloomIntensity + 10);
+  bloomLayer.style.background = "radial-gradient(ellipse at 50% 60%, rgba("+cssR+","+cssG+","+cssB+","+bloomIntensity*0.25+"), transparent 60%)";
+}
+
+function drawParticles(dt) {
+  var w = window.innerWidth;
+  var h = window.innerHeight;
+
+  // Spawn ambient warmth particles during engagement
+  if (isEngaged && bloomIntensity > 0.15 && Math.random() < bloomIntensity * dt * 8) {
+    var cx = w / 2;
+    var cy = h * 0.55;
+    for (var pi = 0; pi < 3; pi++) {
+      ambientParticles.push({
+        x: cx + (Math.random() - 0.5) * 160,
+        y: cy + (Math.random() - 0.5) * 120,
+        vx: (Math.random() - 0.5) * 15,
+        vy: -15 - Math.random() * 25,
+        life: 1,
+        decay: 0.3 + Math.random() * 0.4,
+        size: 2 + Math.random() * 3,
+        hue: 30 + Math.random() * 20
+      });
+    }
+  }
+
+  // Update & draw ambient particles
+  for (var i = ambientParticles.length - 1; i >= 0; i--) {
+    var p = ambientParticles[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.life -= p.decay * dt;
+    p.vx *= 0.98;
+
+    if (p.life <= 0) {
+      ambientParticles.splice(i, 1);
+      continue;
+    }
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fillStyle = "hsla("+p.hue+", 70%, 65%, "+(p.life*0.4)+")";
+    ctx.fill();
+  }
+
+  // Cap ambient particles for performance
+  if (ambientParticles.length > 80) {
+    ambientParticles.splice(0, ambientParticles.length - 80);
+  }
+}
+
+function drawBobaCup() {
+  var w = window.innerWidth;
+  var h = window.innerHeight;
+
+  if (sipAnimProgress < 0) return;
+
+  // Lazy init bob canvas
+  if (!bobaCupCanvas) {
+    bobaCupCanvas = document.createElement("canvas");
+    bobaCupCanvas.width = 80;
+    bobaCupCanvas.height = 120;
+    bobaCupCanvas.style.cssText = "position:absolute;z-index:25;pointer-events:none";
+    document.body.appendChild(bobaCupCanvas);
+  }
+
+  var bc = bobaCupCanvas.getContext("2d");
+  bc.clearRect(0, 0, 80, 120);
+
+  var progress = Math.min(1, sipAnimProgress / (SIP_DURATION / 1000));
+  var cupX = 15 + progress * 30;
+  var cupY = 40 - Math.sin(progress * Math.PI) * 25;
+
+  bc.save();
+  bc.translate(cupX, cupY);
+
+  // Cup body
+  bc.fillStyle = "rgba(200,160,100,0.35)";
+  bc.strokeStyle = "rgba(245,210,160,0.25)";
+  bc.lineWidth = 1;
+  bc.beginPath();
+  bc.moveTo(-18, 0);
+  bc.lineTo(18, 0);
+  bc.quadraticCurveTo(22, 30, 16, 50);
+  bc.lineTo(-16, 50);
+  bc.quadraticCurveTo(-22, 30, -18, 0);
+  bc.closePath();
+  bc.fill();
+  bc.stroke();
+
+  // Boba pearls
+  for (var p = 0; p < 5; p++) {
+    bc.beginPath();
+    bc.arc(-6 + p * 3.5, 42, 3, 0, Math.PI * 2);
+    bc.fillStyle = "rgba(80,50,30,0.5)";
+    bc.fill();
+  }
+
+  // Straw
+  bc.strokeStyle = "rgba(245,210,160,0.4)";
+  bc.lineWidth = 2;
+  bc.beginPath();
+  bc.moveTo(8, -5);
+  bc.lineTo(8 + progress * 20, -30 - Math.sin(progress * Math.PI) * 15);
+  bc.stroke();
+
+  // Steam wisps from cup
+  if (bloomIntensity > 0.2) {
+    for (var s = 0; s < 2; s++) {
+      var sx = -5 + s * 12;
+      var sy = -8 + Math.sin(performance.now() * 0.002 + s * 3) * 5;
+      bc.beginPath();
+      bc.arc(sx, sy, 3 + bloomIntensity * 4, 0, Math.PI * 2);
+      bc.fillStyle = "rgba(245,210,160,"+(bloomIntensity*0.12)+")";
+      bc.fill();
+    }
+  }
+
+  bc.restore();
+
+  bobaCupCanvas.style.left = (w/2 - 40 + progress * 35) + "px";
+  bobaCupCanvas.style.top  = (h*0.55 + 80 - Math.sin(progress * Math.PI) * 20) + "px";
+}
+
+function drawDevice() {
+  var glowIntensity = bloomIntensity;
+  bearArt.style.filter = "drop-shadow(0 0 "+Math.floor(glowIntensity*30)+"px rgba(245,180,80,"+(glowIntensity*0.6)+"))";
+
+  if (isLocked) {
+    deviceLabel.textContent = "embraced fully warm";
+  } else if (bloomIntensity > 0.5) {
+    bearArt.textContent = "\uD83E\uDD70"; // smiling face with hearts
+    deviceLabel.textContent = "so warm";
+  } else if (bloomIntensity > 0.25) {
+    bearArt.textContent = "\uD83D\uDE0A"; // slightly smiling face
+    deviceLabel.textContent = "getting cozy";
+  }
+}
+
+function updateTempDisplay() {
+  var displayTemp = temp.toFixed(1);
+  var color;
+  if (temp >= TEMP_HARD_CLAMP - 0.5) {
+    color = "rgba(252,200,120,"+(0.5+bloomIntensity*0.3)+")";
+  } else if (temp > 45) {
+    color = "rgba(245,170,80,0.5)";
+  } else if (temp > 40) {
+    color = "rgba(245,200,160,0.4)";
+  } else {
+    color = "rgba(245,210,160,0.3)";
+  }
+  tempDisplay.textContent = displayTemp + "\u00B0C";
+  tempDisplay.style.color = color;
+}
+
+// ════════════════════════════════════════════════
+// INPUT HANDLING &mdash; Touch & Mouse
+// ════════════════════════════════════════════════
+
+var pointerDown  = false;
+
+function getPressure(clientY) {
+  var h = window.innerHeight;
+  var distFromEdge = Math.abs(clientY - h * 0.55);
+  var maxDist = h * 0.4;
+  return Math.max(0, Math.min(1, 1 - (distFromEdge / maxDist)));
+}
+
+function onPointerDown(e) {
+  e.preventDefault();
+  var touch = e.touches ? e.touches[0] : e;
+  pointerDown = true;
+  setEngagement(true, getPressure(touch.clientY));
+  touchZone.classList.add("holding");
+}
+
+function onPointerMove(e) {
+  if (!pointerDown) return;
+  e.preventDefault();
+  var touch = e.touches ? e.touches[0] : e;
+  var pressure = getPressure(touch.clientY);
+  setEngagement(true, Math.max(heatInput, pressure));
+}
+
+function onPointerUp(e) {
+  if (isLocked) return; // cannot escape lock
+  pointerDown = false;
+  touchZone.classList.remove("holding");
+  setEngagement(false, 0);
+}
+
+// Touch events
+touchZone.addEventListener("touchstart", onPointerDown, { passive: false });
+touchZone.addEventListener("touchmove",  onPointerMove,  { passive: false });
+touchZone.addEventListener("touchend",   onPointerUp);
+touchZone.addEventListener("touchcancel", onPointerUp);
+
+// Mouse events for desktop testing
+touchZone.addEventListener("mousedown", onPointerDown);
+window.addEventListener("mousemove", onPointerMove);
+window.addEventListener("mouseup", onPointerUp);
+
+// ════════════════════════════════════════════════
+// MAIN GAME LOOP &mdash; Delta-Time Driven 60fps
+// ════════════════════════════════════════════════
+
+var lastTimestamp = 0;
+var hapticAccum = 0;
+
+function gameLoop(timestamp) {
+  requestAnimationFrame(gameLoop);
+
+  if (!lastTimestamp) { lastTimestamp = timestamp; return; }
+  var dt = Math.min((timestamp - lastTimestamp) / 1000, 0.1);
+  lastTimestamp = timestamp;
+
+  // Physics
+  updateThermalPhysics(dt);
+  updateCozyCloud(dt);
+  updateBobaSipping(dt);
+
+  // Haptic ticking
+  hapticAccum += dt * 1000;
+  if (hapticAccum >= 300) {
+    hapticAccum = 0;
+    hapticTick();
+  }
+
+  // Audio: hiss volume based on engagement
+  var hissVol = isEngaged ? (bloomIntensity * 0.25) : 0;
+  if (audioCtx && hissGain) {
+    setHissVolume(hissVol);
+  }
+
+  // Render
+  drawBackground();
+  drawParticles(dt);
+  drawDevice();
+  drawBobaCup();
+  updateTempDisplay();
+
+  // Status bar visibility
+  if (!introOverlay.classList.contains("hidden")) return;
+  if (!statusBar.classList.contains("visible")) {
+    statusBar.classList.add("visible");
+    bottomBar.classList.add("visible");
+  }
+}
+
+// ════════════════════════════════════════════════
+// INITIALIZATION
+// ════════════════════════════════════════════════
+
+function init() {
+  resize();
+  window.addEventListener("resize", resize);
+  requestAnimationFrame(gameLoop);
+
+  setTimeout(function() {
+    showCozyCloud(COZY_MESSAGES.approach);
+  }, 2000);
+}
+
+var started = false;
+
+function startExperience() {
+  if (started) return;
+  started = true;
+
+  initAudio();
+  if (audioCtx && audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+
+  introOverlay.classList.add("hidden");
+  setTimeout(function() {
+    introOverlay.style.display = "none";
+    statusText.textContent = "Warm Embrace touching the warmth";
+    showCozyCloud([
+      "hold close and bring your finger toward the center",
+      "the warmth will bloom for you"
+    ]);
+  }, 1800);
+
+  init();
+}
+
+// Start on first user interaction
+introOverlay.addEventListener("click",   startExperience, { once: true });
+introOverlay.addEventListener("touchend", startExperience, { once: true });
+
+})();
+</script>
+</body>
+</html>
