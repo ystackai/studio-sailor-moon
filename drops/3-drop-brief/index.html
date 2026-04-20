@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#8a2be2">
+    <title>Wish Lanterns</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 800px;
+            max-height: 600px;
+            margin: auto;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        #title-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            max-width: 500px;
+            margin: 0 auto;
+            pointer-events: auto;
+        }
+        
+        #title-screen h1 {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            background: linear-gradient(to right, #ff7eb3, #ff758c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        #title-screen p {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        #start-button {
+            background: linear-gradient(45deg, #ff7eb3, #ff758c);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 117, 140, 0.4);
+        }
+        
+        #start-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 117, 140, 0.6);
+        }
+        
+        #start-button:active {
+            transform: translateY(1px);
+        }
+        
+        #instructions {
+            margin-top: 30px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        #game-ui {
+            display: none;
+        }
+        
+        #score-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        #wish-counter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="ui-overlay">
+            <div id="title-screen">
+                <h1>Wish Lanterns</h1>
+                <p>Release your wishes into the night sky. Meditative experience that combines visual beauty with calming sound.</p>
+                <button id="start-button">Begin Journey</button>
+                <div id="instructions">
+                    <p>Click or tap to release lanterns. Listen to the gentle sounds of the night.</p>
+                </div>
+            </div>
+            <div id="game-ui">
+                <div id="score-display">Score: 0</div>
+                <div id="wish-counter">Wishes: 0</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Basic game state and initialization
+        window.gameState = {
+            score: 0,
+            wishes: 0,
+            isPlaying: false,
+            canvas: null,
+            ctx: null,
+            audioContext: null
+        };
+
+        // Initialize the game when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get references to DOM elements
+            const canvas = document.getElementById('game-canvas');
+            const ctx = canvas.getContext('2d');
+            const titleScreen = document.getElementById('title-screen');
+            const startButton = document.getElementById('start-button');
+            const gameUI = document.getElementById('game-ui');
+            const scoreDisplay = document.getElementById('score-display');
+            const wishCounter = document.getElementById('wish-counter');
+            
+            // Set canvas size to match container
+            function resizeCanvas() {
+                const container = document.getElementById('game-container');
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+            }
+            
+            // Initial resize
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Set up audio context (required for Web Audio API)
+            function initAudio() {
+                if (!window.gameState.audioContext) {
+                    window.gameState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            
+            // Start button click handler
+            startButton.addEventListener('click', function() {
+                // Hide title screen
+                titleScreen.style.display = 'none';
+                
+                // Show game UI
+                gameUI.style.display = 'block';
+                
+                // Initialize audio
+                initAudio();
+                
+                // Start game
+                window.gameState.isPlaying = true;
+                
+                // Start game loop
+                gameLoop();
+            });
+            
+            // Game loop
+            function gameLoop() {
+                if (!window.gameState.isPlaying) return;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw background
+                drawBackground();
+                
+                // Update and draw game elements
+                updateGame();
+                
+                // Continue the loop
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // Draw background
+            function drawBackground() {
+                // Draw gradient background
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, '#0f0c29');
+                gradient.addColorStop(1, '#302b63');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw stars
+                ctx.fillStyle = 'white';
+                for (let i = 0; i < 100; i++) {
+                    const x = (i * 13) % canvas.width;
+                    const y = (i * 7) % canvas.height;
+                    const size = Math.sin(i) * 0.5 + 1.5;
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            // Update game state
+            function updateGame() {
+                // Update score display
+                scoreDisplay.textContent = `Score: ${window.gameState.score}`;
+                wishCounter.textContent = `Wishes: ${window.gameState.wishes}`;
+            }
+            
+            // Set up initial game state
+            window.gameState.canvas = canvas;
+            window.gameState.ctx = ctx;
+        });
+    </script>
+</body>
+</html>
