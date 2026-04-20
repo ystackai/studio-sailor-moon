@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Warm Embrace</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;background:#0a0806;font-family:'Courier New',monospace;-webkit-user-select:none;user-select:none}
+canvas{display:block;position:absolute;top:0;left:0}
+
+/* ── Status bar ── */
+#status-bar{
+  position:fixed;top:28px;left:0;right:0;text-align:center;z-index:20;
+  pointer-events:none;opacity:0;transition:opacity 0.6s ease;
+}
+#status-bar.visible{opacity:1}
+#thermal-state{
+  font-size:12px;letter-spacing:0.18em;text-transform:uppercase;
+  color:rgba(255,200,120,0);transition:color 0.4s ease;
+}
+
+/* ── Temperature readout ── */
+#temp-readout{
+  position:fixed;top:56px;left:0;right:0;text-align:center;z-index:20;
+  pointer-events:none;font-size:28px;font-weight:bold;letter-spacing:0.04em;
+  color:rgba(255,180,80,0);transition:color 0.3s ease;
+}
+#temp-readout.visible{color:rgba(255,180,80,0.7)}
+
+/* ── Lock indicator ── */
+#lock-badge{
+  position:fixed;top:92px;left:0;right:0;text-align:center;z-index:20;
+  pointer-events:none;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;
+  color:rgba(255,220,150,0);opacity:0;transition:all 0.3s ease;
+}
+#lock-badge.locked{color:rgba(255,220,150,0.85);opacity:1}
+
+/* ── Bottom hint ── */
+#hint{
+  position:fixed;bottom:36px;left:0;right:0;text-align:center;z-index:20;
+  pointer-events:none;font-size:12px;color:rgba(200,170,120,0);
+  letter-spacing:0.1em;transition:opacity 1s ease;
+}
+#hint.show{color:rgba(200,170,120,0.5)}
+
+/* ── Glow overlay (bloom effect) ── */
+#glow-overlay{
+  position:fixed;inset:0;background:radial-gradient(circle at center,rgba(255,160,40,0),transparent 70%);
+  pointer-events:none;z-index:5;opacity:0;transition:opacity 0.3s ease;
+}
+
+/* ── Haptic pulse ring ── */
+#pulse-ring{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);
+  width:160px;height:160px;border-radius:50%;pointer-events:none;z-index:15;
+  border:2px solid rgba(255,200,100,0.4);opacity:0;
+}
+#pulse-ring.pulse{animation:pulseOut 0.6s ease-out forwards}
+@keyframes pulseOut{
+  0%{transform:translate(-50%,-50%) scale(0.3);opacity:1}
+  100%{transform:translate(-50%,-50%) scale(2.5);opacity:0}
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="glow-overlay"></div>
+<div id="pulse-ring"></div>
+<div id="status-bar"><div id="thermal-state">Approaching Warmth</div></div>
+<div id="temp-readout">24.0°C</div>
+<div id="lock-badge">✦ Locked ✦</div>
+<div id="hint">touch to begin · bring warmth close</div>
+
+<script>
+(()=>{
+
+// ═══════════════════════════════════════════
+// WARM EMBRACE — Thermal Protection Layer
+// Hard clamp at 62°C · Synthesized ting audio
+// Gentle haptic feedback · Cozy state messages
+// ═══════════════════════════════════════════
+
+const canvas  = document.getElementById('c');
+const ctx     = canvas.getContext('2d', { alpha: false });
+const glow    = document.getElementById('glow-overlay');
+const pulse   = document.getElementById('pulse-ring');
+const statusBar  = document.getElementById('status-bar');
+const stateText  = document.getElementById('thermal-state');
+const tempReadout = document.getElementById('temp-readout');
+const lockBadge  = document.getElementById('lock-badge');
+const hintEl     = document.getElementById('hint');
+
+// ── Performance ──────────────────────────────
+const TARGET_FPS  = 60;
+const FRAME_DT    = 1 / TARGET_FPS;
+
+// ── Canvas sizing ────────────────────────────
+let W, H, dpr, cx, cy;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;  H = window.innerHeight;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0);
+  cx = W / 2; cy = H / 2;
+}
+window.addEventListener('resize', resize);
+
+// ═══════════════════════════════════════════
+// THERMAL MODULE — Simulation + Hard Clamp
+// ═══════════════════════════════════════════
+
+const THERMAL_MAX_RAW  = 120;  // simulated sensor range (up to 120°C raw)
+const CLAMP_LIMIT      = 62.0; // hard thermal barrier — never exceeded
+const LOCK_THRESHOLD   = 62.0; // temperature at which lock engages
+
+// Raw thermal physics (do NOT modify this logic)
+function rawThermalPhysics(dt, inputIntensity) {
+  // Ambient heat gain proportional to how "hot" the environment is
+  const ambientGain = inputIntensity * 18.0;       // °C/s of heating
+  const passiveCool = 3.5;                           // passive dissipation °C/s
+  const currentRaw  = state.rawTemp;
+  const netRate     = ambientGain - passiveCool * Math.max(0, currentRaw - 24) / 96;
+  return currentRaw + netRate * dt;
+}
+
+// Hard clamp — the Warm Embrace thermal protection layer
+function clampThermal(rawOutput) {
+  // Wrap raw sensor output: reject anything above the safe limit
+  return Math.min(rawOutput, CLAMP_LIMIT);
+}
+
+// ═══════════════════════════════════════════
+// AUDIO ENGINE — Synthesized ting audio
+// Two close-pitched sine waves (830 + 870 Hz)
+// ~100ms, gentle volume, soft attack/decay
+// ═══════════════════════════════════════════
+
+let audioCtx = null;
+let tingStarted = false;
+let alarmSilenced = true;  // all alarms silenced by default in Warm Embrace
+
+function initAudio() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } catch(e) { console.warn('Web Audio unavailable'); }
+}
+
+// Play the synthesized *ting* — magical choral lock cue
+function playTing() {
+  if (!audioCtx || tingStarted) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  const now = audioCtx.currentTime;
+  const dur = 0.100; // 100ms total duration
+
+  // Gentle master gain — soft volume
+  const master = audioCtx.createGain();
+  master.gain.setValueAtTime(0, now);
+  master.gain.linearRampToValueAtTime(0.25, now + 0.008); // quick attack ~8ms
+  master.gain.exponentialRampToValueAtTime(0.001, now + dur);
+  master.connect(audioCtx.destination);
+
+  // Sine wave 1: 830 Hz
+  const osc1 = audioCtx.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(830, now);
+
+  // Sine wave 2: 870 Hz (close pitch → chorally beating)
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(870, now);
+
+  // Per-osc gain for balanced mix
+  const g1 = audioCtx.createGain();
+  g1.gain.value = 0.5;
+  const g2 = audioCtx.createGain();
+  g2.gain.value = 0.5;
+
+  osc1.connect(g1).connect(master);
+  osc2.connect(g2).connect(master);
+
+  osc1.start(now);
+  osc2.start(now);
+  osc1.stop(now + dur + 0.02);
+  osc2.stop(now + dur + 0.02);
+
+  tingStarted = true;
+}
+
+// Silences any existing alarm sounds (none should play in Warm Embrace)
+function silenceAllAlarms() {
+  // In the Warm Embrace drop, there are no legacy alarm oscillators.
+  // This is here as a contract anchor: all alarms → silenced.
+  alarmSilenced = true;
+}
+
+// Ambient warmth hum — very low-level background drone (optional)
+let warmHumOsc = null;
+let warmHumGain = null;
+function startWarmHum() {
+  if (!audioCtx || warmHumOsc) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 136; // gentle A~
+    const g = audioCtx.createGain();
+    g.gain.value = 0.03; // barely audible
+    osc.connect(g).connect(audioCtx.destination);
+    osc.start();
+    warmHumOsc = osc;
+    warmHumGain = g;
+  } catch(e) {}
+}
+
+function stopWarmHum() {
+  if (warmHumOsc) { try { warmHumOsc.stop(); } catch(e){} }
+  warmHumOsc = null;
+  warmHumGain  = null;
+}
+
+// ═══════════════════════════════════════════
+// HAPTIC ENGINE — Gentle vibration pattern
+// Sustained low-intensity: [80, 40, 80]
+// No sharp spikes
+// ═══════════════════════════════════════════
+
+let hapticActive = false;
+let hapticInterval = null;
+const VIB_PATTERN = [80, 40, 80]; // ms on, ms off, ms on — gentle ripple
+
+function triggerTingHaptic() {
+  // Single burst on lock engagement
+  if (navigator.vibrate) {
+    navigator.vibrate(VIB_PATTERN);
+  }
+}
+
+function startLockedHaptics() {
+  if (hapticActive || !navigator.vibrate) return;
+  hapticActive = true;
+  // Gentle pulse loop: brief vibration + pause, sustaining the locked feel
+  const gentleVibe = [60, 30]; // soft buzz + tiny gap
+  navigator.vibrate(gentleVibe);
+  hapticInterval = setInterval(() => {
+    if (!hapticActive) return;
+    navigator.vibrate(gentleVibe);
+  }, 120);
+}
+
+function stopLockedHaptics() {
+  hapticActive = false;
+  if (hapticInterval) { clearInterval(hapticInterval); hapticInterval = null; }
+  navigator.vibrate(0);
+}
+
+// ═══════════════════════════════════════════
+// STATE MACHINE — Thermal & Lock States
+// ═══════════════════════════════════════════
+
+const state = {
+  rawTemp:       24.0,    // starting ambient temp °C
+  clampedTemp:   24.0,    // post-clamp output °C (never > 62)
+  inputIntensity: 0,      // user-provided heat intensity [0..1]
+  locked:        false,   // is thermal clamp actively engaged?
+  approaching:   false,   // within warm range but not yet locked
+  lockFrame:     -1,      // frame when lock last engaged (for ting timing)
+  ringPulseAnim: 0,       // pulse ring animation timer
+};
+
+// ── Update thermal state each frame ────────────
+function updateThermal(dt) {
+  const prevClamped = state.clampedTemp;
+  const wasLocked   = state.locked;
+
+  // Raw physics (never modified — wrapped by clamp)
+  const rawOutput = rawThermalPhysics(dt, state.inputIntensity);
+
+  // Apply hard thermal clamp
+  state.rawTemp = rawOutput;
+  state.clampedTemp = clampThermal(rawOutput);
+
+  // Lock engagement check: clamped temp reached 62°C AND input is active
+  if (state.clampedTemp >= LOCK_THRESHOLD && state.inputIntensity > 0.05) {
+    if (!wasLocked) {
+      // ══ First-time lock engagement ══
+      state.locked = true;
+      state.lockFrame = frameCount;
+
+      // Play the ting! (within ~50ms — immediate this frame)
+      playTing();
+
+      // Trigger haptic feedback on lock
+      triggerTingHaptic();
+
+      // Pulse ring visual
+      pulse.classList.remove('pulse');
+      void pulse.offsetWidth; // reflow to restart animation
+      pulse.classList.add('pulse');
+
+      silenceAllAlarms(); // ensure no legacy alarms play
+    }
+    state.approaching = false;
+  } else if (state.clampedTemp >= 45) {
+    // Approaching warmth — between 45°C and 62°C
+    state.locked    = false;
+    state.approaching = true;
+    stopLockedHaptics();
+  } else {
+    // Cool state — below 45°C
+    state.locked    = false;
+    state.approaching = false;
+    stopLockedHaptics();
+  }
+
+  // Update status text based on thermal state
+  updateStatusText(wasLocked);
+}
+
+// ── Status text updates ────────────────────────
+function updateStatusText(wasJustLocked) {
+  if (state.locked) {
+    stateText.textContent  = 'Warm Embrace';
+    stateText.style.color  = 'rgba(255,210,130,0.9)';
+    lockBadge.classList.add('locked');
+  } else if (state.approaching) {
+    stateText.textContent  = 'Approaching Warmth';
+    stateText.style.color  = 'rgba(255,170,80,0.6)';
+    lockBadge.classList.remove('locked');
+  } else {
+    stateText.textContent  = 'Cool & Clear';
+    stateText.style.color  = 'rgba(200,180,140,0.35)';
+    lockBadge.classList.remove('locked');
+  }
+}
+
+// ═══════════════════════════════════════════
+// RENDER ENGINE — Visual warmth aesthetic
+// Golden-orange glow · bloom · no danger red
+// ═══════════════════════════════════════════
+
+function renderBg() {
+  // Dark warm background gradient
+  const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.7);
+  const warmth = state.locked ? 0.15 : (state.approaching ? 0.06 : 0);
+  bg.addColorStop(0, `rgba(60,30,10,${warmth})`);
+  bg.addColorStop(1, '#0a0806');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function renderThermalOrb() {
+  // The "device" orb — visual representation of the warm Pixel 5
+  const baseR    = 48;
+  const pulseAmt = Math.sin(frameCount * 0.04) * 2;
+
+  if (state.locked) {
+    // Locked: warm golden-orange, pulsing glow
+    const warmthPhase = Math.sin(frameCount * 0.03) * 0.15;
+    const orbR = baseR + pulseAmt;
+
+    // Outer bloom glow
+    const bloom = ctx.createRadialGradient(cx, cy, orbR * 0.5, cx, cy, orbR * 2.8);
+    bloom.addColorStop(0, `rgba(255,170,60,${0.18 + warmthPhase})`);
+    bloom.addColorStop(0.5, `rgba(255,140,40,${0.06 + warmthPhase * 0.3})`);
+    bloom.addColorStop(1, 'rgba(255,120,20,0)');
+    ctx.fillStyle = bloom;
+    ctx.beginPath();
+    ctx.arc(cx, cy, orbR * 2.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Orb body — warm amber gradient
+    const orbGrad = ctx.createRadialGradient(cx - 12, cy - 16, 4, cx, cy, orbR);
+    orbGrad.addColorStop(0, 'rgba(255,230,170,0.9)');
+    orbGrad.addColorStop(0.4, 'rgba(255,180,80,0.85)');
+    orbGrad.addColorStop(0.8, 'rgba(240,130,40,0.7)');
+    orbGrad.addColorStop(1,  'rgba(200,90,20,0.5)');
+
+    ctx.fillStyle = orbGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, orbR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Lock icon — soft cross-hatch glow on lock
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,240,200,${0.3 + warmthPhase})`;
+    ctx.lineWidth = 2;
+    const lx = cx, ly = cy - 4;
+    ctx.beginPath();
+    ctx.moveTo(lx - 6, ly + 6);
+    ctx.lineTo(lx - 6, ly - 4);
+    ctx.arc(lx, ly - 4, 6, Math.PI, 0, false);
+    ctx.lineTo(lx + 6, ly + 6);
+    ctx.stroke();
+    ctx.restore();
+
+  } else if (state.approaching) {
+    // Approaching: warm amber, growing glow
+    const intensity = (state.clampedTemp - 45) / (LOCK_THRESHOLD - 45); // [0..1]
+    const orbR = baseR + pulseAmt + intensity * 4;
+
+    // Growing bloom
+    const bloom = ctx.createRadialGradient(cx, cy, orbR * 0.3, cx, cy, orbR * (2 + intensity * 2));
+    bloom.addColorStop(0, `rgba(255,160,50,${0.08 + intensity * 0.1})`);
+    bloom.addColorStop(1, 'rgba(255,120,20,0)');
+    ctx.fillStyle = bloom;
+    ctx.beginPath();
+    ctx.arc(cx, cy, orbR * (2 + intensity * 2), 0, Math.PI * 2);
+    ctx.fill();
+
+    const orbGrad = ctx.createRadialGradient(cx - 10, cy - 14, 3, cx, cy, orbR);
+    orbGrad.addColorStop(0, `rgba(255,220,160,${0.7 + intensity * 0.2})`);
+    orbGrad.addColorStop(0.5, `rgba(255,170,60,${0.6 + intensity * 0.2})`);
+    orbGrad.addColorStop(1,  `rgba(230,120,30,${0.4 + intensity * 0.2})`);
+
+    ctx.fillStyle = orbGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, orbR, 0, Math.PI * 2);
+    ctx.fill();
+
+  } else {
+    // Cool: soft pearl glow
+    const orbR = baseR + pulseAmt;
+    const bloom = ctx.createRadialGradient(cx, cy, orbR * 0.5, cx, cy, orbR * 1.8);
+    bloom.addColorStop(0, 'rgba(200,190,170,0.06)');
+    bloom.addColorStop(1, 'rgba(200,190,170,0)');
+    ctx.fillStyle = bloom;
+    ctx.beginPath();
+    ctx.arc(cx, cy, orbR * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    const orbGrad = ctx.createRadialGradient(cx - 10, cy - 14, 3, cx, cy, orbR);
+    orbGrad.addColorStop(0, 'rgba(230,220,200,0.5)');
+    orbGrad.addColorStop(0.6, 'rgba(200,190,170,0.4)');
+    orbGrad.addColorStop(1,  'rgba(180,170,150,0.25)');
+
+    ctx.fillStyle = orbGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, orbR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function renderTempGlow() {
+  // Temperature readout glow
+  const norm = state.clampedTemp / LOCK_THRESHOLD; // [0..1]
+  if (norm < 0.3) {
+    tempReadout.classList.remove('visible');
+    return;
+  }
+  tempReadout.classList.add('visible');
+
+  const r = Math.round(255 * norm);
+  const g = Math.round(180 * norm);
+  const b = Math.round(60  * norm);
+  tempReadout.style.color = `rgba(${r},${g},${b},0.7)`;
+
+  // Format: show clamped temp with one decimal
+  tempReadout.textContent = state.clampedTemp.toFixed(1) + '°C';
+
+  if (state.locked) {
+    // Pulsing lock border on the readout
+    const pulseA = Math.sin(frameCount * 0.08) * 0.3 + 0.7;
+    tempReadout.style.textShadow = `0 0 12px rgba(255,200,100,${pulseA})`;
+  } else if (state.approaching) {
+    tempReadout.style.textShadow = 'none';
+  }
+
+  // Show status bar after first interaction
+  statusBar.classList.add('visible');
+}
+
+function renderGlowOverlay() {
+  // Full-screen warm bloom overlay
+  if (state.locked || state.approaching) {
+    const intensity = state.locked ? 0.12 : ((state.clampedTemp - 45) / (LOCK_THRESHOLD - 45)) * 0.06;
+    const pulseA    = state.locked ? Math.sin(frameCount * 0.03) * 0.04 : 0;
+    glow.style.opacity = intensity + pulseA;
+  } else {
+    glow.style.opacity = '0';
+  }
+}
+
+// ═══════════════════════════════════════════
+// INPUT HANDLING — Heat input via interaction
+// ═══════════════════════════════════════════
+
+function onInteractionStart() {
+  initAudio();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  startWarmHum();
+
+  // Begin heating: bring warmth close
+  state.inputIntensity = Math.max(state.inputIntensity, 0.5);
+}
+
+function onInteractionMove(intensity) {
+  initAudio();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  state.inputIntensity = Math.min(1.0, Math.max(0, intensity));
+}
+
+function onInteractionEnd() {
+  // Reduce heat input — let it cool down gradually
+  state.inputIntensity = Math.max(0, state.inputIntensity - 0.6);
+  stopWarmHum();
+}
+
+// Touch events (primary for mobile / Pixel 5)
+let touchStartTime = 0;
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  touchStartTime = Date.now();
+  onInteractionStart();
+  hintEl.classList.remove('show');
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  // Intensity based on proximity to center (closer = hotter)
+  const dx = t.clientX - cx;
+  const dy = t.clientY - cy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const intensity = Math.max(0, 1 - dist / (Math.min(W, H) * 0.4));
+  onInteractionMove(intensity);
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  onInteractionEnd();
+}, { passive: false });
+
+// Mouse events (desktop fallback)
+let mouseDown = false;
+canvas.addEventListener('mousedown', (e) => {
+  mouseDown = true;
+  touchStartTime = Date.now();
+  onInteractionStart();
+  hintEl.classList.remove('show');
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!mouseDown) return;
+  const dx = e.clientX - cx;
+  const dy = e.clientY - cy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const intensity = Math.max(0, 1 - dist / (Math.min(W, H) * 0.4));
+  onInteractionMove(intensity);
+});
+
+canvas.addEventListener('mouseup', () => {
+  mouseDown = false;
+  onInteractionEnd();
+});
+
+// ═══════════════════════════════════════════
+// MAIN LOOP
+// ═══════════════════════════════════════════
+
+let lastTimestamp = 0;
+let frameCount = 0;
+let dtAccumulator = 0;
+const PHYSICS_DT_TARGET = FRAME_DT; // 16.67ms fixed timestep
+
+function loop(timestamp) {
+  requestAnimationFrame(loop);
+
+  if (lastTimestamp === 0) { lastTimestamp = timestamp; return; }
+
+  const rawDt = Math.min((timestamp - lastTimestamp) / 1000, 0.05); // cap dt
+  lastTimestamp = timestamp;
+  frameCount++;
+
+  dtAccumulator += rawDt;
+  let steps = 0;
+  while (dtAccumulator >= PHYSICS_DT_TARGET && steps < 4) {
+    updateThermal(PHYSICS_DT_TARGET);
+    dtAccumulator -= PHYSICS_DT_TARGET;
+    steps++;
+  }
+  if (dtAccumulator > PHYSICS_DT_TARGET * 2) dtAccumulator = 0;
+
+  // ── Render pass ────────────────────────
+  renderBg();
+  renderThermalOrb();
+  renderTempGlow();
+  renderGlowOverlay();
+}
+
+// ── Init ────────────────────────────────────────
+resize();
+hintEl.classList.add('show');
+requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
