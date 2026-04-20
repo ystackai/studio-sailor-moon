@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Wish Lanterns</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;background:#0a0a1a;font-family:'Georgia','Times New Roman',serif}
+canvas{display:block;position:absolute;top:0;left:0}
+#prompt{position:absolute;bottom:12%;left:0;right:0;text-align:center;color:rgba(255,220,160,0.5);font-size:15px;letter-spacing:0.15em;font-style:italic;pointer-events:none;transition:opacity 2s}
+#prompt.hidden{opacity:0}
+#title-screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;transition:opacity 1.5s}
+#title-screen.hidden{opacity:0;pointer-events:none}
+#title-screen h1{color:#fcd9a0;font-size:clamp(28px,6vw,52px);font-weight:300;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:12px;text-shadow:0 0 40px rgba(252,200,120,0.3)}
+#title-screen p{color:rgba(255,220,180,0.5);font-size:clamp(13px,2.5vw,17px);letter-spacing:0.1em;font-style:italic;margin-bottom:40px}
+#title-screen .start{color:rgba(255,220,160,0.4);font-size:13px;letter-spacing:0.3em;animation:pulse-text 3s ease-in-out infinite}
+@keyframes pulse-text{0%,100%{opacity:0.4}50%{opacity:0.8}}
+.credit{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:rgba(255,220,180,0.15);font-size:11px;letter-spacing:0.15em;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="title-screen">
+  <h1>Wish Lanterns</h1>
+  <p>A night sky. A lantern. A wish.</p>
+  <span class="start">tap anywhere</span>
+</div>
+<canvas id="c"></canvas>
+<div id="prompt">tap to release a lantern</div>
+<div class="credit">SaiLOR MOON &mdash; cozy interactive toys, built by moonlight</div>
+<script>
+// ── Wishes ──────────────────────────────────────────────────────────
+const WISHES = [
+  "May you find what you weren't looking for",
+  "Let the morning be kinder than you expect",
+  "May your doubts dissolve like mist at dawn",
+  "Warmth in unexpected places",
+  "May the next chapter surprise you",
+  "Let go of what you can't carry",
+  "May someone remember you fondly tonight",
+  "Peace in the spaces between thoughts",
+  "May you forgive yourself for yesterday",
+  "Let the stars remind you how small your worries are",
+  "May you laugh until your face hurts",
+  "A door you didn't know was there",
+  "May the wind always be interesting",
+  "Let something beautiful find you off guard",
+  "May you rest without guilt",
+  "The courage to begin again",
+  "May you be exactly enough",
+];
+
+// ── Audio ──────────────────────────────────────────────────────────
+let audioContext;
+let titleVisible = true;
+let chimeIndex = 0;
+let lanterns = [];
+let stars = [];
+let wishAlpha = 0;
+let wishAlphaTarget = 0;
+let wishText = '';
+let lastTime = 0;
+let animationId;
+
+// ── Canvas ──────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ── Stars ──────────────────────────────────────────────────────────
+function initStars() {
+  stars = [];
+  const starCount = Math.min(200, Math.floor(window.innerWidth * window.innerHeight / 1000));
+  for (let i = 0; i < starCount; i++) {
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      size: Math.random() * 1.5 + 0.5,
+      opacity: Math.random() * 0.5 + 0.3,
+      twinkleSpeed: Math.random() * 0.02 + 0.005,
+      twinklePhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// ── Audio Context ────────────────────────────────────────────────────
+function initAudio() {
+  if (audioContext) return;
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  // Create a simple chime sound using oscillator
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.type = 'sine';
+  oscillator.frequency.value = 300;
+  gainNode.gain.value = 0.1;
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.2);
+}
+
+// ── Lantern ──────────────────────────────────────────────────────────
+function createLantern(x, y) {
+  const lantern = {
+    x: x,
+    y: y,
+    size: Math.random() * 20 + 30,
+    color: `hsl(${Math.random() * 360}, 80%, 70%)`,
+    wobble: Math.random() * Math.PI * 2,
+    wobbleSpeed: Math.random() * 0.02 + 0.01,
+    pulse: 0,
+    pulseSpeed: Math.random() * 0.03 + 0.02,
+    age: 0,
+    wishAlpha: 0,
+    wishAlphaTarget: 0,
+    wishText: WISHES[Math.floor(Math.random() * WISHES.length)],
+    wishFontSize: Math.random() * 10 + 12,
+    wishX: 0,
+    wishY: 0,
+    wishOffset: Math.random() * 30 + 10
+  };
+  lanterns.push(lantern);
+}
+
+// ── Render ──────────────────────────────────────────────────────────
+function render(time) {
+  if (lastTime === 0) lastTime = time;
+  const deltaTime = (time - lastTime) / 1000;
+  lastTime = time;
+
+  // Clear canvas with a dark blue background
+  ctx.fillStyle = '#0a0a1a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw stars
+  for (const star of stars) {
+    star.twinklePhase += star.twinkleSpeed;
+    const opacity = star.opacity + Math.sin(star.twinklePhase) * 0.3;
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+    ctx.fill();
+  }
+
+  // Update and draw lanterns
+  for (let i = lanterns.length - 1; i >= 0; i--) {
+    const l = lanterns[i];
+    
+    // Update wobble
+    l.wobble += l.wobbleSpeed;
+    
+    // Update pulse
+    l.pulse += l.pulseSpeed;
+    
+    // Update age
+    l.age += deltaTime;
+    
+    // Update wish alpha
+    if (l.wishAlphaTarget > l.wishAlpha) {
+      l.wishAlpha += 0.05;
+    } else if (l.wishAlphaTarget < l.wishAlpha) {
+      l.wishAlpha -= 0.05;
+    }
+    
+    // Update position (float upward)
+    l.y -= 0.5;
+    
+    // Draw lantern
+    const wobbleX = Math.sin(l.wobble) * 3;
+    const pulseScale = 1 + Math.sin(l.pulse) * 0.1;
+    
+    // Lantern body
+    ctx.save();
+    ctx.translate(l.x + wobbleX, l.y);
+    ctx.scale(pulseScale, pulseScale);
+    
+    // Lantern glow
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, l.size * 1.5);
+    gradient.addColorStop(0, l.color);
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, l.size * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Lantern body
+    ctx.fillStyle = l.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, l.size, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Lantern string
+    ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, l.size);
+    ctx.lineTo(0, l.size + 10);
+    ctx.stroke();
+    
+    ctx.restore();
+    
+    // Draw wish text
+    if (l.wishAlpha > 0) {
+      ctx.save();
+      ctx.translate(l.x + wobbleX, l.y - l.size - l.wishOffset);
+      ctx.fillStyle = `rgba(255, 255, 255, ${l.wishAlpha})`;
+      ctx.font = `bold ${l.wishFontSize}px Georgia, serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(l.wishText, 0, 0);
+      ctx.restore();
+    }
+    
+    // Remove lantern if it's off screen
+    if (l.y < -l.size * 2) {
+      lanterns.splice(i, 1);
+    }
+  }
+  
+  animationId = requestAnimationFrame(render);
+}
+
+// ── Input ───────────────────────────────────────────────────────────
+function handleTap(x, y) {
+  initAudio();
+
+  if (titleVisible) {
+    titleVisible = false;
+    document.getElementById('title-screen').classList.add('hidden');
+    setTimeout(() => {
+      document.getElementById('prompt').classList.remove('hidden');
+    }, 500);
+    setTimeout(() => {
+      document.getElementById('prompt').classList.add('hidden');
+    }, 5000);
+    return;
+  }
+
+  // Check if tapping an existing lantern
+  for (const l of lanterns) {
+    const wobbleX = Math.sin(l.wobble) * 3;
+    const dx = x - (l.x + wobbleX);
+    const dy = y - l.y;
+    if (Math.sqrt(dx * dx + dy * dy) < l.size * 1.5) {
+      l.pulseTime = 120;
+      l.wishAlpha = 0;
+      l.wishAlphaTarget = 1;
+      l.age = 0; // Reset wish timer
+      playChime(chimeIndex++);
+      return;
+    }
+  }
+
+  // Create new lantern
+  createLantern(x, y);
+  playChime(chimeIndex++);
+
+  // Hide prompt after first lantern
+  document.getElementById('prompt').classList.add('hidden');
+}
+
+function playChime(index) {
+  if (!audioContext) return;
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  
+  // Different chime tones for variety
+  const baseFreq = 300 + (index % 5) * 100;
+  oscillator.frequency.value = baseFreq;
+  oscillator.type = 'sine';
+  
+  gainNode.gain.value = 0.1;
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.3);
+}
+
+document.body.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  handleTap(e.clientX, e.clientY);
+});
+
+// ── Start ───────────────────────────────────────────────────────────
+initStars();
+render();
+</script>
+</body>
+</html>
