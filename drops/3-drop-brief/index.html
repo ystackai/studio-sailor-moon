@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wish Lanterns</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: linear-gradient(to bottom, #0c1445, #1a237e, #4a148c);
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 800px;
+            max-height: 600px;
+            margin: auto;
+        }
+
+        #canvas {
+            background: radial-gradient(circle at center, #1a237e 0%, #0c1445 70%, #000000 100%);
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #titleScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: rgba(12, 20, 69, 0.9);
+            z-index: 10;
+            transition: opacity 1s ease;
+        }
+
+        #titleScreen h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        #titleScreen p {
+            font-size: 1.2rem;
+            max-width: 80%;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        #startButton {
+            background: linear-gradient(to bottom, #ff9a9e, #fad0c4);
+            border: none;
+            border-radius: 50px;
+            color: #4a148c;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        #startButton:hover {
+            transform: scale(1.05);
+            box-shadow: 0 7px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: rgba(12, 20, 69, 0.9);
+            z-index: 10;
+        }
+
+        #gameOverScreen h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        #finalScore {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        #restartButton {
+            background: linear-gradient(to bottom, #4facfe, #00f2fe);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        #restartButton:hover {
+            transform: scale(1.05);
+            box-shadow: 0 7px 20px rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="canvas"></canvas>
+        <div id="titleScreen">
+            <h1>Wish Lanterns</h1>
+            <p>Release your wishes into the night sky. Click or tap to create glowing lanterns that float upward, carrying your dreams.</p>
+            <button id="startButton">Begin Your Journey</button>
+            <div id="instructions">Click or tap anywhere to release a lantern</div>
+        </div>
+        <div id="gameOverScreen">
+            <h2>Wishes Released</h2>
+            <div id="finalScore">Score: 0</div>
+            <button id="restartButton">Release More Wishes</button>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        const gameState = {
+            isRunning: false,
+            isTitleScreen: true,
+            score: 0,
+            lanterns: [],
+            particles: [],
+            audioContext: null,
+            soundEnabled: true
+        };
+
+        // Canvas setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const titleScreen = document.getElementById('titleScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        const finalScore = document.getElementById('finalScore');
+
+        // Set canvas size to match container
+        function resizeCanvas() {
+            const container = document.getElementById('gameContainer');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+
+        // Initialize canvas size
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Start game
+        startButton.addEventListener('click', () => {
+            gameState.isTitleScreen = false;
+            titleScreen.style.opacity = '0';
+            setTimeout(() => {
+                titleScreen.style.display = 'none';
+                gameState.isRunning = true;
+                initAudio();
+            }, 1000);
+        });
+
+        // Restart game
+        restartButton.addEventListener('click', () => {
+            gameState.isRunning = false;
+            gameOverScreen.style.display = 'none';
+            gameState.score = 0;
+            gameState.lanterns = [];
+            gameState.particles = [];
+            gameState.isRunning = true;
+            initAudio();
+        });
+
+        // Audio initialization
+        function initAudio() {
+            if (!gameState.audioContext) {
+                gameState.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Particle class
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 3 + 1;
+                this.speedX = Math.random() * 3 - 1.5;
+                this.speedY = Math.random() * 3 - 1.5;
+                this.color = color;
+                this.life = 100;
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life--;
+                this.size *= 0.97;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.life / 100;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // Lantern class
+        class Lantern {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 15 + 10;
+                this.speed = Math.random() * 2 + 1;
+                this.color = `hsl(${Math.random() * 360}, 70%, 60%)`;
+                this.particles = [];
+                this.life = 100;
+                this.brightness = 1;
+                this.pulse = 0;
+                this.audioSource = null;
+                this.createParticles();
+                this.playSound();
+            }
+
+            createParticles() {
+                for (let i = 0; i < 20; i++) {
+                    this.particles.push(new Particle(this.x, this.y, this.color));
+                }
+            }
+
+            playSound() {
+                if (!gameState.audioContext || !gameState.soundEnabled) return;
+
+                const oscillator = gameState.audioContext.createOscillator();
+                const gainNode = gameState.audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(gameState.audioContext.destination);
+
+                oscillator.type = 'sine';
+                oscillator.frequency.value = 220 + Math.random() * 220;
+                gainNode.gain.value = 0.1;
+
+                oscillator.start();
+                oscillator.stop(gameState.audioContext.currentTime + 0.5);
+            }
+
+            update() {
+                this.y -= this.speed;
+                this.pulse += 0.05;
+                this.brightness = 0.7 + Math.sin(this.pulse) * 0.3;
+
+                // Update particles
+                for (let i = 0; i < this.particles.length; i++) {
+                    this.particles[i].update();
+                }
+
+                // Remove dead particles
+                this.particles = this.particles.filter(particle => particle.life > 0);
+
+                this.life--;
+            }
+
+            draw() {
+                // Draw lantern glow
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.size * 2
+                );
+                gradient.addColorStop(0, this.color);
+                gradient.addColorStop(1, 'transparent');
+
+                ctx.globalAlpha = this.brightness * 0.3;
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw lantern
+                ctx.globalAlpha = this.brightness;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw string
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y + this.size);
+                ctx.lineTo(this.x, this.y + this.size + 30);
+                ctx.stroke();
+
+                // Draw particles
+                for (let i = 0; i < this.particles.length; i++) {
+                    this.particles[i].draw();
+                }
+
+                ctx.globalAlpha = 1;
+            }
+
+            isDead() {
+                return this.life <= 0 || this.y < -this.size;
+            }
+        }
+
+        // Handle mouse/touch events
+        function handleInteraction(event) {
+            if (!gameState.isRunning) return;
+
+            let x, y;
+            if (event.type === 'click' || event.type === 'touchstart') {
+                const rect = canvas.getBoundingClientRect();
+                x = event.clientX ? event.clientX - rect.left : event.touches[0].clientX - rect.left;
+                y = event.clientY ? event.clientY - rect.top : event.touches[0].clientY - rect.top;
+            } else {
+                // Mouse move - create particles along the path
+                const rect = canvas.getBoundingClientRect();
+                x = event.clientX - rect.left;
+                y = event.clientY - rect.top;
+            }
+
+            // Create lantern at click position
+            gameState.lanterns.push(new Lantern(x, y));
+
+            // Add to score
+            gameState.score += 10;
+        }
+
+        canvas.addEventListener('click', handleInteraction);
+        canvas.addEventListener('touchstart', handleInteraction);
+        canvas.addEventListener('mousemove', handleInteraction);
+
+        // Animation loop
+        function animate() {
+            if (!gameState.isRunning) return;
+
+            // Clear canvas with a dark gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#0c1445');
+            gradient.addColorStop(1, '#000000');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw stars
+            ctx.fillStyle = 'white';
+            for (let i = 0; i < 100; i++) {
+                const x = (i * 13) % canvas.width;
+                const y = (i * 7) % canvas.height;
+                const size = Math.sin(Date.now() / 1000 + i) * 0.5 + 1;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Update and draw lanterns
+            for (let i = 0; i < gameState.lanterns.length; i++) {
+                gameState.lanterns[i].update();
+                gameState.lanterns[i].draw();
+            }
+
+            // Remove dead lanterns
+            gameState.lanterns = gameState.lanterns.filter(lantern => !lantern.isDead());
+
+            // Add some random lanterns occasionally
+            if (Math.random() < 0.02) {
+                const x = Math.random() * canvas.width;
+                const y = canvas.height;
+                gameState.lanterns.push(new Lantern(x, y));
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Start animation
+        animate();
+
+        // Export game state for testing
+        window.gameState = gameState;
+    </script>
+</body>
+</html>
