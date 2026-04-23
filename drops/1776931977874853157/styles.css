@@ -1,0 +1,116 @@
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  scroll-behavior: auto;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+}
+
+#scroll-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40vh 0 80vh 0;
+}
+
+.node {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 60px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform, opacity, filter;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.node .aura {
+  position: absolute;
+  inset: -30px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(148, 163, 184, 0.12) 0%, transparent 70%);
+  will-change: opacity, transform;
+  pointer-events: none;
+}
+
+.node svg {
+  width: 56px;
+  height: 56px;
+  fill: #94a3b8;
+  filter: drop-shadow(0 0 8px rgba(148, 163, 184, 0.25));
+  will-change: transform, opacity, filter;
+  transition: none;
+}
+
+.node .label {
+  position: absolute;
+  bottom: -28px;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #64748b;
+  opacity: 0;
+  will-change: opacity;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.9);
+  z-index: 100;
+  will-change: opacity;
+  cursor: pointer;
+  transition: opacity 0.6s ease-out;
+}
+
+#overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#overlay h1 {
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: 0.3em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+#overlay p {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #475569;
+  letter-spacing: 0.1em;
+}
+
+#velocity-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  font-size: 10px;
+  font-family: monospace;
+  color: #334155;
+  z-index: 50;
+  pointer-events: none;
+}
