@@ -311,89 +311,133 @@
     ptrVelocity = activeCount > 0 ? totalSpeed / activeCount : ptrVelocity * 0.92;
   }
 
-  // --- Rendering ---
-  function render() {
-    const pixels = imgData.data;
+    // --- Rendering ---
+   function render() {
+     const pixels = imgData.data;
+     const t = performance.now() * 0.0003;
+     const cw = canvas.width;
+     const ch = canvas.height;
 
-    // Precompute time for caustics
-    const t = performance.now() * 0.0003;
+      // Background gradient: deep indigo-to-lavender
+     const bgGrad = ctx.createRadialGradient(
+       cw * 0.5, ch * 0.35, 0,
+       cw * 0.5, ch * 0.35, Math.max(cw, ch) * 0.75
+     );
+     bgGrad.addColorStop(0, "#3d2b56");
+     bgGrad.addColorStop(0.4, "#2a1b3d");
+     bgGrad.addColorStop(1, "#1a1025");
+     ctx.fillStyle = bgGrad;
+     ctx.fillRect(0, 0, cw, ch);
 
-    for (let y = 0; y < GRID; y++) {
-      const rowOffset = y * GRID;
-      // Caustic base row values (avoids recomputing cos per pixel)
-      const cosRow = Math.cos(y * 0.12 + t * 1.7);
+     for (let y = 0; y < GRID; y++) {
+       const rowOffset = y * GRID;
+       const cosRow = Math.cos(y * 0.12 + t * 1.7);
 
-      for (let x = 0; x < GRID; x++) {
-        const i = rowOffset + x;
-        const h = curr[i];
-        const p4 = i << 2;
+       for (let x = 0; x < GRID; x++) {
+         const i = rowOffset + x;
+         const h = curr[i];
+         const p4 = i << 2;
 
-        // Height to color mapping
-        const clip = h > 1 ? 1 : h < -1 ? -1 : h;
-        const tNorm = clip * 0.5;
+          // Height to color mapping with smoother interpolation
+         const clip = h > 2 ? 2 : h < -2 ? -2 : h;
+         const tNorm = (clip + 2) / 4; // normalize to [0,1]
 
-        // Base color #2A1B3D -> rgb(42,27,61)
-        // Highlight #D4B8E0 -> rgb(212,184,224)
-        let r, g, b;
-        if (tNorm > 0) {
-          r = 42 + (212 - 42) * tNorm;
-          g = 27 + (184 - 27) * tNorm;
-          b = 61 + (224 - 61) * tNorm;
-        } else {
-          const u = -tNorm;
-          r = 42 * (1 - u * 0.6);
-          g = 27 * (1 - u * 0.6);
-          b = 61 * (1 - u * 0.6);
+          // Triphasic color: deep shadow -> base pudding -> highlight
+          let r, g, b;
+         if (tNorm < 0.5) {
+           // Shadow to base: #130c1e -> #2A1B3D
+           const u = tNorm * 2;
+           r = 19 + (42 - 19) * u;
+           g = 12 + (27 - 12) * u;
+           b = 30 + (61 - 30) * u;
+          } else {
+           // Base to highlight: #2A1B3D -> #D4B8E0
+           const u = (tNorm - 0.5) * 2;
+           r = 42 + (212 - 42) * u;
+           g = 27 + (184 - 27) * u;
+           b = 61 + (224 - 61) * u;
+          }
+
+          // Specular bloom on ripple peaks
+         if (h > 1.2) {
+           const spec = Math.min(1, (h - 1.2) * 0.5);
+           r += 160 * spec;
+           g += 140 * spec;
+           b += 155 * spec;
+          }
+
+          // Moonlight caustics: two-layer Perlin-like interference
+         const sinX = Math.sin(x * 0.15 + t * 2.1);
+         const caustic1 = sinX * cosRow * 0.18;
+         const caustic2 = Math.sin((x + y) * 0.08 + t * 0.9) * 0.12;
+         const caustic3 = Math.sin(x * 0.05 - y * 0.07 + t * 1.3) * 0.08;
+         const caustic = caustic1 + caustic2 + caustic3;
+
+         const cr = caustic * 55;
+         const cg = caustic * 48;
+         const cb = caustic * 65;
+
+         pixels[p4]     = cr >= 0 ? Math.min(255, r + cr) | 0 : Math.max(0, r + cr) | 0;
+         pixels[p4 + 1] = cg >= 0 ? Math.min(255, g + cg) | 0 : Math.max(0, g + cg) | 0;
+         pixels[p4 + 2] = cb >= 0 ? Math.min(255, b + cb) | 0 : Math.max(0, b + cb) | 0;
+         pixels[p4 + 3] = 255;
         }
+      }
 
-        // Specular bloom on ripple peaks
-        if (h > 1.5) {
-          const spec = Math.min(1, (h - 1.5) * 0.4);
-          r += 143 * spec;
-          g += 121 * spec;
-          b += 131 * spec;
+      // Bilinear upscale from 64x64 to screen
+     upCtx.putImageData(imgData, 0, 0);
+     ctx.imageSmoothingEnabled = true;
+     ctx.imageSmoothingQuality = "high";
+     ctx.drawImage(upCanvas, 0, 0, GRID, GRID, 0, 0, cw, ch);
+
+       // Moon glow overlay
+     const moonT = performance.now() * 0.00015;
+     const moonPulse = Math.sin(moonT) * 0.03 + 0.05;
+     const moonGlow = ctx.createRadialGradient(
+       cw * 0.5, ch * 0.25, 0,
+       cw * 0.5, ch * 0.25, cw * 0.15
+       );
+     moonGlow.addColorStop(0, `rgba(212,184,224,${(moonPulse * 1.5).toFixed(3)})`);
+     moonGlow.addColorStop(0.5, `rgba(212,184,224,${(moonPulse * 0.3).toFixed(3)})`);
+     moonGlow.addColorStop(1, "rgba(212,184,224,0)");
+     ctx.fillStyle = moonGlow;
+     ctx.fillRect(0, 0, cw, ch);
+
+       // Vignette overlay for depth
+     const vigGrad = ctx.createRadialGradient(
+       cw * 0.5, ch * 0.5, cw * 0.25,
+       cw * 0.5, ch * 0.5, cw * 0.75
+      );
+     vigGrad.addColorStop(0, "rgba(0,0,0,0)");
+     vigGrad.addColorStop(1, "rgba(0,0,0,0.45)");
+     ctx.fillStyle = vigGrad;
+     ctx.fillRect(0, 0, cw, ch);
+
+       // Star-dust particles with glow
+     if (pAlive > 0) {
+       ctx.globalCompositeOperation = "lighter";
+       for (let i = 0; i < PoolSize; i++) {
+         if (!pActive[i]) continue;
+         const screenX = (pX[i] / GRID) * cw;
+         const screenY = (pY[i] / GRID) * ch;
+         const alpha = pLife[i] * 0.6;
+         const radius = 1.2 + pLife[i] * 2;
+
+          // Outer glow
+         ctx.beginPath();
+         ctx.arc(screenX, screenY, radius * 2.5, 0, Math.PI * 2);
+         ctx.fillStyle = `rgba(212,184,224,${(alpha * 0.2).toFixed(3)})`;
+         ctx.fill();
+
+          // Core
+         ctx.beginPath();
+         ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
+         ctx.fillStyle = `rgba(230,215,240,${alpha.toFixed(3)})`;
+         ctx.fill();
         }
-
-        // Moonlight caustics overlay
-        const sinX = Math.sin(x * 0.15 + t * 2.1);
-        const caustic =
-          sinX * cosRow * 0.15 +
-          Math.sin((x + y) * 0.08 + t * 0.9) * 0.1;
-
-        // Apply caustic as additive color overlay
-        const cr = caustic * 60;
-        const cg = caustic * 50;
-        const cb = caustic * 70;
-
-        pixels[p4] = cr > 0 ? Math.min(255, r + cr) : Math.max(0, r + cr);
-        pixels[p4 + 1] = cg > 0 ? Math.min(255, g + cg) : Math.max(0, g + cg);
-        pixels[p4 + 2] = cb > 0 ? Math.min(255, b + cb) : Math.max(0, b + cb);
-        pixels[p4 + 3] = 255;
+       ctx.globalCompositeOperation = "source-over";
       }
     }
-
-    // Bilinear upscale
-    upCtx.putImageData(imgData, 0, 0);
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(upCanvas, 0, 0, GRID, GRID, 0, 0, canvas.width, canvas.height);
-
-    // Draw star-dust particles
-    if (pAlive > 0) {
-      for (let i = 0; i < PoolSize; i++) {
-        if (!pActive[i]) continue;
-        const screenX = (pX[i] / GRID) * canvas.width;
-        const screenY = (pY[i] / GRID) * canvas.height;
-        const alpha = pLife[i] * 0.5;
-        const radius = 1.5 + pLife[i];
-
-        ctx.beginPath();
-        ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(212,184,224,${alpha})`;
-        ctx.fill();
-      }
-    }
-  }
 
   // --- Particle update ---
   function updateParticles(dt) {
@@ -434,30 +478,45 @@
     }
   }
 
-  // --- Static gradient for reduced motion ---
-  function renderStatic() {
-    const grd = ctx.createRadialGradient(
-      canvas.width / 2,
-      canvas.height / 2,
-      0,
-      canvas.width / 2,
-      canvas.height / 2,
-      Math.max(canvas.width, canvas.height) * 0.7
-    );
-    grd.addColorStop(0, "#3d2b56");
-    grd.addColorStop(0.5, "#2a1b3d");
-    grd.addColorStop(1, "#1a1025");
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+   // --- Static gradient for reduced motion ---
+   function renderStatic() {
+     const cw = canvas.width;
+     const ch = canvas.height;
 
-    // Subtle shimmer on static mode
-    const t = performance.now() * 0.0002;
-    const shimmer = Math.sin(t) * 0.03 + 0.03;
-    ctx.fillStyle = `rgba(212,184,224,${shimmer})`;
-    ctx.beginPath();
-    ctx.arc(canvas.width * 0.5, canvas.height * 0.35, 60, 0, Math.PI * 2);
-    ctx.fill();
-  }
+     // Background gradient
+     const bg = ctx.createRadialGradient(
+       cw * 0.5, ch * 0.35, 0,
+       cw * 0.5, ch * 0.35, Math.max(cw, ch) * 0.75
+      );
+     bg.addColorStop(0, "#3d2b56");
+     bg.addColorStop(0.4, "#2a1b3d");
+     bg.addColorStop(1, "#1a1025");
+     ctx.fillStyle = bg;
+     ctx.fillRect(0, 0, cw, ch);
+
+      // Moon glow
+     const t = performance.now() * 0.00015;
+     const shimmer = Math.sin(t) * 0.025 + 0.04;
+     const moonGlow = ctx.createRadialGradient(
+       cw * 0.5, ch * 0.3, 0,
+       cw * 0.5, ch * 0.3, cw * 0.12
+      );
+     moonGlow.addColorStop(0, `rgba(212,184,224,${(shimmer * 1.5).toFixed(3)})`);
+     moonGlow.addColorStop(0.6, `rgba(212,184,224,${(shimmer * 0.4).toFixed(3)})`);
+     moonGlow.addColorStop(1, "rgba(212,184,224,0)");
+     ctx.fillStyle = moonGlow;
+     ctx.fillRect(0, 0, cw, ch);
+
+      // Vignette
+     const vig = ctx.createRadialGradient(
+       cw * 0.5, ch * 0.5, cw * 0.3,
+       cw * 0.5, ch * 0.5, cw * 0.75
+      );
+     vig.addColorStop(0, "rgba(0,0,0,0)");
+     vig.addColorStop(1, "rgba(0,0,0,0.4)");
+     ctx.fillStyle = vig;
+     ctx.fillRect(0, 0, cw, ch);
+    }
 
   // --- Main animation loop ---
   let lastTime = 0;
@@ -478,7 +537,7 @@
     const delta = timestamp - lastTime;
 
     // Skip frames that arrive too early to respect 60fps budget
-    if (delta < TARGET_FRAME_TIME * 0.8) {
+    if (delta < TARGET_FRAME_TIME * 0.5) {
       rafId = requestAnimationFrame(loop);
       return;
     }
