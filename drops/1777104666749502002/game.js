@@ -17,36 +17,109 @@
     let prev = new Float32Array(SIZE);
     let nextGrid = new Float32Array(SIZE);
 
-    // --- Canvas setup ---
-   const canvas = document.getElementById("canvas");
-   const ctx = canvas.getContext("2d", { alpha: false });
+      // --- Canvas setup ---
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d", { alpha: false });
 
-   let imgData = null;
-   let upCanvas = null;
-   let upCtx = null;
+    let imgData = null;
+    let upCanvas = null;
+    let upCtx = null;
+    let upImgData = null;
 
-   const upFullCanvas = document.createElement("canvas");
-   const upFullCtx = upFullCanvas.getContext("2d");
+    const upFullCanvas = document.createElement("canvas");
+    const upFullCtx = upFullCanvas.getContext("2d");
+    // Pre-allocated bilinear output buffer
+    let bilinearData = null;
 
-   function resize() {
-     const w = window.innerWidth;
-     const h = window.innerHeight;
-     canvas.width = w;
-     canvas.height = h;
-
-     imgData = ctx.createImageData(GRID, GRID);
-
-     if (!upCanvas) {
-       upCanvas = document.createElement("canvas");
-       upCtx = upCanvas.getContext("2d");
+    // Bilinear interpolation: upscale 64x64 grid to full canvas resolution
+    function bilinearUpsample(srcW, srcH, dstW, dstH) {
+      ensureBilinearBuffer(dstW, dstH);
+      const d = bilinearData;
+      const dx = srcW / dstW;
+      const dy = srcH / dstH;
+      for (let vy = 0; vy < dstH; vy++) {
+        const sy0 = Math.min(Math.floor(vy * dy), srcH - 2);
+        const sy1 = sy0 + 1;
+        const fy = (vy * dy) - sy0;
+        const fy1 = 1 - fy;
+        const rowOff = vy * dstW;
+        for (let vx = 0; vx < dstW; vx++) {
+          const sx0 = Math.min(Math.floor(vx * dx), srcW - 2);
+          const sx1 = sx0 + 1;
+          const fx = (vx * dx) - sx0;
+          const fx1 = 1 - fx;
+          // Four corner indices
+          const i00 = sy0 * srcW + sx0;
+          const i10 = sy0 * srcW + sx1;
+          const i01 = sy1 * srcW + sx0;
+          const i11 = sy1 * srcW + sx1;
+          const h00 = curr[i00], h10 = curr[i10], h01 = curr[i01], h11 = curr[i11];
+          // Bilinear interpolation of height value
+          const h = h00 * fx1 * fy1 + h10 * fx * fy1 + h01 * fx1 * fy + h11 * fx * fy;
+          const p4 = (rowOff + vx) << 2;
+          // Same triphasic coloring as render()
+          const clip = h > 2 ? 2 : h < -2 ? -2 : h;
+          const tNorm = (clip + 2) / 4;
+          let r, g, b;
+          if (tNorm < 0.5) {
+            const u = tNorm * 2;
+            r = 19 + (42 - 19) * u;
+            g = 12 + (27 - 12) * u;
+            b = 30 + (61 - 30) * u;
+          } else {
+            const u = (tNorm - 0.5) * 2;
+            r = 42 + (212 - 42) * u;
+            g = 27 + (184 - 27) * u;
+            b = 61 + (224 - 61) * u;
+          }
+          if (h > 1.2) {
+            const spec = Math.min(1, (h - 1.2) * 0.5);
+            r += 160 * spec;
+            g += 140 * spec;
+            b += 155 * spec;
+          }
+          // Moonlight caustics
+          const gx = vx / dstW * GRID;
+          const gy = vy / dstH * GRID;
+          const caustic1 = Math.sin(gx * 0.15 + t * 2.1) * Math.cos(gy * 0.12 + t * 1.7) * 0.18;
+          const caustic2 = Math.sin((gx + gy) * 0.08 + t * 0.9) * 0.12;
+          const caustic3 = Math.sin(gx * 0.05 - gy * 0.07 + t * 1.3) * 0.08;
+          const caustic = (caustic1 + caustic2 + caustic3);
+          const cr = caustic * 55, cg = caustic * 48, cb = caustic * 65;
+          d[p4]     = cr >= 0 ? Math.min(255, r + cr) | 0 : Math.max(0, r + cr) | 0;
+          d[p4 + 1] = cg >= 0 ? Math.min(255, g + cg) | 0 : Math.max(0, g + cg) | 0;
+          d[p4 + 2] = cb >= 0 ? Math.min(255, b + cb) | 0 : Math.max(0, b + cb) | 0;
+          d[p4 + 3] = 255;
+        }
       }
-     upCanvas.width = GRID;
-     upCanvas.height = GRID;
-     upFullCanvas.width = GRID;
-     upFullCanvas.height = GRID;
+      return d;
     }
-   window.addEventListener("resize", resize);
-   resize();
+
+    function ensureBilinearBuffer(w, h) {
+      if (!bilinearData || bilinearData.length !== w * h * 4) {
+        bilinearData = ctx.createImageData(w, h);
+      }
+    }
+
+    function resize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      canvas.width = w;
+      canvas.height = h;
+
+      imgData = ctx.createImageData(GRID, GRID);
+
+      if (!upCanvas) {
+        upCanvas = document.createElement("canvas");
+        upCtx = upCanvas.getContext("2d");
+        }
+      upCanvas.width = GRID;
+      upCanvas.height = GRID;
+      upFullCanvas.width = GRID;
+      upFullCanvas.height = GRID;
+      }
+    window.addEventListener("resize", resize);
+    resize();
 
     // --- Viewport offset and zoom state ---
    let zoom = 1;
@@ -368,123 +441,55 @@
      ptrVelocity = activeCount > 0 ? totalSpeed / activeCount : ptrVelocity * 0.92;
     }
 
-    // --- Render zoomed portion of grid ---
-   function renderZoomedGrid() {
-     const cw = canvas.width;
-     const ch = canvas.height;
-
-     // Calculate visible region of the grid based on zoom and pan
-     const viewW = GRID / zoom;
-     const viewH = GRID / zoom;
-     const originX = Math.max(0, Math.min(GRID - viewW, (0.5 + panX) * GRID - viewW / 2));
-     const originY = Math.max(0, Math.min(GRID - viewH, (0.5 + panY) * GRID - viewH / 2));
-
-     // Draw the 64x64 rendered grid scaled to fill viewport with proper crop
-     const srcX = Math.max(0, originX | 0);
-     const srcY = Math.max(0, originY | 0);
-     const srcW = Math.min(GRID - srcX, Math.ceil(viewW));
-     const srcH = Math.min(GRID - srcY, Math.ceil(viewH));
-
-     // First render to the upscaled canvas at full resolution
-     upFullCtx.putImageData(imgData, 0, 0);
-
-     // Then draw the cropped region scaled to fill screen
-     ctx.drawImage(upFullCanvas, srcX, srcY, srcW, srcH, 0, 0, cw, ch);
+       // --- Smooth interpolation and state update ---
+   function updateInterp() {
+     // Smooth velocity: lerp toward raw pointer velocity
+     smoothVelocity += (ptrVelocity - smoothVelocity) * SMOOTH_ALPHA;
+     // Smooth zoom: lerp toward target zoom
+     smoothZoom += (targetZoom - smoothZoom) * SMOOTH_ALPHA;
+     // Smooth pan: lerp toward target pan
+     zoom += (targetZoom - zoom) * SMOOTH_ALPHA;
+     panX += (targetPanX - panX) * SMOOTH_ALPHA;
+     panY += (targetPanY - panY) * SMOOTH_ALPHA;
     }
 
-      // --- Rendering ---
+    // --- Rendering ---
+    let renderTime = 0;
     function render() {
-      const pixels = imgData.data;
-      const t = performance.now() * 0.0003;
       const cw = canvas.width;
       const ch = canvas.height;
+      const t = performance.now() * 0.0003;
+      renderTime = t;
 
         // Background gradient: deep indigo-to-lavender
       const bgGrad = ctx.createRadialGradient(
         cw * 0.5, ch * 0.35, 0,
         cw * 0.5, ch * 0.35, Math.max(cw, ch) * 0.75
-       );
+        );
       bgGrad.addColorStop(0, "#3d2b56");
       bgGrad.addColorStop(0.4, "#2a1b3d");
       bgGrad.addColorStop(1, "#1a1025");
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, cw, ch);
 
-      for (let y = 0; y < GRID; y++) {
-        const rowOffset = y * GRID;
-        const cosRow = Math.cos(y * 0.12 + t * 1.7);
+        // Bilinear upsample the 64x64 heightmap to full canvas resolution
+      const bd = bilinearUpsample(GRID, GRID, cw, ch);
+      ctx.putImageData(bd, 0, 0);
 
-        for (let x = 0; x < GRID; x++) {
-          const i = rowOffset + x;
-          const h = curr[i];
-          const p4 = i << 2;
-
-            // Height to color mapping with smoother interpolation
-          const clip = h > 2 ? 2 : h < -2 ? -2 : h;
-          const tNorm = (clip + 2) / 4; // normalize to [0,1]
-
-            // Triphasic color: deep shadow -> base pudding -> highlight
-           let r, g, b;
-          if (tNorm < 0.5) {
-             // Shadow to base: #130c1e -> #2A1B3D
-            const u = tNorm * 2;
-            r = 19 + (42 - 19) * u;
-            g = 12 + (27 - 12) * u;
-            b = 30 + (61 - 30) * u;
-            } else {
-             // Base to highlight: #2A1B3D -> #D4B8E0
-            const u = (tNorm - 0.5) * 2;
-            r = 42 + (212 - 42) * u;
-            g = 27 + (184 - 27) * u;
-            b = 61 + (224 - 61) * u;
-            }
-
-            // Specular bloom on ripple peaks
-          if (h > 1.2) {
-            const spec = Math.min(1, (h - 1.2) * 0.5);
-            r += 160 * spec;
-            g += 140 * spec;
-            b += 155 * spec;
-            }
-
-            // Moonlight caustics: two-layer Perlin-like interference
-          const sinX = Math.sin(x * 0.15 + t * 2.1);
-          const caustic1 = sinX * cosRow * 0.18;
-          const caustic2 = Math.sin((x + y) * 0.08 + t * 0.9) * 0.12;
-          const caustic3 = Math.sin(x * 0.05 - y * 0.07 + t * 1.3) * 0.08;
-          const caustic = caustic1 + caustic2 + caustic3;
-
-          const cr = caustic * 55;
-          const cg = caustic * 48;
-          const cb = caustic * 65;
-
-          pixels[p4]      = cr >= 0 ? Math.min(255, r + cr) | 0 : Math.max(0, r + cr) | 0;
-          pixels[p4 + 1] = cg >= 0 ? Math.min(255, g + cg) | 0 : Math.max(0, g + cg) | 0;
-          pixels[p4 + 2] = cb >= 0 ? Math.min(255, b + cb) | 0 : Math.max(0, b + cb) | 0;
-          pixels[p4 + 3] = 255;
-          }
-        }
-
-        // Put pixel data into the 64x64 source canvas
-      upFullCtx.putImageData(imgData, 0, 0);
-
-        // Upscale with bilinear smoothing and zoom crop
-      renderZoomedGrid();
-
-         // Moon glow overlay
+        // Moon glow overlay
       const moonT = performance.now() * 0.00015;
       const moonPulse = Math.sin(moonT) * 0.03 + 0.05;
       const moonGlow = ctx.createRadialGradient(
         cw * 0.5, ch * 0.25, 0,
         cw * 0.5, ch * 0.25, cw * 0.15
-         );
+        );
       moonGlow.addColorStop(0, `rgba(212,184,224,${(moonPulse * 1.5).toFixed(3)})`);
       moonGlow.addColorStop(0.5, `rgba(212,184,224,${(moonPulse * 0.3).toFixed(3)})`);
       moonGlow.addColorStop(1, "rgba(212,184,224,0)");
       ctx.fillStyle = moonGlow;
       ctx.fillRect(0, 0, cw, ch);
 
-         // Vignette overlay for depth
+        // Vignette overlay for depth
       const vigGrad = ctx.createRadialGradient(
         cw * 0.5, ch * 0.5, cw * 0.25,
         cw * 0.5, ch * 0.5, cw * 0.75
@@ -494,7 +499,7 @@
       ctx.fillStyle = vigGrad;
       ctx.fillRect(0, 0, cw, ch);
 
-         // Star-dust particles with glow
+        // Star-dust particles with glow
       if (pAlive > 0) {
         ctx.globalCompositeOperation = "lighter";
         for (let i = 0; i < PoolSize; i++) {
@@ -515,63 +520,12 @@
           ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(230,215,240,${alpha.toFixed(3)})`;
           ctx.fill();
-          }
-        ctx.globalCompositeOperation = "source-over";
-        }
-      }
-
-    // --- Particle update ---
-   function updateParticles(dt) {
-     for (let i = 0; i < PoolSize; i++) {
-       if (!pActive[i]) continue;
-       pX[i] += pVX[i];
-       pY[i] += pVY[i];
-       pLife[i] -= dt * 1.5;
-       if (pLife[i] <= 0) {
-         pActive[i] = 0;
-         pAlive--;
-        }
-      }
-    }
-
-    // --- Particle spawn at ripple intersections ---
-   let spawnFrame = 0;
-   function maybeSpawnParticles() {
-     spawnFrame++;
-     if (spawnFrame % 3 !== 0) return;
-
-     let count = 0;
-     for (let y = 2; y < GRID - 2 && count < 15; y += 3) {
-       const rowOffset = y * GRID;
-       for (let x = 2; x < GRID - 2 && count < 15; x += 3) {
-         const idx = rowOffset + x;
-         const center = Math.abs(curr[idx]);
-         const neighbors =
-           Math.abs(curr[idx - 1]) +
-           Math.abs(curr[idx + 1]) +
-           Math.abs(curr[idx - GRID]) +
-           Math.abs(curr[idx + GRID]);
-         if (center > 0.8 && neighbors > 2.5) {
-           spawnParticle(x / GRID, y / GRID);
-           count++;
+           }
+         ctx.globalCompositeOperation = "source-over";
           }
         }
-      }
-    }
 
-     // --- Smooth interpolation and state update ---
-   function updateInterp() {
-     // Smooth velocity: lerp toward raw pointer velocity
-     smoothVelocity += (ptrVelocity - smoothVelocity) * SMOOTH_ALPHA;
-     // Smooth zoom: lerp toward target zoom
-     smoothZoom += (targetZoom - smoothZoom) * SMOOTH_ALPHA;
-     // Smooth pan: lerp toward target pan
-     zoom += (targetZoom - zoom) * SMOOTH_ALPHA;
-     panX += (targetPanX - panX) * SMOOTH_ALPHA;
-     panY += (targetPanY - panY) * SMOOTH_ALPHA;
-    }
-
-    // --- Static gradient for reduced motion ---
+        // --- Static gradient for reduced motion ---
     function renderStatic() {
       const cw = canvas.width;
       const ch = canvas.height;
