@@ -13,9 +13,9 @@
   const SIZE = GRID * GRID;
   const DAMPING = 0.96;
   const WAVE_SPEED = 0.8;
-  const curr = new Float32Array(SIZE);
-  const prev = new Float32Array(SIZE);
-  const nextGrid = new Float32Array(SIZE);
+    let curr = new Float32Array(SIZE);
+   let prev = new Float32Array(SIZE);
+   let nextGrid = new Float32Array(SIZE);
 
   // --- Canvas setup ---
   const canvas = document.getElementById("canvas");
@@ -259,9 +259,9 @@
 
     // Swap buffers: prev <- curr <- nextGrid, reuse nextGrid as temp
     const tmp = prev;
-    for (let i = 0; i < SIZE; i++) prev[i] = curr[i];
-    for (let i = 0; i < SIZE; i++) curr[i] = nextGrid[i];
-    nextGrid.set(tmp);
+    prev = curr;
+    curr = nextGrid;
+    nextGrid = tmp;
   }
 
   // --- Displacement field from pointers ---
