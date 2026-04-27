@@ -6,59 +6,70 @@
     const ctx = canvas.getContext('2d');
     const overlay = document.getElementById('overlay');
     const freeBtn = document.getElementById('free-btn');
+    const dlBtn = document.getElementById('dl-btn');
+    const downloadUi = document.getElementById('download-ui');
     const ui = document.getElementById('ui');
+    const hintText = document.getElementById('hint-text');
 
     let W, H;
     let frozen = false;
     let screenshotMode = false;
+    let audioInitiated = false;
+    let hintOpacity = 1;
 
     function resize() {
         W = canvas.width = window.innerWidth;
         H = canvas.height = window.innerHeight;
         initGrid();
         buildOverlay();
+        initOffscreen();
     }
-    resize();
-    window.addEventListener('resize', resize);
 
     // -- Fluid Simulation: Damped Wave Equation --
     const RES = 4;
     let cols, rows;
-    let current, previous, temp;
+    let current, prev;
+    let simTemp;
 
     function initGrid() {
         cols = Math.ceil(W / RES) + 2;
         rows = Math.ceil(H / RES) + 2;
         current = new Float32Array(cols * rows);
-        previous = new Float32Array(cols * rows);
+        prev = new Float32Array(cols * rows);
+        if (!simTemp) simTemp = new Float32Array(cols * rows);
+        else simTemp = new Float32Array(Math.max(simTemp.length, cols * rows));
     }
 
-    const VISCOSITY = 0.96;
+    const VISCOSITY = 0.962;
     const SPEED = 0.25;
 
     function simulate() {
+        const n = cols * rows;
         for (let y = 1; y < rows - 1; y++) {
+            const rowOff = y * cols;
+            const rowUp = (y - 1) * cols;
+            const rowDn = (y + 1) * cols;
             for (let x = 1; x < cols - 1; x++) {
-                const i = y * cols + x;
-                current[i] = (
+                const i = rowOff + x;
+                simTemp[i] = (
                     current[i - 1] +
                     current[i + 1] +
-                    current[i - cols] +
-                    current[i + cols]
-                ) * 0.5 - previous[i];
-                current[i] *= VISCOSITY;
+                    current[rowUp + x] +
+                    current[rowDn + x]
+                ) * 0.5 - prev[i];
+                simTemp[i] *= VISCOSITY;
             }
         }
-        temp = previous;
-        previous = current;
-        current = temp;
+        const t = prev;
+        prev = current;
+        current = simTemp;
+        simTemp = t;
     }
 
-    function dropRipple(cx, cy, amplitude, decay) {
-        const r = Math.max(3, Math.floor(16 / RES));
+    function dropRipple(cx, cy, amplitude) {
+        const r = Math.max(3, Math.floor(18 / RES));
         const gx = Math.floor(cx / RES);
         const gy = Math.floor(cy / RES);
-        const effectiveAmp = amplitude * (decay ? decay : 1);
 
         for (let dy = -r; dy <= r; dy++) {
             for (let dx = -r; dx <= r; dx++) {
@@ -68,44 +79,69 @@
                 const py = gy + dy;
                 if (px < 1 || px >= cols - 1 || py < 1 || py >= rows - 1) continue;
                 const falloff = 1 - dist / r;
-                current[py * cols + px] += effectiveAmp * falloff * falloff;
+                current[py * cols + px] += amplitude * falloff * falloff;
             }
         }
     }
 
-    // -- Optimized Rendering: Offscreen scaled canvas --
+    // -- Offscreen Rendering (scaled down for performance) --
     const offCanvas = document.createElement('canvas');
-    const offCtx = offCanvas.getContext('2d');
-    let offWidth, offHeight;
+    const offCtx = offCanvas.getContext('2d', { willReadFrequently: false });
+    let offW, offH;
 
-    function resizeOffscreen() {
-        offWidth = Math.ceil(W / RES);
-        offHeight = Math.ceil(H / RES);
-        offCanvas.width = offWidth;
-        offCanvas.height = offHeight;
+    function initOffscreen() {
+        offW = Math.ceil(W / RES);
+        offH = Math.ceil(H / RES);
+        offCanvas.width = offW;
+        offCanvas.height = offH;
     }
-    resizeOffscreen();
-    window.addEventListener('resize', resizeOffscreen);
+    initOffscreen();
 
-    function render() {
-        const imgData = offCtx.createImageData(offWidth, offHeight);
-        const pixels = imgData.data;
+    // Pre-warm with initial gentle ripples
+    let initRipples = 0;
 
-        for (let y = 0; y < rows - 1; y++) {
-            for (let x = 0; x < cols - 1; x++) {
-                const val = previous[y * cols + x];
-                const gradient = (previous[y * cols + x + 1] - previous[y * cols + x - 1]) * SPEED * 50;
+    function render(time) {
+        if (initRipples < 5) {
+            dropRipple(
+                Math.random() * W,
+                Math.random() * H * 0.4,
+                25 * (1 + initRipples * 0.3)
+            );
+            initRipples++;
+        }
 
-                const idx = (y * offWidth + x) * 4;
+        const imgData = offCtx.createImageData(offW, offH);
+        const px = imgData.data;
 
-                const baseR = 200 + val * 40 + gradient * 8;
-                const baseG = 140 + val * 25 + gradient * 4;
-                const baseB = 20 + val * 10;
+        for (let y = 1; y < rows - 2; y++) {
+            const yRow = y * cols;
+            const yRowUp = (y - 1) * cols;
+            const yRowDn = (y + 1) * cols;
+            for (let x = 1; x < cols - 2; x++) {
+                const i = yRow + x;
+                const v = prev[i];
 
-                pixels[idx]     = Math.max(0, Math.min(255, baseR));
-                pixels[idx + 1] = Math.max(0, Math.min(255, baseG));
-                pixels[idx + 2] = Math.max(0, Math.min(255, baseB));
-                pixels[idx + 3] = 255;
+                // Gradient for pseudo-specular highlights
+                const gradX = (prev[i + 1] - prev[i - 1]) * SPEED * 40;
+                const gradY = (prev[yRowDn + x] - prev[yRowUp + x]) * SPEED * 40;
+                const gradMag = Math.sqrt(gradX * gradX + gradY * gradY);
+
+                const idx = (y * offW + x) * 4;
+
+                // Warm honey-gold palette with gradient-based specular
+                const r = 185 + v * 55 + gradX * 6 + gradMag * 20;
+                const g = 125 + v * 32 + gradX * 3 + gradMag * 10;
+                const b = 18 + v * 12 + gradMag * 5;
+
+                // Vignette: darker at edges
+                const nx = x / offW;
+                const ny = y / offH;
+                const vig = 0.65 + 0.35 * Math.min(1, 2 * (1 - Math.sqrt((nx - 0.5) * (nx - 0.5) + (ny - 0.5) * (ny - 0.5))));
+
+                px[idx]     = Math.max(0, Math.min(255, r * vig));
+                px[idx + 1] = Math.max(0, Math.min(255, g * vig));
+                px[idx + 2] = Math.max(0, Math.min(255, b * vig));
+                px[idx + 3] = 255;
             }
         }
 
@@ -114,33 +150,46 @@
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(offCanvas, 0, 0, W, H);
+
+        // Subtle glow overlay for warmth
+        if (audioAmplitude > 0.02) {
+            ctx.save();
+            ctx.globalAlpha = audioAmplitude * 0.08;
+            ctx.globalCompositeOperation = 'screen';
+            const glow = ctx.createRadialGradient(W * 0.5, H * 0.4, 0, W * 0.5, H * 0.4, W * 0.6);
+            glow.addColorStop(0, 'rgba(255, 200, 100, 1)');
+            glow.addColorStop(1, 'rgba(255, 150, 50, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+            ctx.restore();
+        }
     }
 
-    // -- Audio Engine --
+    // -- Audio Engine: Full procedural chain --
     let audioCtx = null;
     let droneGain = null;
     let compNode = null;
     let masterGain = null;
-    let lpfNode = null;
     let analyserNode = null;
     let audioStarted = false;
-
-    // Honey-melt envelope state
-    let envPhase = 'idle'; // idle | attack | sustain | release
-    let envValue = 0;
-    const ENV_ATTACK = 0.4;    // slow attack (0.4s)
-    const ENV_SUSTAIN_LEVEL = 0.6;
-    const ENV_RELEASE = 0.8;    // exponential release (0.8s)
     let envGainNode = null;
     let sidechainGainNode = null;
+
+    // Honey-melt envelope
+    let envPhase = 'idle';
+    let envValue = 0;
+    const ENV_ATTACK = 0.4;
+    const ENV_SUSTAIN = 0.55;
+    const ENV_RELEASE = 0.8;
 
     function initAudio() {
         if (audioStarted) return;
         audioStarted = true;
 
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
 
-        // 24dB/octave high-pass at 80Hz: cascade two 2nd-order (12dB/oct each) BiquadFilters
+        // 24dB/octave high-pass at 80Hz: cascade two 2nd-order BiquadFilters
         const hp1 = audioCtx.createBiquadFilter();
         hp1.type = 'highpass';
         hp1.frequency.value = 80;
@@ -151,9 +200,7 @@
         hp2.frequency.value = 80;
         hp2.Q.value = 0.707;
 
-        lpfNode = hp1; // keep reference for compatibility
-
-        // Compressor: soft-knee at -3dB threshold, -3dBFS guard
+        // Soft-knee compressor at -3dB threshold
         compNode = audioCtx.createDynamicsCompressor();
         compNode.threshold = -3;
         compNode.knee = 10;
@@ -161,61 +208,50 @@
         compNode.attack = 0.003;
         compNode.release = 0.15;
 
-        // Analyser for amplitude tracking and sidechain
+        // Analyser for amplitude tracking
         analyserNode = audioCtx.createAnalyser();
         analyserNode.fftSize = 256;
         analyserNode.smoothingTimeConstant = 0.7;
 
-        // Drone gain (oscillator mix volume)
+        // Drone mix gain
         droneGain = audioCtx.createGain();
-        droneGain.gain.value = 0.12;
+        droneGain.gain.value = 0.1;
 
-        // Envelope gain node for honey-melt attack/sustain/release
+        // Envelope gain (honey-melt: slow attack, exponential release)
         envGainNode = audioCtx.createGain();
-        envGainNode.gain.value = 1;
+        envGainNode.gain.value = ENV_SUSTAIN;
 
-        // Sidechain ducking gain – reduces drone when input is active
+        // Sidechain ducking gain
         sidechainGainNode = audioCtx.createGain();
         sidechainGainNode.gain.value = 1;
 
-        // Master gain (final output control)
+        // Master gain
         masterGain = audioCtx.createGain();
-        masterGain.gain.value = 0.8;
+        masterGain.gain.value = 0.75;
 
-        // Oscillator 1: Base drone at 55Hz (A1)
+        // 3 oscillators: base (55Hz sine), warmth (55.4Hz sine), harmonic (110Hz triangle)
         const osc1 = audioCtx.createOscillator();
         osc1.type = 'sine';
         osc1.frequency.value = 55;
 
-        // Oscillator 2: Slight detune for warmth at 55.5Hz
         const osc2 = audioCtx.createOscillator();
         osc2.type = 'sine';
-        osc2.frequency.value = 55.5;
+        osc2.frequency.value = 55.4;
 
-        // Oscillator 3: Harmonic at 110Hz (A2)
         const osc3 = audioCtx.createOscillator();
         osc3.type = 'triangle';
         osc3.frequency.value = 110;
 
-        // Oscillator 4: Subtle 5th harmonic for depth
-        const osc4 = audioCtx.createOscillator();
-        osc4.type = 'sine';
-        osc4.frequency.value = 82.5;
-
         const g3 = audioCtx.createGain();
-        g3.gain.value = 0.3;
-
-        const g4 = audioCtx.createGain();
-        g4.gain.value = 0.15;
+        g3.gain.value = 0.25;
 
         // Signal chain:
-        // oscillators -> droneGain -> hp1(12dB) -> hp2(12dB) -> compNode -> sidechainGain -> envGain -> analyserNode -> masterGain -> destination
+        // [osc1, osc2] -> droneGain -> [osc3 -> g3] -> droneGain
+        // droneGain -> hp1 -> hp2 -> compNode -> sidechainGain -> envGain -> analyser -> master -> dest
         osc1.connect(droneGain);
         osc2.connect(droneGain);
         osc3.connect(g3);
         g3.connect(droneGain);
-        osc4.connect(g4);
-        g4.connect(droneGain);
 
         droneGain.connect(hp1);
         hp1.connect(hp2);
@@ -229,44 +265,48 @@
         osc1.start();
         osc2.start();
         osc3.start();
-        osc4.start();
 
-        // Start envelope fade-in on first audio init
-        const now = audioCtx.currentTime;
-        envGainNode.gain.setValueAtTime(0.001, now);
-        envGainNode.gain.exponentialRampToValueAtTime(ENV_SUSTAIN_LEVEL, now + ENV_ATTACK);
+        // Gentle fade-in
+        const t = audioCtx.currentTime;
+        envGainNode.gain.setValueAtTime(0.001, t);
+        envGainNode.gain.exponentialRampToValueAtTime(ENV_SUSTAIN, t + ENV_ATTACK + 0.3);
         envPhase = 'sustain';
+
+        // Hide hint on first audio init
+        if (hintText) {
+            hintOpacity = 0;
+            hintText.style.opacity = '0';
+        }
     }
 
     function triggerEnvelope() {
         if (!audioCtx || !envGainNode) return;
-        const now = audioCtx.currentTime;
-        envGainNode.gain.cancelScheduledValues(now);
-        envGainNode.gain.setValueAtTime(envValue || 0.001, now);
-        envGainNode.gain.exponentialRampToValueAtTime(0.9, now + ENV_ATTACK);
+        const t = audioCtx.currentTime;
+        envGainNode.gain.cancelScheduledValues(t);
+        envGainNode.gain.setValueAtTime(Math.max(envValue, 0.001), t);
+        envGainNode.gain.exponentialRampToValueAtTime(0.85, t + ENV_ATTACK);
         envPhase = 'attack';
     }
 
     function releaseEnvelope() {
         if (!audioCtx || !envGainNode) return;
-        const now = audioCtx.currentTime;
-        envGainNode.gain.cancelScheduledValues(now);
-        envGainNode.gain.setValueAtTime(envGainNode.gain.value, now);
-        envGainNode.gain.exponentialRampToValueAtTime(ENV_SUSTAIN_LEVEL, now + ENV_RELEASE);
+        const t = audioCtx.currentTime;
+        envGainNode.gain.cancelScheduledValues(t);
+        envGainNode.gain.setValueAtTime(envGainNode.gain.value, t);
+        envGainNode.gain.exponentialRampToValueAtTime(ENV_SUSTAIN, t + ENV_RELEASE);
         envPhase = 'release';
     }
 
     let sidechainActive = false;
-    let sidechainStart = 0;
-    let currentInputAmplitude = 0;
-    let targetInputAmplitude = 0;
+    let currentInputAmp = 0;
+    let targetInputAmp = 0;
 
     function duckDrone() {
         if (!audioCtx || !sidechainGainNode) return;
-        const now = audioCtx.currentTime;
-        const target = sidechainActive ? 0.15 : 1.0;
-        sidechainGainNode.gain.setTargetAtTime(target, now, 0.015);
-     }
+        const t = audioCtx.currentTime;
+        const target = sidechainActive ? 0.18 : 1.0;
+        sidechainGainNode.gain.setTargetAtTime(target, t, 0.015);
+    }
 
     function getAudioAmplitude() {
         if (!analyserNode) return 0;
@@ -277,103 +317,133 @@
         return sum / data.length / 255;
     }
 
-    // -- SVG Overlay: Park Bench + Strawberry Mochi --
+    // -- SVG Overlay: Detailed Park Bench + Strawberry Mochi --
     function buildOverlay() {
-        const ox = W * 0.15;
-        const oy = H * 0.65;
+        const ox = W * 0.12;
+        const oy = H * 0.72;
+        const benchW = Math.max(280, W * 0.35);
+        const mochiCx = ox + benchW * 0.35;
+        const mochiCy = oy - 50;
 
         overlay.innerHTML = `
 <defs>
-    <linearGradient id="benchGrad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#8B5E3C" />
-        <stop offset="100%" stop-color="#5C3A1E" />
-    </linearGradient>
-    <radialGradient id="mochiGrad" cx="50%" cy="40%" r="50%">
-        <stop offset="0%" stop-color="#FFE4E1" />
-        <stop offset="70%" stop-color="#FFB6C1" />
-        <stop offset="100%" stop-color="#FF8FAA" />
-    </radialGradient>
-    <radialGradient id="berryGrad" cx="50%" cy="40%" r="50%">
-        <stop offset="0%" stop-color="#FF6B8A" />
-        <stop offset="100%" stop-color="#CC3366" />
-    </radialGradient>
+  <linearGradient id="benchGrad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#9B7040"/>
+    <stop offset="100%" stop-color="#5C3A1E"/>
+  </linearGradient>
+  <linearGradient id="backGrad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#7A6038"/>
+    <stop offset="100%" stop-color="#4A2E15"/>
+  </linearGradient>
+  <radialGradient id="mochiGrad" cx="45%" cy="35%" r="55%">
+    <stop offset="0%" stop-color="#FFF5F2"/>
+    <stop offset="60%" stop-color="#FFB6C1"/>
+    <stop offset="100%" stop-color="#FF9AAF"/>
+  </radialGradient>
+  <radialGradient id="berryGrad" cx="48%" cy="38%" r="52%">
+    <stop offset="0%" stop-color="#FF5577"/>
+    <stop offset="80%" stop-color="#DD2255"/>
+    <stop offset="100%" stop-color="#AA1144"/>
+  </radialGradient>
+  <linearGradient id="leafGrad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#4CAF50"/>
+    <stop offset="100%" stop-color="#2D7B3E"/>
+  </linearGradient>
+  <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+    <feOffset dx="1" dy="2"/>
+    <feComponentTransfer><feFuncA type="linear" slope="0.2"/></feComponentTransfer>
+    <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
 </defs>
 
-<g id="bench-group">
-    <rect x="${ox}" y="${oy}" width="320" height="10" rx="3" fill="url(#benchGrad)" opacity="0.7"/>
-    <rect x="${ox + 20}" y="${oy + 10}" width="10" height="60" rx="2" fill="url(#benchGrad)" opacity="0.6"/>
-    <rect x="${ox + 290}" y="${oy + 10}" width="10" height="60" rx="2" fill="url(#benchGrad)" opacity="0.6"/>
-    <rect x="${ox}" y="${oy - 40}" width="320" height="8" rx="2" fill="url(#benchGrad)" opacity="0.5"/>
-    <rect x="${ox + 30}" y="${oy - 40}" width="8" height="50" rx="2" fill="url(#benchGrad)" opacity="0.4"/>
-    <rect x="${ox + 282}" y="${oy - 40}" width="8" height="50" rx="2" fill="url(#benchGrad)" opacity="0.4"/>
+<!-- Park bench -->
+<g id="bench-group" opacity="0.7">
+  <!-- Backrest -->
+  <rect x="${ox}" y="${oy - 55}" width="${benchW}" height="7" rx="3" fill="url(#backGrad)"/>
+  <rect x="${ox + 25}" y="${oy - 62}" width="7" height="62" rx="2" fill="url(#backGrad)"/>
+  <rect x="${ox + benchW - 32}" y="${oy - 62}" width="7" height="62" rx="2" fill="url(#backGrad)"/>
+  <!-- Seat -->
+  <rect x="${ox - 5}" y="${oy}" width="${benchW + 10}" height="9" rx="3" fill="url(#benchGrad)"/>
+  <!-- Legs -->
+  <rect x="${ox + 12}" y="${oy + 9}" width="8" height="50" rx="2" fill="url(#benchGrad)" opacity="0.8"/>
+  <rect x="${ox + benchW - 18}" y="${oy + 9}" width="8" height="50" rx="2" fill="url(#benchGrad)" opacity="0.8"/>
+  <!-- Leg crossbar -->
+  <rect x="${ox + 12}" y="${oy + 42}" width="${benchW - 22}" height="4" rx="1.5" fill="url(#benchGrad)" opacity="0.5"/>
 </g>
 
-<g id="mochi-group">
-    <ellipse cx="${ox + 100}" cy="${oy - 45}" rx="30" ry="22" fill="url(#mochiGrad)" opacity="0.8"/>
-    <ellipse cx="${ox + 100}" cy="${oy - 52}" rx="18" ry="14" fill="url(#berryGrad)" opacity="0.7"/>
-    <ellipse cx="${ox + 100}" cy="${oy - 52}" rx="8" ry="6" fill="#2D8B4E" opacity="0.6"/>
-    <ellipse cx="${ox + 75}" cy="${oy - 45}" rx="12" ry="10" fill="url(#berryGrad)" opacity="0.5"/>
-    <path d="M${ox + 85},${oy - 50} Q${ox + 100},${oy - 60} ${ox + 115},${oy - 50}" fill="none" stroke="#FFE4E1" stroke-width="2" opacity="0.6"/>
+<!-- Strawberry mochi (half-eaten) -->
+<g id="mochi-group" filter="url(#softShadow)">
+  <!-- Mochi body -->
+  <ellipse cx="${mochiCx}" cy="${mochiCy}" rx="28" ry="22" fill="url(#mochiGrad)"/>
+  <!-- Bite mark (eaten portion) -->
+  <ellipse cx="${mochiCx + 22}" cy="${mochiCy - 6}" rx="14" ry="16" fill="#1a1008" opacity="0.85"/>
+  <!-- Exposed strawberry filling -->
+  <ellipse cx="${mochiCx + 10}" cy="${mochiCy - 2}" rx="15" ry="12" fill="url(#berryGrad)"/>
+  <!-- Berry seeds -->
+  <ellipse cx="${mochiCx + 5}" cy="${mochiCy - 6}" rx="1.5" ry="2" fill="#FFCC44" opacity="0.7"/>
+  <ellipse cx="${mochiCx + 13}" cy="${mochiCy - 2}" rx="1.5" ry="2" fill="#FFCC44" opacity="0.7"/>
+  <ellipse cx="${mochiCx + 8}" cy="${mochiCy + 3}" rx="1.5" ry="2" fill="#FFCC44" opacity="0.7"/>
+  <ellipse cx="${mochiCx + 16}" cy="${mochiCy + 1}" rx="1.5" ry="2" fill="#FFCC44" opacity="0.7"/>
+  <!-- Berry leaf -->
+  <path d="M${mochiCx + 10},${mochiCy - 14} Q${mochiCx + 3},${mochiCy - 22} ${mochiCx - 2},${mochiCy - 16} Q${mochiCx + 2},${mochiCy - 13} ${mochiCx + 10},${mochiCy - 14}" fill="url(#leafGrad)" opacity="0.8"/>
+  <path d="M${mochiCx + 8},${mochiCy - 15} Q${mochiCx + 14},${mochiCy - 20} ${mochiCx + 18},${mochiCy - 14}" fill="none" stroke="url(#leafGrad)" stroke-width="1.5" opacity="0.6"/>
+  <!-- Mochi gloss highlight -->
+  <ellipse cx="${mochiCx - 10}" cy="${mochiCy - 12}" rx="8" ry="5" fill="rgba(255,255,255,0.25)"/>
+  <!-- Honey drip from mochi -->
+  <path d="M${mochiCx - 5},${mochiCy + 18} Q${mochiCx - 8},${mochiCy + 30} ${mochiCx - 6},${mochiCy + 38}" fill="none" stroke="rgba(255,180,60,0.5)" stroke-width="2.5" stroke-linecap="round"/>
+  <ellipse cx="${mochiCx - 6}" cy="${mochiCy + 39}" rx="3" ry="4" fill="rgba(255,180,60,0.4)"/>
 </g>
 `;
     }
     buildOverlay();
 
-    // -- Input Handling: Touch/Click with Pressure Mapping --
+    // -- Input Handling --
     let pointerDown = false;
     let inputX = 0, inputY = 0;
     let inputPressure = 0;
     let inputStartTime = 0;
-    let lastInputTime = 0;
     let pressDuration = 0;
 
     function handlePointer(x, y, isDown, pressure) {
+        if (frozen) return;
         initAudio();
         inputX = x;
         inputY = y;
-        pointerDown = isDown;
         inputPressure = pressure || 0.5;
-        const now = performance.now();
 
         if (isDown) {
-            inputStartTime = now;
+            inputStartTime = performance.now();
             pressDuration = 0;
             triggerEnvelope();
-          } else {
-            pressDuration = now - inputStartTime;
+        } else {
+            pressDuration = performance.now() - inputStartTime;
             releaseEnvelope();
-          }
+        }
 
-          // Pressure maps to amplitude: higher pressure = larger ripple
-        const pressureFactor = Math.max(0.3, Math.min(1.5, inputPressure));
-        const durationFactor = Math.max(0.5, Math.min(2, 1 + pressDuration / 500));
+        const pressFactor = Math.max(0.3, Math.min(1.5, inputPressure));
+        const durFactor = Math.max(0.5, Math.min(2, 1 + pressDuration / 500));
 
         const amplitude = isDown
-             ? 80 * pressureFactor * durationFactor
-             : -30 * pressureFactor;
-        const decay = isDown ? (0.5 + inputPressure * 0.5) : (1.5 - inputPressure * 0.5);
+            ? 80 * pressFactor * durFactor
+            : -30 * pressFactor;
 
-        dropRipple(x, y, amplitude, decay);
+        dropRipple(x, y, amplitude);
 
-         // Update input amplitude for sidechain
-        targetInputAmplitude = isDown ? inputPressure : 0;
+        targetInputAmp = isDown ? inputPressure : 0;
 
-        if (isDown) {
-            if (!sidechainActive) {
-                sidechainActive = true;
-                sidechainStart = now;
-            }
-        } else {
+        if (isDown && !sidechainActive) {
+            sidechainActive = true;
+        } else if (!isDown) {
             sidechainActive = false;
         }
         duckDrone();
-        lastInputTime = now;
-      }
+    }
 
-    // High-performance pointer events with <20ms latency
     canvas.addEventListener('pointerdown', e => {
         e.preventDefault();
         handlePointer(e.clientX, e.clientY, true, e.pressure);
+        pointerDown = true;
     }, { passive: false });
 
     canvas.addEventListener('pointermove', e => {
@@ -400,10 +470,20 @@
         duckDrone();
     }, { passive: false });
 
-    // -- Freeze Frame: Pause simulation, show overlay, hide UI --
-    freeBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        initAudio(); // Ensure audio is started for amplitude tracking
+    // -- Keyboard shortcuts --
+    document.addEventListener('keydown', e => {
+        if (e.key === 'f' || e.key === 'F') {
+            e.preventDefault();
+            toggleFreeze();
+        } else if (e.key === 's' || e.key === 'S') {
+            e.preventDefault();
+            if (frozen) captureScreenshot();
+        }
+    });
+
+    // -- Freeze / Unfreeze --
+    function toggleFreeze() {
+        initAudio();
         frozen = !frozen;
         freeBtn.classList.toggle('active', frozen);
         document.body.classList.toggle('frozen', frozen);
@@ -412,70 +492,124 @@
             screenshotMode = true;
             overlay.style.display = 'block';
             ui.style.display = 'none';
+            downloadUi.style.display = 'block';
         } else {
             screenshotMode = false;
             overlay.style.display = 'none';
+            downloadUi.style.display = 'none';
             ui.style.display = 'block';
         }
+    }
+
+    freeBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        toggleFreeze();
     });
 
-    // -- Ambient Drip --
+    // -- Screenshot Capture --
+    function captureScreenshot() {
+        // Composite canvas + overlay onto a temp canvas
+        const snap = document.createElement('canvas');
+        snap.width = W;
+        snap.height = H;
+        const sCtx = snap.getContext('2d');
+
+        // Draw the fluid sim
+        sCtx.drawImage(canvas, 0, 0);
+
+        // Draw the SVG overlay by serializing to SVG blob
+        const svgStr = '<?xml version="1.0" encoding="UTF-8"?>' +
+            `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${overlay.innerHTML}</svg>`;
+        const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+        const img = new Image();
+        img.onload = () => {
+            sCtx.drawImage(img, 0, 0, W, H);
+            URL.revokeObjectURL(url);
+            snap.toBlob(blob => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'honey-melt-' + Date.now() + '.png';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
+                }, 100);
+            }, 'image/png');
+        };
+        img.src = url;
+    }
+
+    if (dlBtn) {
+        dlBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            captureScreenshot();
+        });
+    }
+
+    // -- Ambient Drip (layered ripples) --
     let lastDrip = 0;
 
     function ambientDrip(now) {
         if (frozen) return;
-        const interval = 4000;
+        const interval = 3500;
         if (now - lastDrip > interval) {
             lastDrip = now;
-            const rx = Math.random() * W;
-            const ry = Math.random() * H * 0.5;
-            dropRipple(rx, ry, 20 + Math.random() * 20);
+            const count = 1 + Math.floor(Math.random() * 2);
+            for (let i = 0; i < count; i++) {
+                dropRipple(
+                    Math.random() * W * 0.8 + W * 0.1,
+                    Math.random() * H * 0.5 + H * 0.05,
+                    12 + Math.random() * 18
+                );
+            }
         }
     }
 
     // -- Main Loop --
-    let lastTime = 0;
     let audioAmplitude = 0;
+    let smoothAmp = 0;
 
     function loop(now) {
         requestAnimationFrame(loop);
 
-         // Smooth input amplitude for audio-driven effects
-        currentInputAmplitude += (targetInputAmplitude - currentInputAmplitude) * 0.1;
+        // Smooth input amplitude
+        currentInputAmp += (targetInputAmp - currentInputAmp) * 0.1;
 
         if (!frozen) {
             simulate();
             ambientDrip(now);
-         }
+        }
 
-        render();
+        render(now);
 
         if (audioStarted) {
             audioAmplitude = getAudioAmplitude();
+            smoothAmp += (audioAmplitude - smoothAmp) * 0.08;
 
-             // Smooth envelope value from audio node
+            // Update env value from audio node
             envValue = envGainNode ? envGainNode.gain.value : 0;
 
             const benchGroup = overlay.querySelector('#bench-group');
             const mochiGroup = overlay.querySelector('#mochi-group');
 
-             // Audio amplitude envelope drives sway with organic feel
-            const swayX = Math.sin(now / 2000) * envValue * 8;
-            const swayY = Math.cos(now / 2800) * envValue * 4;
-            const swayRot = Math.sin(now / 3200) * envValue * 2;
+            // Audio-driven sway
+            const swX = Math.sin(now / 2000) * envValue * 8;
+            const swY = Math.cos(now / 2800) * envValue * 4;
+            const swR = Math.sin(now / 3200) * envValue * 2;
 
             if (benchGroup) {
-                benchGroup.setAttribute('transform', `translate(${swayX * 0.3}, ${swayY * 0.2})`);
-              }
+                benchGroup.setAttribute('transform', `translate(${swX * 0.3}, ${swY * 0.2})`);
+            }
             if (mochiGroup) {
+                const benchOrigX = W * 0.12 + Math.max(280, W * 0.35) * 0.35;
+                const benchOrigY = H * 0.72 - 50;
                 mochiGroup.setAttribute('transform',
-                    `translate(${swayX}, ${swayY}) rotate(${swayRot}, ${W * 0.15 + 100}, ${H * 0.65 - 45}) scale(${1 + envValue * 0.04})`);
-              }
-         }
-
-        const delta = now - lastTime;
-        lastTime = now;
-      }
+                    `translate(${swX}, ${swY}) rotate(${swR}, ${benchOrigX}, ${benchOrigY}) scale(${1 + envValue * 0.04})`);
+            }
+        }
+    }
 
     requestAnimationFrame(loop);
 })();

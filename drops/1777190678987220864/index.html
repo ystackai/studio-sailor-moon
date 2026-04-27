@@ -7,11 +7,15 @@
    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-   <canvas id="sim"></canvas>
-   <svg id="overlay" aria-hidden="true" viewBox="0 0 800 600" preserveAspectRatio="xMid YMax slice" style="display:none"></svg>
-   <div id="ui">
-     <button id="free-btn" aria-label="Freeze Frame">Freeze</button>
-   </div>
-   <script src="game.js"></script>
+    <canvas id="sim"></canvas>
+    <svg id="overlay" aria-hidden="true" viewBox="0 0 1600 1200" preserveAspectRatio="xMid YMax slice" style="display:none"></svg>
+    <div id="hint-text">tap or press to touch the honey</div>
+    <div id="ui">
+       <button id="free-btn" aria-label="Freeze Frame">Freeze</button>
+     </div>
+     <div id="download-ui" style="display:none">
+       <button id="dl-btn" aria-label="Download Screenshot">Capture</button>
+     </div>
+    <script src="game.js"></script>
 </body>
 </html>
