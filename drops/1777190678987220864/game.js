@@ -121,6 +121,11 @@
                 const i = yRow + x;
                 const v = current[i];
 
+                // Position-dependent base gradient (warmer top-right, deeper bottom-left)
+                const nx = (x - 1) / Math.max(1, offW - 1);
+                const ny = (y - 1) / Math.max(1, offH - 1);
+                const posWarm = 0.7 + 0.3 * (nx * 0.6 + ny * 0.4);
+
                 // Gradient for pseudo-specular highlights
                 const gradX = (current[i + 1] - current[i - 1]) * SPEED * 40;
                 const gradY = (current[yRowDn + x] - current[yRowUp + x]) * SPEED * 40;
@@ -128,17 +133,24 @@
 
                 const idx = ((y - 1) * offW + (x - 1)) * 4;
 
-                // Warm honey-gold palette with gradient-based specular
-                const r = 185 + v * 55 + gradX * 6 + gradMag * 20;
-                const g = 125 + v * 32 + gradX * 3 + gradMag * 10;
-                const b = 18 + v * 12 + gradMag * 5;
+                // Warm honey-gold palette with position-dependent gradient mesh
+                // Base colors shift across the canvas for organic warmth
+                const baseR = (175 + 35 * nx) * posWarm;
+                const baseG = (115 + 25 * ny) * posWarm;
+                const baseB = (12 + 18 * (1 - nx)) * posWarm;
 
-                // Vignette: darker at edges
-                const nx = (x - 1) / (offW - 1);
-                const ny = (y - 1) / (offH - 1);
-                const vig = 0.65 + 0.35 * Math.min(1, 2 * (1 - Math.sqrt((nx - 0.5) * (nx - 0.5) + (ny - 0.5) * (ny - 0.5))));
+                // Specular highlight: strong where gradient faces "view"
+                const specHighlight = Math.pow(Math.max(0, gradMag / 80), 1.8) * 90;
 
-                px[idx]      = Math.max(0, Math.min(255, r * vig));
+                // Final pixel with layered contributions
+                let r = baseR + v * 55 + gradX * 6 + gradMag * 20 + specHighlight;
+                let g = baseG + v * 32 + gradX * 3 + gradMag * 10 + specHighlight * 0.6;
+                let b = baseB + v * 12 + gradMag * 5 + specHighlight * 0.15;
+
+                // Vignette: darker at edges for depth
+                const vig = 0.55 + 0.45 * Math.min(1, 2 * (1 - Math.sqrt((nx - 0.5) * (nx - 0.5) * 1.3 + (ny - 0.5) * (ny - 0.5))));
+
+                px[idx]       = Math.max(0, Math.min(255, r * vig));
                 px[idx + 1] = Math.max(0, Math.min(255, g * vig));
                 px[idx + 2] = Math.max(0, Math.min(255, b * vig));
                 px[idx + 3] = 255;
@@ -301,13 +313,15 @@
     let sidechainActive = false;
     let currentInputAmp = 0;
     let targetInputAmp = 0;
+    let duckDepth = 0;
 
     function duckDrone() {
         if (!audioCtx || !sidechainGainNode) return;
         const t = audioCtx.currentTime;
-        const target = sidechainActive ? 0.18 : 1.0;
-        sidechainGainNode.gain.setTargetAtTime(target, t, 0.015);
-    }
+        const depth = sidechainActive ? (0.15 + currentInputAmp * 0.5) : 1.0;
+        sidechainGainNode.gain.setTargetAtTime(Math.max(0.08, depth), t, 0.012);
+        duckDepth = depth;
+      }
 
     function getAudioAmplitude() {
         if (!analyserNode) return 0;
@@ -318,7 +332,7 @@
         return sum / data.length / 255;
     }
 
-    // -- SVG Overlay: Detailed Park Bench + Strawberry Mochi --
+      // -- SVG Overlay: Detailed Park Bench + Strawberry Mochi --
     function buildOverlay() {
         overlay.setAttribute('viewBox', `0 0 ${W} ${H}`);
         const ox = W * 0.12;
@@ -329,75 +343,117 @@
 
         overlay.innerHTML = `
 <defs>
-  <linearGradient id="benchGrad" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="#9B7040"/>
-    <stop offset="100%" stop-color="#5C3A1E"/>
-  </linearGradient>
-  <linearGradient id="backGrad" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="#7A6038"/>
-    <stop offset="100%" stop-color="#4A2E15"/>
-  </linearGradient>
-  <radialGradient id="mochiGrad" cx="45%" cy="35%" r="55%">
-    <stop offset="0%" stop-color="#FFF5F2"/>
-    <stop offset="60%" stop-color="#FFB6C1"/>
-    <stop offset="100%" stop-color="#FF9AAF"/>
-  </radialGradient>
-  <radialGradient id="berryGrad" cx="48%" cy="38%" r="52%">
-    <stop offset="0%" stop-color="#FF5577"/>
-    <stop offset="80%" stop-color="#DD2255"/>
-    <stop offset="100%" stop-color="#AA1144"/>
-  </radialGradient>
-  <linearGradient id="leafGrad" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0%" stop-color="#4CAF50"/>
-    <stop offset="100%" stop-color="#2D7B3E"/>
-  </linearGradient>
-  <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-    <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-    <feOffset dx="1" dy="2"/>
-    <feComponentTransfer><feFuncA type="linear" slope="0.2"/></feComponentTransfer>
-    <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
-  </filter>
+   <linearGradient id="benchGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9B7040"/>
+      <stop offset="100%" stop-color="#5C3A1E"/>
+    </linearGradient>
+    <linearGradient id="backGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7A6038"/>
+      <stop offset="100%" stop-color="#4A2E15"/>
+    </linearGradient>
+    <radialGradient id="mochiGrad" cx="45%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#FFF5F2"/>
+      <stop offset="60%" stop-color="#FFB6C1"/>
+      <stop offset="100%" stop-color="#FF9AAF"/>
+    </radialGradient>
+    <radialGradient id="berryGrad" cx="48%" cy="38%" r="52%">
+      <stop offset="0%" stop-color="#FF5577"/>
+      <stop offset="80%" stop-color="#DD2255"/>
+      <stop offset="100%" stop-color="#AA1144"/>
+    </radialGradient>
+    <radialGradient id="fillingGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF4466"/>
+      <stop offset="100%" stop-color="#CC2244"/>
+    </radialGradient>
+    <linearGradient id="leafGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4CAF50"/>
+      <stop offset="100%" stop-color="#2D7B3E"/>
+    </linearGradient>
+    <radialGradient id="shadowGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(0,0,0,0.25)"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+    </radialGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="1" dy="2"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.2"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="benchGlow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
 </defs>
 
 <!-- Park bench -->
-<g id="bench-group" opacity="0.7">
-  <!-- Backrest -->
-  <rect x="${ox}" y="${oy - 55}" width="${benchW}" height="7" rx="3" fill="url(#backGrad)"/>
-  <rect x="${ox + 25}" y="${oy - 62}" width="7" height="62" rx="2" fill="url(#backGrad)"/>
-  <rect x="${ox + benchW - 32}" y="${oy - 62}" width="7" height="62" rx="2" fill="url(#backGrad)"/>
-  <!-- Seat -->
-  <rect x="${ox - 5}" y="${oy}" width="${benchW + 10}" height="9" rx="3" fill="url(#benchGrad)"/>
-  <!-- Legs -->
-  <rect x="${ox + 12}" y="${oy + 9}" width="8" height="50" rx="2" fill="url(#benchGrad)" opacity="0.8"/>
-  <rect x="${ox + benchW - 18}" y="${oy + 9}" width="8" height="50" rx="2" fill="url(#benchGrad)" opacity="0.8"/>
-  <!-- Leg crossbar -->
-  <rect x="${ox + 12}" y="${oy + 42}" width="${benchW - 22}" height="4" rx="1.5" fill="url(#benchGrad)" opacity="0.5"/>
+<g id="bench-group" opacity="0.75" filter="url(#benchGlow)">
+   <!-- Bench shadow on ground -->
+   <ellipse cx="${ox + benchW / 2}" cy="${oy + 62}" rx="${benchW * 0.32}" ry="8" fill="url(#shadowGrad)"/>
+   <!-- Top backrest rail -->
+    <rect x="${ox}" y="${oy - 65}" width="${benchW}" height="5" rx="2.5" fill="url(#backGrad)"/>
+   <!-- Backrest middle rail -->
+    <rect x="${ox}" y="${oy - 50}" width="${benchW}" height="6" rx="3" fill="url(#backGrad)"/>
+   <!-- Backrest bottom rail -->
+    <rect x="${ox}" y="${oy - 36}" width="${benchW}" height="5" rx="2.5" fill="url(#backGrad)"/>
+   <!-- Back posts -->
+    <rect x="${ox + 22}" y="${oy - 68}" width="6" height="72" rx="2" fill="url(#backGrad)"/>
+    <rect x="${ox + benchW - 28}" y="${oy - 68}" width="6" height="72" rx="2" fill="url(#backGrad)"/>
+    <!-- Arm rests -->
+    <rect x="${ox - 3}" y="${oy - 28}" width="6" height="32" rx="2.5" fill="url(#benchGrad)"/>
+    <rect x="${ox + benchW - 3}" y="${oy - 28}" width="6" height="32" rx="2.5" fill="url(#benchGrad)"/>
+    <!-- Arm rest tops -->
+    <rect x="${ox - 6}" y="${oy - 31}" width="12" height="4" rx="2" fill="url(#benchGrad)"/>
+    <rect x="${ox + benchW - 6}" y="${oy - 31}" width="12" height="4" rx="2" fill="url(#benchGrad)"/>
+    <!-- Seat planks -->
+    <rect x="${ox - 5}" y="${oy - 2}" width="${benchW + 10}" height="6" rx="2" fill="url(#benchGrad)"/>
+    <rect x="${ox - 5}" y="${oy + 5}" width="${benchW + 10}" height="6" rx="2" fill="url(#benchGrad)" opacity="0.85"/>
+   <!-- Seat highlight -->
+    <rect x="${ox - 4}" y="${oy - 1}" width="${benchW + 8}" height="1.5" rx="0.5" fill="rgba(255,220,160,0.15)"/>
+    <!-- Legs -->
+    <rect x="${ox + 15}" y="${oy + 11}" width="7" height="48" rx="2" fill="url(#benchGrad)" opacity="0.85"/>
+    <rect x="${ox + benchW - 21}" y="${oy + 11}" width="7" height="48" rx="2" fill="url(#benchGrad)" opacity="0.85"/>
+   <!-- Leg foot pads -->
+    <ellipse cx="${ox + 18.5}" cy="${oy + 60}" rx="6" ry="3" fill="url(#benchGrad)" opacity="0.6"/>
+    <ellipse cx="${ox + benchW - 17.5}" cy="${oy + 60}" rx="6" ry="3" fill="url(#benchGrad)" opacity="0.6"/>
+    <!-- Leg crossbar -->
+    <rect x="${ox + 14}" y="${oy + 40}" width="${benchW - 24}" height="3.5" rx="1.5" fill="url(#benchGrad)" opacity="0.5"/>
 </g>
 
 <!-- Strawberry mochi (half-eaten) -->
 <g id="mochi-group" filter="url(#softShadow)">
-  <!-- Mochi body -->
-  <ellipse cx="${mochiCx}" cy="${mochiCy}" rx="28" ry="22" fill="url(#mochiGrad)"/>
-  <!-- Bite mark (eaten portion) -->
-  <ellipse cx="${mochiCx + 22}" cy="${mochiCy - 6}" rx="14" ry="16" fill="#1a1008" opacity="0.85"/>
-  <!-- Exposed strawberry filling -->
-  <ellipse cx="${mochiCx + 10}" cy="${mochiCy - 2}" rx="15" ry="12" fill="url(#berryGrad)"/>
-  <!-- Berry seeds -->
-  <ellipse cx="${mochiCx + 5}" cy="${mochiCy - 6}" rx="1.5" ry="2" fill="#FFCC44" opacity="0.7"/>
-  <ellipse cx="${mochiCx + 13}" cy="${mochiCy - 2}" rx="1.5" ry="2" fill="#FFCC44" opacity="0.7"/>
-  <ellipse cx="${mochiCx + 8}" cy="${mochiCy + 3}" rx="1.5" ry="2" fill="#FFCC44" opacity="0.7"/>
-  <ellipse cx="${mochiCx + 16}" cy="${mochiCy + 1}" rx="1.5" ry="2" fill="#FFCC44" opacity="0.7"/>
-  <!-- Berry leaf -->
-  <path d="M${mochiCx + 10},${mochiCy - 14} Q${mochiCx + 3},${mochiCy - 22} ${mochiCx - 2},${mochiCy - 16} Q${mochiCx + 2},${mochiCy - 13} ${mochiCx + 10},${mochiCy - 14}" fill="url(#leafGrad)" opacity="0.8"/>
-  <path d="M${mochiCx + 8},${mochiCy - 15} Q${mochiCx + 14},${mochiCy - 20} ${mochiCx + 18},${mochiCy - 14}" fill="none" stroke="url(#leafGrad)" stroke-width="1.5" opacity="0.6"/>
-  <!-- Mochi gloss highlight -->
-  <ellipse cx="${mochiCx - 10}" cy="${mochiCy - 12}" rx="8" ry="5" fill="rgba(255,255,255,0.25)"/>
-  <!-- Honey drip from mochi -->
-  <path d="M${mochiCx - 5},${mochiCy + 18} Q${mochiCx - 8},${mochiCy + 30} ${mochiCx - 6},${mochiCy + 38}" fill="none" stroke="rgba(255,180,60,0.5)" stroke-width="2.5" stroke-linecap="round"/>
-  <ellipse cx="${mochiCx - 6}" cy="${mochiCy + 39}" rx="3" ry="4" fill="rgba(255,180,60,0.4)"/>
+   <!-- Mochi shadow on bench -->
+    <ellipse cx="${mochiCx}" cy="${mochiCy + 26}" rx="20" ry="4" fill="rgba(0,0,0,0.15)"/>
+   <!-- Mochi body (soft rice exterior) -->
+    <ellipse cx="${mochiCx}" cy="${mochiCy}" rx="30" ry="24" fill="url(#mochiGrad)"/>
+   <!-- Mochi inner highlight for soft texture -->
+    <ellipse cx="${mochiCx - 6}" cy="${mochiCy - 6}" rx="18" ry="14" fill="rgba(255,240,235,0.2)"/>
+   <!-- Bite mark (eaten portion - uses dark to cut into mochi) -->
+   <path d="M${mochiCx + 18},${mochiCy - 18} C${mochiCx + 30},${mochiCy - 8} ${mochiCx + 26},${mochiCy + 12} ${mochiCx + 16},${mochiCy + 16} Z" fill="#2a1a0a" opacity="0.8"/>
+   <!-- Exposed strawberry filling (visible through bite) -->
+   <ellipse cx="${mochiCx + 14}" cy="${mochiCy - 2}" rx="12" ry="10" fill="url(#fillingGrad)"/>
+   <!-- Filling highlight/juice -->
+    <ellipse cx="${mochiCx + 11}" cy="${mochiCy - 5}" rx="5" ry="4" fill="rgba(255,150,180,0.35)"/>
+   <!-- Berry seeds scattered on exposed filling -->
+    <ellipse cx="${mochiCx + 9}" cy="${mochiCy - 7}" rx="1.2" ry="1.8" fill="#FFDD66" opacity="0.8"/>
+    <ellipse cx="${mochiCx + 16}" cy="${mochiCy - 4}" rx="1.2" ry="1.8" fill="#FFDD66" opacity="0.8"/>
+    <ellipse cx="${mochiCx + 11}" cy="${mochiCy + 1}" rx="1.2" ry="1.8" fill="#FFDD66" opacity="0.8"/>
+    <ellipse cx="${mochiCx + 18}" cy="${mochiCy - 1}" rx="1.2" ry="1.8" fill="#FFDD66" opacity="0.7"/>
+    <ellipse cx="${mochiCx + 14}" cy="${mochiCy + 4}" rx="1.2" ry="1.8" fill="#FFDD66" opacity="0.7"/>
+   <!-- Berry calyx (leafy top) -->
+   <path d="M${mochiCx + 14},${mochiCy - 12} Q${mochiCx + 6},${mochiCy - 20} ${mochiCx},${mochiCy - 14} Q${mochiCx + 4},${mochiCy - 10} ${mochiCx + 14},${mochiCy - 12}" fill="url(#leafGrad)" opacity="0.85"/>
+   <path d="M${mochiCx + 12},${mochiCy - 13} Q${mochiCx + 16},${mochiCy - 20} ${mochiCx + 22},${mochiCy - 15}" fill="none" stroke="url(#leafGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+    <path d="M${mochiCx + 13},${mochiCy - 12} Q${mochiCx + 10},${mochiCy - 18} ${mochiCx + 4},${mochiCy - 16}" fill="none" stroke="url(#leafGrad)" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+   <!-- Mochi glossy highlight (wet, soft look) -->
+    <ellipse cx="${mochiCx - 12}" cy="${mochiCy - 14}" rx="10" ry="6" fill="rgba(255,255,255,0.3)"/>
+    <ellipse cx="${mochiCx - 14}" cy="${mochiCy - 15}" rx="4" ry="2.5" fill="rgba(255,255,255,0.5)"/>
+   <!-- Honey drip from mochi onto bench -->
+    <path d="M${mochiCx - 8},${mochiCy + 20} Q${mochiCx - 12},${mochiCy + 35} ${mochiCx - 10},${mochiCy + 44} Q${mochiCx - 9},${mochiCy + 46} ${mochiCx - 7},${mochiCy + 44}" fill="rgba(255,180,60,0.55)" stroke="none"/>
+    <ellipse cx="${mochiCx - 8}" cy="${mochiCy + 46}" rx="4" ry="5" fill="rgba(255,180,60,0.45)"/>
+   <!-- Small drip pool on bench -->
+    <ellipse cx="${mochiCx - 6}" cy="${mochiCy + 50}" rx="8" ry="3" fill="rgba(255,170,50,0.2)"/>
 </g>
 `;
-    }
+       }
     buildOverlay();
 
     // -- Input Handling --
@@ -599,33 +655,36 @@
             audioAmplitude = getAudioAmplitude();
             smoothAmp += (audioAmplitude - smoothAmp) * 0.08;
 
-             // Update env value from audio node
+            // Update env value from audio node
             envValue = envGainNode ? envGainNode.gain.value : 0;
+
+            // Subtle input-driven warmth boost during interaction
+            const inputWarmth = currentInputAmp * 0.03;
 
             const benchGroup = overlay.querySelector('#bench-group');
             const mochiGroup = overlay.querySelector('#mochi-group');
 
-             // Audio-driven sway (always, not just when interacting)
-            const swX = Math.sin(now / 2000) * envValue * 8;
+            // Audio-driven sway (always, not just when interacting)
+            const swX = Math.sin(now / 2000) * envValue * 8 + currentInputAmp * 2;
             const swY = Math.cos(now / 2800) * envValue * 4;
-            const swR = Math.sin(now / 3200) * envValue * 2;
+            const swR = Math.sin(now / 3200) * envValue * 2.5;
 
             if (benchGroup) {
                 benchGroup.setAttribute('transform', `translate(${swX * 0.3}, ${swY * 0.2})`);
-             }
+              }
             if (mochiGroup) {
                 const benchOrigX = W * 0.12 + Math.max(280, W * 0.35) * 0.35;
                 const benchOrigY = H * 0.72 - 50;
                 mochiGroup.setAttribute('transform',
-                     `translate(${swX}, ${swY}) rotate(${swR}, ${benchOrigX}, ${benchOrigY}) scale(${1 + envValue * 0.04})`);
-             }
+                      `translate(${swX}, ${swY}) rotate(${swR}, ${benchOrigX}, ${benchOrigY}) scale(${1 + envValue * 0.04 + inputWarmth})`);
+              }
 
-             // Live overlay visibility in non-frozen state for ambient prop
+            // Live overlay visibility in non-frozen state for ambient prop
             if (!frozen) {
                 overlay.style.display = 'block';
-                overlay.style.opacity = String(0.3 + smoothAmp * 0.5);
-            }
-        }
+                overlay.style.opacity = String(0.25 + smoothAmp * 0.55 + inputWarmth * 2);
+              }
+          }
     }
 
     requestAnimationFrame(loop);
