@@ -1,0 +1,12 @@
+{
+  "name": "honey-melt",
+  "version": "1.0.0",
+  "description": "Tactile honey-thick liquid simulation with procedural audio",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "dev": "npx http-server drop -p 3000 -o"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
