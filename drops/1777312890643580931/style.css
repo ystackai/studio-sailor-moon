@@ -1,0 +1,60 @@
+:root {
+  --bg: #1a1612;
+  --warm: #f5d6a0;
+  --honey: #e8a930;
+  --amber: #d4880a;
+  --glow: rgba(245, 214, 160, 0.35);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+#canvas {
+  display: block;
+  width: 100%; height: 100%;
+  touch-action: none;
+}
+
+#grain {
+  position: fixed;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 2;
+}
+
+#grain.active {
+  opacity: 1;
+}
+
+#hint {
+  position: fixed;
+  bottom: 6vh;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(245, 214, 160, 0.5);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+  z-index: 3;
+  transition: opacity 0.5s ease;
+}
+
+#hint.hidden {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #grain { display: none; }
+}
