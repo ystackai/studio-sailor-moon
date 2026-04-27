@@ -1,0 +1,112 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0c14;
+  font-family: system-ui, sans-serif;
+}
+
+.app-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  /* Deep moonlit background gradient */
+  background: radial-gradient(ellipse at 50% 40%, #1a1c2e 0%, #0a0c14 70%);
+}
+
+/* ── Ripple Node ────────────────────────────────── */
+.ripple-node {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  /* Zero layout shift: fixed size, no margin/padding shift */
+  will-change: transform;
+  touch-action: manipulation;
+}
+
+/* Inner glow element: warm amber → cool lunar blue shift */
+.ripple-glow {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 200, 100, 0.7) 0%, rgba(120, 160, 220, 0.3) 60%, transparent 100%);
+  opacity: 0.5;
+  will-change: transform, opacity;
+  transition: none; /* All animation driven by JS rAF, no CSS transitions */
+}
+
+/* Ripple rings: expand and fade */
+.ripple-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(200, 220, 255, 0.15);
+  will-change: transform, opacity;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Progress ring overlay */
+.progress-ring {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity, transform;
+}
+
+.progress-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.04);
+  stroke-width: 2;
+}
+
+.progress-arc {
+  fill: none;
+  stroke: url(#arcGradient);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transform-origin: 60px 60px;
+  transform: rotate(-90deg);
+  /* circumference = 2 * PI * 56 ≈ 351.86 */
+  stroke-dasharray: 352;
+  stroke-dashoffset: 352;
+  transition: none;
+}
+
+/* SVG gradient for progress arc: amber → lunar blue */
+.progress-ring::before {
+  content: "";
+}
+
+/* ── Freeze Overlay ─────────────────────────────── */
+.freeze-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 230, 180, 0.08) 0%, rgba(180, 200, 240, 0.04) 40%, transparent 70%);
+  will-change: opacity;
+  /* Breath-on-glass frosted effect at freeze */
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+}

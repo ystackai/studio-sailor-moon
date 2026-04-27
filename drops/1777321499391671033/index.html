@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Sailor Moon — Ripple</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app" class="app-container">
+    <!-- Ripple node: the central interactive element -->
+    <div id="ripple-node" class="ripple-node">
+      <!-- Inner glow pulse layer -->
+      <div id="ripple-glow" class="ripple-glow"></div>
+      <!-- Ripple ring layers (procedural, zero layout shift) -->
+      <span id="ring-1" class="ripple-ring"></span>
+      <span id="ring-2" class="ripple-ring"></span>
+      <span id="ring-3" class="ripple-ring"></span>
+      <!-- Progress ring for hold window indicator -->
+      <svg id="progress-ring" class="progress-ring" viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="progress-track" cx="60" cy="60" r="56"/>
+        <circle id="progress-arc" class="progress-arc" cx="60" cy="60" r="56"/>
+      </svg>
+    </div>
+    <!-- Frozen breath overlay (like breath on glass) -->
+    <div id="freeze-overlay" class="freeze-overlay"></div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
