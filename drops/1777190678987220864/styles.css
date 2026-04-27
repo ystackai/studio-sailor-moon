@@ -69,8 +69,13 @@ html, body {
 }
 
 .frozen #ui {
+  display: none !important;
   opacity: 0;
   pointer-events: none;
+}
+
+.frozen #free-btn {
+  display: none !important;
 }
 
 #free-btn.active {
