@@ -113,20 +113,20 @@
         const imgData = offCtx.createImageData(offW, offH);
         const px = imgData.data;
 
-        for (let y = 1; y < rows - 2; y++) {
+        for (let y = 1; y < rows - 1; y++) {
             const yRow = y * cols;
             const yRowUp = (y - 1) * cols;
             const yRowDn = (y + 1) * cols;
-            for (let x = 1; x < cols - 2; x++) {
+            for (let x = 1; x < cols - 1; x++) {
                 const i = yRow + x;
-                const v = prev[i];
+                const v = current[i];
 
                 // Gradient for pseudo-specular highlights
-                const gradX = (prev[i + 1] - prev[i - 1]) * SPEED * 40;
-                const gradY = (prev[yRowDn + x] - prev[yRowUp + x]) * SPEED * 40;
+                const gradX = (current[i + 1] - current[i - 1]) * SPEED * 40;
+                const gradY = (current[yRowDn + x] - current[yRowUp + x]) * SPEED * 40;
                 const gradMag = Math.sqrt(gradX * gradX + gradY * gradY);
 
-                const idx = (y * offW + x) * 4;
+                const idx = ((y - 1) * offW + (x - 1)) * 4;
 
                 // Warm honey-gold palette with gradient-based specular
                 const r = 185 + v * 55 + gradX * 6 + gradMag * 20;
@@ -134,15 +134,16 @@
                 const b = 18 + v * 12 + gradMag * 5;
 
                 // Vignette: darker at edges
-                const nx = x / offW;
-                const ny = y / offH;
+                const nx = (x - 1) / (offW - 1);
+                const ny = (y - 1) / (offH - 1);
                 const vig = 0.65 + 0.35 * Math.min(1, 2 * (1 - Math.sqrt((nx - 0.5) * (nx - 0.5) + (ny - 0.5) * (ny - 0.5))));
 
-                px[idx]     = Math.max(0, Math.min(255, r * vig));
+                px[idx]      = Math.max(0, Math.min(255, r * vig));
                 px[idx + 1] = Math.max(0, Math.min(255, g * vig));
                 px[idx + 2] = Math.max(0, Math.min(255, b * vig));
                 px[idx + 3] = 255;
-            }
+              }
+          }
         }
 
         offCtx.putImageData(imgData, 0, 0);
@@ -319,6 +320,7 @@
 
     // -- SVG Overlay: Detailed Park Bench + Strawberry Mochi --
     function buildOverlay() {
+        overlay.setAttribute('viewBox', `0 0 ${W} ${H}`);
         const ox = W * 0.12;
         const oy = H * 0.72;
         const benchW = Math.max(280, W * 0.35);
@@ -506,20 +508,20 @@
         toggleFreeze();
     });
 
-    // -- Screenshot Capture --
+      // -- Screenshot Capture --
     function captureScreenshot() {
-        // Composite canvas + overlay onto a temp canvas
+         // Composite canvas + overlay onto a temp canvas (no UI elements)
         const snap = document.createElement('canvas');
         snap.width = W;
         snap.height = H;
         const sCtx = snap.getContext('2d');
 
-        // Draw the fluid sim
+         // Draw the fluid sim
         sCtx.drawImage(canvas, 0, 0);
 
-        // Draw the SVG overlay by serializing to SVG blob
+         // Draw the SVG overlay by serializing to SVG blob
         const svgStr = '<?xml version="1.0" encoding="UTF-8"?>' +
-            `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${overlay.innerHTML}</svg>`;
+             `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${overlay.innerHTML}</svg>`;
         const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(svgBlob);
         const img = new Image();
@@ -535,9 +537,9 @@
                 setTimeout(() => {
                     document.body.removeChild(a);
                     URL.revokeObjectURL(a.href);
-                }, 100);
-            }, 'image/png');
-        };
+                 }, 150);
+             }, 'image/png');
+         };
         img.src = url;
     }
 
@@ -574,13 +576,22 @@
     function loop(now) {
         requestAnimationFrame(loop);
 
-        // Smooth input amplitude
+         // Smooth input amplitude
         currentInputAmp += (targetInputAmp - currentInputAmp) * 0.1;
+
+         // Fade hint text smoothly
+        if (hintOpacity > 0 && !audioStarted) {
+            hintOpacity = Math.max(0, hintOpacity - 0.005);
+            hintText.style.opacity = String(hintOpacity);
+        }
+        if (hintOpacity <= 0 && hintText) {
+            hintText.style.opacity = '0';
+        }
 
         if (!frozen) {
             simulate();
             ambientDrip(now);
-        }
+         }
 
         render(now);
 
@@ -588,28 +599,38 @@
             audioAmplitude = getAudioAmplitude();
             smoothAmp += (audioAmplitude - smoothAmp) * 0.08;
 
-            // Update env value from audio node
+             // Update env value from audio node
             envValue = envGainNode ? envGainNode.gain.value : 0;
 
             const benchGroup = overlay.querySelector('#bench-group');
             const mochiGroup = overlay.querySelector('#mochi-group');
 
-            // Audio-driven sway
+             // Audio-driven sway (always, not just when interacting)
             const swX = Math.sin(now / 2000) * envValue * 8;
             const swY = Math.cos(now / 2800) * envValue * 4;
             const swR = Math.sin(now / 3200) * envValue * 2;
 
             if (benchGroup) {
                 benchGroup.setAttribute('transform', `translate(${swX * 0.3}, ${swY * 0.2})`);
-            }
+             }
             if (mochiGroup) {
                 const benchOrigX = W * 0.12 + Math.max(280, W * 0.35) * 0.35;
                 const benchOrigY = H * 0.72 - 50;
                 mochiGroup.setAttribute('transform',
-                    `translate(${swX}, ${swY}) rotate(${swR}, ${benchOrigX}, ${benchOrigY}) scale(${1 + envValue * 0.04})`);
+                     `translate(${swX}, ${swY}) rotate(${swR}, ${benchOrigX}, ${benchOrigY}) scale(${1 + envValue * 0.04})`);
+             }
+
+             // Live overlay visibility in non-frozen state for ambient prop
+            if (!frozen) {
+                overlay.style.display = 'block';
+                overlay.style.opacity = String(0.3 + smoothAmp * 0.5);
             }
         }
     }
 
     requestAnimationFrame(loop);
+
+     // Window resize handler
+    window.addEventListener('resize', resize);
+    resize();
 })();
