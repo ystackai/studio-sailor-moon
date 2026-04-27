@@ -125,21 +125,35 @@
     let analyserNode = null;
     let audioStarted = false;
 
+    // Honey-melt envelope state
+    let envPhase = 'idle'; // idle | attack | sustain | release
+    let envValue = 0;
+    const ENV_ATTACK = 0.4;    // slow attack (0.4s)
+    const ENV_SUSTAIN_LEVEL = 0.6;
+    const ENV_RELEASE = 0.8;    // exponential release (0.8s)
+    let envGainNode = null;
+    let sidechainGainNode = null;
+
     function initAudio() {
         if (audioStarted) return;
         audioStarted = true;
 
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        // Low-pass filter: 80Hz, 24dB/octave slope (highpass type won't work, use lowpass)
-        // Task says "sub-bass roll-off confirmed at 80Hz (24dB/octave slope)"
-        // This means we want to roll off BELOW 80Hz, so we need a highpass filter at 80Hz
-        lpfNode = audioCtx.createBiquadFilter();
-        lpfNode.type = 'highpass';
-        lpfNode.frequency.value = 80;
-        lpfNode.Q.value = 0.707;
+        // 24dB/octave high-pass at 80Hz: cascade two 2nd-order (12dB/oct each) BiquadFilters
+        const hp1 = audioCtx.createBiquadFilter();
+        hp1.type = 'highpass';
+        hp1.frequency.value = 80;
+        hp1.Q.value = 0.707;
 
-        // Compressor: soft-knee, -3dB threshold
+        const hp2 = audioCtx.createBiquadFilter();
+        hp2.type = 'highpass';
+        hp2.frequency.value = 80;
+        hp2.Q.value = 0.707;
+
+        lpfNode = hp1; // keep reference for compatibility
+
+        // Compressor: soft-knee at -3dB threshold, -3dBFS guard
         compNode = audioCtx.createDynamicsCompressor();
         compNode.threshold = -3;
         compNode.knee = 10;
@@ -152,13 +166,21 @@
         analyserNode.fftSize = 256;
         analyserNode.smoothingTimeConstant = 0.7;
 
-        // Drone gain (master volume for oscillators)
+        // Drone gain (oscillator mix volume)
         droneGain = audioCtx.createGain();
         droneGain.gain.value = 0.12;
 
+        // Envelope gain node for honey-melt attack/sustain/release
+        envGainNode = audioCtx.createGain();
+        envGainNode.gain.value = 1;
+
+        // Sidechain ducking gain – reduces drone when input is active
+        sidechainGainNode = audioCtx.createGain();
+        sidechainGainNode.gain.value = 1;
+
         // Master gain (final output control)
         masterGain = audioCtx.createGain();
-        masterGain.gain.value = 1;
+        masterGain.gain.value = 0.8;
 
         // Oscillator 1: Base drone at 55Hz (A1)
         const osc1 = audioCtx.createOscillator();
@@ -170,29 +192,68 @@
         osc2.type = 'sine';
         osc2.frequency.value = 55.5;
 
-        // Oscillator 3: Harmonic at 110Hz (A2) - third oscillator instantiated
+        // Oscillator 3: Harmonic at 110Hz (A2)
         const osc3 = audioCtx.createOscillator();
         osc3.type = 'triangle';
         osc3.frequency.value = 110;
 
+        // Oscillator 4: Subtle 5th harmonic for depth
+        const osc4 = audioCtx.createOscillator();
+        osc4.type = 'sine';
+        osc4.frequency.value = 82.5;
+
         const g3 = audioCtx.createGain();
         g3.gain.value = 0.3;
 
-        // Signal chain: oscillators -> droneGain -> lpfNode (highpass 80Hz) -> compNode -> analyserNode -> masterGain -> destination
+        const g4 = audioCtx.createGain();
+        g4.gain.value = 0.15;
+
+        // Signal chain:
+        // oscillators -> droneGain -> hp1(12dB) -> hp2(12dB) -> compNode -> sidechainGain -> envGain -> analyserNode -> masterGain -> destination
         osc1.connect(droneGain);
         osc2.connect(droneGain);
         osc3.connect(g3);
         g3.connect(droneGain);
+        osc4.connect(g4);
+        g4.connect(droneGain);
 
-        droneGain.connect(lpfNode);
-        lpfNode.connect(compNode);
-        compNode.connect(analyserNode);
+        droneGain.connect(hp1);
+        hp1.connect(hp2);
+        hp2.connect(compNode);
+        compNode.connect(sidechainGainNode);
+        sidechainGainNode.connect(envGainNode);
+        envGainNode.connect(analyserNode);
         analyserNode.connect(masterGain);
         masterGain.connect(audioCtx.destination);
 
         osc1.start();
         osc2.start();
         osc3.start();
+        osc4.start();
+
+        // Start envelope fade-in on first audio init
+        const now = audioCtx.currentTime;
+        envGainNode.gain.setValueAtTime(0.001, now);
+        envGainNode.gain.exponentialRampToValueAtTime(ENV_SUSTAIN_LEVEL, now + ENV_ATTACK);
+        envPhase = 'sustain';
+    }
+
+    function triggerEnvelope() {
+        if (!audioCtx || !envGainNode) return;
+        const now = audioCtx.currentTime;
+        envGainNode.gain.cancelScheduledValues(now);
+        envGainNode.gain.setValueAtTime(envValue || 0.001, now);
+        envGainNode.gain.exponentialRampToValueAtTime(0.9, now + ENV_ATTACK);
+        envPhase = 'attack';
+    }
+
+    function releaseEnvelope() {
+        if (!audioCtx || !envGainNode) return;
+        const now = audioCtx.currentTime;
+        envGainNode.gain.cancelScheduledValues(now);
+        envGainNode.gain.setValueAtTime(envGainNode.gain.value, now);
+        envGainNode.gain.exponentialRampToValueAtTime(ENV_SUSTAIN_LEVEL, now + ENV_RELEASE);
+        envPhase = 'release';
     }
 
     let sidechainActive = false;
@@ -201,11 +262,11 @@
     let targetInputAmplitude = 0;
 
     function duckDrone() {
-        if (!audioCtx || !droneGain) return;
+        if (!audioCtx || !sidechainGainNode) return;
         const now = audioCtx.currentTime;
-        const target = sidechainActive ? 0.03 : 0.12;
-        droneGain.gain.setTargetAtTime(target, now, 0.02);
-    }
+        const target = sidechainActive ? 0.15 : 1.0;
+        sidechainGainNode.gain.setTargetAtTime(target, now, 0.015);
+     }
 
     function getAudioAmplitude() {
         if (!analyserNode) return 0;
@@ -277,22 +338,24 @@
         if (isDown) {
             inputStartTime = now;
             pressDuration = 0;
-        } else {
+            triggerEnvelope();
+          } else {
             pressDuration = now - inputStartTime;
-        }
+            releaseEnvelope();
+          }
 
-        // Pressure maps to amplitude: higher pressure = larger ripple
+          // Pressure maps to amplitude: higher pressure = larger ripple
         const pressureFactor = Math.max(0.3, Math.min(1.5, inputPressure));
         const durationFactor = Math.max(0.5, Math.min(2, 1 + pressDuration / 500));
 
         const amplitude = isDown
-            ? 80 * pressureFactor * durationFactor
-            : -30 * pressureFactor;
+             ? 80 * pressureFactor * durationFactor
+             : -30 * pressureFactor;
         const decay = isDown ? (0.5 + inputPressure * 0.5) : (1.5 - inputPressure * 0.5);
 
         dropRipple(x, y, amplitude, decay);
 
-        // Update input amplitude for sidechain
+         // Update input amplitude for sidechain
         targetInputAmplitude = isDown ? inputPressure : 0;
 
         if (isDown) {
@@ -305,7 +368,7 @@
         }
         duckDrone();
         lastInputTime = now;
-    }
+      }
 
     // High-performance pointer events with <20ms latency
     canvas.addEventListener('pointerdown', e => {
@@ -377,36 +440,42 @@
     function loop(now) {
         requestAnimationFrame(loop);
 
-        // Smooth input amplitude for audio-driven effects
+         // Smooth input amplitude for audio-driven effects
         currentInputAmplitude += (targetInputAmplitude - currentInputAmplitude) * 0.1;
 
         if (!frozen) {
             simulate();
             ambientDrip(now);
-        }
+         }
 
         render();
 
         if (audioStarted) {
             audioAmplitude = getAudioAmplitude();
+
+             // Smooth envelope value from audio node
+            envValue = envGainNode ? envGainNode.gain.value : 0;
+
             const benchGroup = overlay.querySelector('#bench-group');
             const mochiGroup = overlay.querySelector('#mochi-group');
 
-            // Audio envelope drives mochi sway with smooth interpolation
-            const swayX = Math.sin(now / 2000) * audioAmplitude * 6;
-            const swayY = Math.cos(now / 2500) * audioAmplitude * 3;
+             // Audio amplitude envelope drives sway with organic feel
+            const swayX = Math.sin(now / 2000) * envValue * 8;
+            const swayY = Math.cos(now / 2800) * envValue * 4;
+            const swayRot = Math.sin(now / 3200) * envValue * 2;
 
             if (benchGroup) {
-                benchGroup.setAttribute('transform', `translate(${swayX * 0.5}, ${swayY * 0.3})`);
-            }
+                benchGroup.setAttribute('transform', `translate(${swayX * 0.3}, ${swayY * 0.2})`);
+              }
             if (mochiGroup) {
-                mochiGroup.setAttribute('transform', `translate(${swayX}, ${swayY}) scale(${1 + audioAmplitude * 0.03})`);
-            }
-        }
+                mochiGroup.setAttribute('transform',
+                    `translate(${swayX}, ${swayY}) rotate(${swayRot}, ${W * 0.15 + 100}, ${H * 0.65 - 45}) scale(${1 + envValue * 0.04})`);
+              }
+         }
 
         const delta = now - lastTime;
         lastTime = now;
-    }
+      }
 
     requestAnimationFrame(loop);
 })();
