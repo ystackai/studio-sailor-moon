@@ -21,3 +21,4 @@ html, body {
   width: 100%;
   height: 100%;
 }
+/* runtime repair: ensure stylesheet is published with the drop */
