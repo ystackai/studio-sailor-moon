@@ -8,8 +8,10 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: linear-gradient(160deg, #0a0a1a 0%, #1a1035 35%, #0d1b2a 70%, #080810 100%);
+  -webkit-overflow-scrolling: touch;
+  background: linear-gradient(160deg, #0a0a1a 0%, #150e30 30%, #0d1b2a 65%, #080820 100%);
   font-family: system-ui, -apple-system, sans-serif;
+  overscroll-behavior: none;
 }
 
 canvas {
