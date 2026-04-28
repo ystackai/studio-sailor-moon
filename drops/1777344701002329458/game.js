@@ -1,9 +1,9 @@
-// ─── Device Detection ───────────────────────────────────────────────
+// ─── Device Detection ───────────────────────────────────────────────────────
 const isMobile =
-  /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-  (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+    /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
 
-// ─── State Machine Constants ─────────────────────────────────────────
+// ─── State Machine Constants ───────────────────────────────────────────────
 const STATE = {
   IDLE: 'idle',
   ATTACK: 'attack',
@@ -14,7 +14,7 @@ const STATE = {
 const FREEZE_MAX_MS = 2500;
 const CROSSFADE_MS = 40;
 
-// ─── Canvas Setup ────────────────────────────────────────────────────
+// ─── Canvas Setup ──────────────────────────────────────────────────────────
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
@@ -32,45 +32,70 @@ const H = () => window.innerHeight;
 const CX = () => W() / 2;
 const CY = () => H() / 2;
 
-// ─── Audio Engine ────────────────────────────────────────────────────
+// ─── Audio Engine ──────────────────────────────────────────────────────────
 let audioCtx = null;
 let masterGain = null;
 let oscillators = [];
 let lpfNode = null;
 let crossfadeGain = null;
+let analyser = null;
+let compressor = null;
+let analyserData = null;
 
 function ensureAudio() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Compressor to duck background audio / prevent masking
+    compressor = audioCtx.createDynamicsCompressor();
+    compressor.threshold.value = -30;
+    compressor.knee.value = 10;
+    compressor.ratio.value = 8;
+    compressor.attack.value = 0.005;
+    compressor.release.value = 0.12;
+
+    // Analyser for tight audio-visual sync (±15ms)
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.3;
+    analyserData = new Uint8Array(analyser.frequencyBinCount);
+
+    // Master gain
     masterGain = audioCtx.createGain();
     masterGain.gain.value = 0;
 
-    // Low-pass filter for the melter
+    // Low-pass filter for melt roll-off
     lpfNode = audioCtx.createBiquadFilter();
     lpfNode.type = 'lowpass';
     lpfNode.frequency.value = 8000;
     lpfNode.Q.value = 0.7;
 
-    // Crossfade buffer gain node
+    // Crossfade buffer gain node (40ms smooth transitions)
     crossfadeGain = audioCtx.createGain();
     crossfadeGain.gain.value = 1;
 
+    // Signal chain: oscillators -> masterGain -> lpf -> crossfade -> compressor -> analyser -> destination
     masterGain.connect(lpfNode);
     lpfNode.connect(crossfadeGain);
-    crossfadeGain.connect(audioCtx.destination);
+    crossfadeGain.connect(compressor);
+    compressor.connect(analyser);
+    analyser.connect(audioCtx.destination);
 
     // Procedural ambient pad oscillators (A minor with extended harmonics)
     const frequencies = [220, 329.63, 440, 493.88, 659.25]; // A3, E4, A4, B4, E5
+    const gains     = [0.18, 0.12, 0.10, 0.07, 0.05]; // harmonic rolloff
     frequencies.forEach((freq, i) => {
       const osc = audioCtx.createOscillator();
       const g = audioCtx.createGain();
 
       // Mix sine and triangle for warmth
-      osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+      osc.type = (i % 2 === 0) ? 'sine' : 'triangle';
       osc.frequency.value = freq;
 
       // Slight detune for organic feel
       osc.detune.value = (Math.random() - 0.5) * 8;
+
+      g.gain.value = gains[i];
 
       osc.connect(g);
       g.connect(masterGain);
@@ -85,6 +110,18 @@ function ensureAudio() {
   }
 }
 
+// Read RMS amplitude from the analyser for tight audio-visual sync
+function getAudioAmplitude() {
+  if (!analyser || !analyserData) return 0;
+  analyser.getByteFrequencyData(analyserData);
+  let sum = 0;
+  for (let i = 0; i < analyserData.length; i++) {
+    sum += analyserData[i];
+  }
+  // Normalise 0..1
+  return (sum / (analyserData.length * 255)) * 2;
+}
+
 function setAmplitude(t, target, duration) {
   const now = audioCtx.currentTime + t;
   masterGain.gain.setTargetAtTime(target, now, duration);
@@ -95,33 +132,43 @@ function setLpf(t, freq, duration) {
   lpfNode.frequency.setTargetAtTime(freq, now, duration);
 }
 
-function startCrossfade() {
+// 40ms crossfade UP: prevent clicks on attack / freeze entry
+function crossfadeUp() {
   if (!crossfadeGain) return;
-  crossfadeGain.gain.cancelScheduledValues(audioCtx.currentTime);
-  crossfadeGain.gain.setValueAtTime(crossfadeGain.gain.value, audioCtx.currentTime);
-  crossfadeGain.gain.linearRampToValueAtTime(1, audioCtx.currentTime + CROSSFADE_MS / 1000);
+  const now = audioCtx.currentTime;
+  crossfadeGain.gain.cancelScheduledValues(now);
+  crossfadeGain.gain.setValueAtTime(0, now);
+  crossfadeGain.gain.linearRampToValueAtTime(1, now + CROSSFADE_MS / 1000);
 }
 
-function stopCrossfade() {
+// 40ms crossfade DOWN: prevent clicks on freeze / melt transitions
+function crossfadeDown() {
   if (!crossfadeGain) return;
-  crossfadeGain.gain.cancelScheduledValues(audioCtx.currentTime);
-  crossfadeGain.gain.setValueAtTime(crossfadeGain.gain.value, audioCtx.currentTime);
-  crossfadeGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + CROSSFADE_MS / 1000);
+  const now = audioCtx.currentTime;
+  crossfadeGain.gain.cancelScheduledValues(now);
+  crossfadeGain.gain.setValueAtTime(crossfadeGain.gain.value, now);
+  crossfadeGain.gain.linearRampToValueAtTime(0, now + CROSSFADE_MS / 1000);
 }
 
-// ─── Interaction State ───────────────────────────────────────────────
+// ─── Interaction State ─────────────────────────────────────────────────────
 let state = STATE.IDLE;
-let amplitude = 0;
+let amplitude = 0;          // model amplitude 0..1
 let holdStart = 0;
 let freezeStart = 0;
+let meltStart = 0;
 let pressActive = false;
 
 // Visual ripple parameters
 let rippleRadius = 0;
 let rippleTarget = 0;
 let glowIntensity = 0;
+let audioGlow = 0;  // synced glow from analyser
 
-// ─── Input Handling ──────────────────────────────────────────────────
+// Ripple ring history for trailing effect
+let rippleHistory = []; // { radius: number, alpha: number, born: number, life: number }
+const RIPPLE_TRAIL_MAX = 6;
+
+// ─── Input Handling ────────────────────────────────────────────────────────
 function onDown(e) {
   e.preventDefault();
   ensureAudio();
@@ -132,19 +179,20 @@ function onDown(e) {
     state = STATE.ATTACK;
     holdStart = performance.now();
     rippleRadius = 0;
-    startCrossfade();
+    rippleHistory = [];
+    crossfadeUp();
 
-    // Ramp amplitude with smooth attack curve
     const now = audioCtx.currentTime;
     masterGain.gain.cancelScheduledValues(now);
-    masterGain.gain.setValueAtTime(0, now);
-    masterGain.gain.setTargetAtTime(0.35, now, 0.08);
+    masterGain.gain.setValueAtTime(0.001, now);
+    // Log attack: exponential approach with fast initial rise
+    masterGain.gain.setTargetAtTime(0.35, now, 0.06);
 
-    // Open LPF
+    // Open LPF wide for full spectrum on attack
     lpfNode.frequency.cancelScheduledValues(now);
     lpfNode.frequency.setValueAtTime(8000, now);
   } else if (state === STATE.FREEZE) {
-    // Trigger melt early
+    // Early release from freeze triggers melt
     triggerMelt();
   }
 }
@@ -154,7 +202,7 @@ function onUp(e) {
   pressActive = false;
 
   if (state === STATE.ATTACK) {
-    // Trigger freeze at current amplitude
+    // Release during attack: freeze at current amplitude
     triggerFreeze();
   } else if (state === STATE.FREEZE) {
     triggerMelt();
@@ -166,38 +214,70 @@ function triggerFreeze() {
   freezeStart = performance.now();
   rippleTarget = rippleRadius;
 
-  // Smooth freeze: crossfade buffer to eliminate clicks
+  // Push a ripple ring into history
+  rippleHistory.push({
+    radius: rippleRadius,
+    alpha: 0.6,
+    born: performance.now(),
+    life: 2000,
+  });
+
+  // Smooth freeze: 40ms crossfade to hold amplitude steady
   const now = audioCtx.currentTime;
-  // Hold amplitude steady with a tiny buffer to prevent pop
+
+  // Briefly dip then restore to create a soft transient (click-free)
+  crossfadeDown();
+  setTimeout(() => crossfadeUp(), CROSSFADE_MS);
+
   masterGain.gain.cancelScheduledValues(now);
   masterGain.gain.setValueAtTime(masterGain.gain.value, now);
 }
 
 function triggerMelt() {
   state = STATE.MELT;
-  stopCrossfade();
+  meltStart = performance.now();
 
   const now = audioCtx.currentTime;
-  const fadeTime = isMobile ? 1.8 : 0.9;
-  const lpfTarget = isMobile ? 350 : 250;
+  // Adaptive fade: mobile gets gentler roll-off, desktop gets steeper
+  const fadeTime  = isMobile ? 2.0 : 1.0;
+  const lpfTarget = isMobile ? 400 : 250;
 
-  masterGain.gain.cancelScheduledValues(now);
-  masterGain.gain.setValueAtTime(masterGain.gain.value, now);
-  masterGain.gain.exponentialRampToValueAtTime(0.001, now + fadeTime);
+  // 40ms crossfade down to kill transient, then exponential fade
+  crossfadeDown();
 
-  lpfNode.frequency.cancelScheduledValues(now);
-  lpfNode.frequency.setValueAtTime(lpfNode.frequency.value, now);
-  lpfNode.frequency.exponentialRampToValueAtTime(lpfTarget, now + fadeTime);
+  setTimeout(() => {
+    if (state !== STATE.MELT) return;
+    const t2 = audioCtx.currentTime;
 
-  // After freeze max or amplitude decay, return to idle
+    masterGain.gain.cancelScheduledValues(t2);
+    masterGain.gain.setValueAtTime(masterGain.gain.value || 0.01, t2);
+    // Adaptive exponential fade curve
+    masterGain.gain.exponentialRampToValueAtTime(0.001, t2 + fadeTime);
+
+    lpfNode.frequency.cancelScheduledValues(t2);
+    lpfNode.frequency.setValueAtTime(lpfNode.frequency.value || 8000, t2);
+    lpfNode.frequency.exponentialRampToValueAtTime(lpfTarget, t2 + fadeTime);
+  }, CROSSFADE_MS);
+
+  // Push a final ripple ring for the melt burst
+  rippleHistory.push({
+    radius: Math.max(rippleRadius, 30),
+    alpha: 0.5,
+    born: performance.now(),
+    life: fadeTime * 1000 + 300,
+  });
+
+  // Return to idle after fade completes
   setTimeout(() => {
     if (state === STATE.MELT) {
       state = STATE.IDLE;
       amplitude = 0;
       rippleRadius = 0;
       glowIntensity = 0;
+      audioGlow = 0;
+      rippleHistory = [];
     }
-  }, fadeTime * 1000 + 100);
+  }, fadeTime * 1000 + 200);
 }
 
 // Mouse + Touch
@@ -208,100 +288,193 @@ canvas.addEventListener('touchstart', onDown, { passive: false });
 canvas.addEventListener('touchend', onUp, { passive: false });
 canvas.addEventListener('touchcancel', onUp, { passive: false });
 
-// ─── Color Palette ───────────────────────────────────────────────────
-const HONEY_AMBER = [255, 179, 71];   // warm amber glow
-const SOFT_PEACH = [255, 183, 130];    // peach midtone
-const WARM_CREAM = [255, 223, 173];    // cream highlight
-const BG_COLOR = '#0a0e1a';             // dark moonlit
+// ─── Color Palette ─────────────────────────────────────────────────────────
+const HONEY_AMBER = [255, 179, 71];    // warm amber glow
+const SOFT_PEACH  = [255, 183, 130];   // peach midtone
+const WARM_CREAM  = [255, 223, 173];   // cream highlight
+const BG_COLOR    = '#0a0e1a';            // dark moonlit
 
-function hsla(r, g, b, a) {
-  return `rgba(${r},${g},${b},${a})`;
+function rgba(r, g, b, a) {
+  return `rgba(${r},${g},${b},${Math.max(0, Math.min(1, a))})`;
 }
 
-// ─── Rendering ───────────────────────────────────────────────────────
+// ─── Rendering ─────────────────────────────────────────────────────────────
 function drawRipple(t) {
   const cx = CX();
   const cy = CY();
-  const maxR = Math.min(W(), H()) * 0.35;
+  const maxR = Math.min(W(), H()) * 0.38;
+  const now = performance.now();
 
-  // Update amplitude based on state
+  // ── Update amplitude / radius based on state ──────────────────────────
   if (state === STATE.ATTACK && pressActive) {
-    const elapsed = performance.now() - holdStart;
-    // Logarithmic amplitude ramp
-    amplitude = Math.min(1, 1 - Math.exp(-elapsed / 600));
+    const elapsed = now - holdStart;
+    // Logarithmic amplitude ramp: fast initial rise, smooth plateau
+    amplitude = Math.min(1, 1 - Math.exp(-elapsed / 450));
     rippleRadius = amplitude * maxR;
     glowIntensity = amplitude;
+
+    // Spawn trailing ripple rings periodically during attack
+    if (rippleHistory.length < RIPPLE_TRAIL_MAX &&
+        Math.floor(elapsed / 180) > rippleHistory.length) {
+      rippleHistory.push({
+        radius: rippleRadius * 0.7,
+        alpha: 0.3 * amplitude,
+        born: now,
+        life: 1500,
+      });
+    }
+
   } else if (state === STATE.FREEZE) {
-    const freezeElapsed = performance.now() - freezeStart;
+    const freezeElapsed = now - freezeStart;
+    // Hard cap: auto-triggers melt after exactly 2.5s
     if (freezeElapsed > FREEZE_MAX_MS) {
       triggerMelt();
     }
-    // Slight micro-breathe during freeze for life
-    rippleRadius = rippleTarget + Math.sin(t * 0.003) * 2 * amplitude;
-    glowIntensity = amplitude;
+
+    // Freeze-frame: gentle micro-breathe for life, locked glow
+    rippleRadius = rippleTarget + Math.sin(t * 0.004) * 2.5 * amplitude;
+    glowIntensity = amplitude + 0.1; // intensity boost during freeze glow
+
   } else if (state === STATE.MELT) {
-    // Ripple gently contracts during melt
-    const meltProgress = Math.max(0, 1 - (rippleRadius / maxR));
-    rippleRadius *= 0.997;
-    glowIntensity *= 0.993;
+    const meltElapsed = now - meltStart;
+    const fadeTime = (isMobile ? 2.0 : 1.0);
+    const progress = Math.min(1, meltElapsed / (fadeTime * 1000));
+
+    // Adaptive fade curve: mobile uses smoother ease-out, desktop steeper
+    if (isMobile) {
+      // Gentler: exponential ease-out for phone speakers
+      const eased = 1 - Math.exp(-progress * 3);
+      rippleRadius *= (1 - eased * 0.004);
+      glowIntensity *= (1 - eased * 0.005);
+    } else {
+      // Steeper: linear-exponential mix for desktop
+      rippleRadius *= 0.996;
+      glowIntensity *= 0.992;
+    }
+
     if (rippleRadius < 2) {
       rippleRadius = 0;
       glowIntensity = 0;
     }
+
   } else {
-    // Idle: slight ambient pulse
-    rippleRadius = maxR * 0.08 + Math.sin(t * 0.001) * 3;
-    glowIntensity = 0.02;
+    // IDLE: subtle ambient pulse
+    rippleRadius = maxR * 0.06 + Math.sin(t * 0.0008) * 2;
+    glowIntensity = 0.015;
     amplitude = 0;
   }
 
-  // Clear
+  // Read actual audio amplitude for sync (±15ms target)
+  const rawAudioAmp = getAudioAmplitude();
+  // Smooth the audio reading with lerp for stable glow
+  audioGlow += (rawAudioAmp - audioGlow) * 0.25;
+
+  // Final glow combines model intensity + live audio for tight sync
+  glowIntensity = Math.max(glowIntensity, audioGlow * 0.8);
+
+  // ── Clear canvas ─────────────────────────────────────────────────────
   ctx.fillStyle = BG_COLOR;
   ctx.fillRect(0, 0, W(), H());
 
-  // Outer glow halo
+  // ── Trail ripple rings ───────────────────────────────────────────────
+  for (let i = rippleHistory.length - 1; i >= 0; i--) {
+    const ring = rippleHistory[i];
+    const age = now - ring.born;
+    const lifeRatio = Math.min(1, age / ring.life);
+
+    if (lifeRatio >= 1) {
+      rippleHistory.splice(i, 1);
+      continue;
+    }
+
+    // Ring expands and fades
+    const expandedR = ring.radius * (1 + lifeRatio * 0.6);
+    const alpha = ring.alpha * (1 - lifeRatio * lifeRatio); // quadratic fade
+
+    if (alpha > 0.005) {
+      ctx.strokeStyle = rgba(...HONEY_AMBER, alpha);
+      ctx.lineWidth = 1.5 + (1 - lifeRatio) * 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, expandedR, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  // ── Outer glow halo ──────────────────────────────────────────────────
   if (glowIntensity > 0.01) {
-    const haloR = rippleRadius * 1.8;
-    const haloGrad = ctx.createRadialGradient(cx, cy, rippleRadius * 0.3, cx, cy, haloR);
-    haloGrad.addColorStop(0, hsla(...WARM_CREAM, glowIntensity * 0.06));
-    haloGrad.addColorStop(0.5, hsla(...SOFT_PEACH, glowIntensity * 0.03));
-    haloGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    const haloR = rippleRadius * 2;
+    const haloGrad = ctx.createRadialGradient(cx, cy, rippleRadius * 0.2, cx, cy, haloR);
+    haloGrad.addColorStop(0,   rgba(...WARM_CREAM, glowIntensity * 0.08));
+    haloGrad.addColorStop(0.4, rgba(...SOFT_PEACH, glowIntensity * 0.04));
+    haloGrad.addColorStop(0.7, rgba(...HONEY_AMBER, glowIntensity * 0.015));
+    haloGrad.addColorStop(1,   'rgba(0,0,0,0)');
     ctx.fillStyle = haloGrad;
     ctx.beginPath();
     ctx.arc(cx, cy, haloR, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Main ripple gradient
+  // ── Main ripple body ─────────────────────────────────────────────────
   if (rippleRadius > 1) {
     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rippleRadius);
 
-    // Core glow (honey amber)
-    const coreAlpha = 0.15 + glowIntensity * 0.45;
-    grad.addColorStop(0, hsla(...WARM_CREAM, coreAlpha));
-    grad.addColorStop(0.25, hsla(...HONEY_AMBER, coreAlpha * 0.8));
-    grad.addColorStop(0.55, hsla(...SOFT_PEACH, coreAlpha * 0.4));
-    grad.addColorStop(0.8, hsla(...HONEY_AMBER, coreAlpha * 0.12));
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    // Core glow intensity maps to color stops
+    const coreA = 0.12 + glowIntensity * 0.5;
+    grad.addColorStop(0,    rgba(...WARM_CREAM, coreA));
+    grad.addColorStop(0.2,  rgba(...HONEY_AMBER, coreA * 0.85));
+    grad.addColorStop(0.45, rgba(...SOFT_PEACH,  coreA * 0.5));
+    grad.addColorStop(0.7,  rgba(...HONEY_AMBER, coreA * 0.18));
+    grad.addColorStop(0.9,  rgba(...SOFT_PEACH,  coreA * 0.06));
+    grad.addColorStop(1,    'rgba(0,0,0,0)');
 
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(cx, cy, rippleRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Ripple ring
-    const ringWidth = 3 + glowIntensity * 6;
-    ctx.strokeStyle = hsla(...HONEY_AMBER, 0.12 + glowIntensity * 0.4);
+    // Glow ring on the ripple edge
+    const ringWidth = 2 + glowIntensity * 7;
+    const ringAlpha = 0.1 + glowIntensity * 0.5;
+    ctx.strokeStyle = rgba(...HONEY_AMBER, ringAlpha);
     ctx.lineWidth = ringWidth;
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.arc(cx, cy, rippleRadius, 0, Math.PI * 2);
     ctx.stroke();
+
+    // Second accent ring slightly inward (softer)
+    ctx.strokeStyle = rgba(...SOFT_PEACH, ringAlpha * 0.4);
+    ctx.lineWidth = ringWidth * 0.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rippleRadius * 0.9, 0, Math.PI * 2);
+    ctx.stroke();
   }
 
-  // Center dot with warm glow
-  const dotR = 4 + glowIntensity * 12;
+  // ── Freeze-frame glow: distinctive bloom when frozen ──────────────────
+  if (state === STATE.FREEZE) {
+    const freezeElapsed = now - freezeStart;
+    const freezeProgress = freezeElapsed / FREEZE_MAX_MS;
+
+    // Pulsing glow that intensifies slightly over the hold
+    const pulse = 0.15 + Math.sin(t * 0.005) * 0.03 + freezeProgress * 0.1;
+    const freezeGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rippleRadius * 1.3);
+    freezeGrad.addColorStop(0,   rgba(...WARM_CREAM, pulse));
+    freezeGrad.addColorStop(0.3, rgba(...HONEY_AMBER, pulse * 0.6));
+    freezeGrad.addColorStop(0.7, rgba(...SOFT_PEACH,  pulse * 0.2));
+    freezeGrad.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = freezeGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rippleRadius * 1.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // ── Center dot with warm glow ────────────────────────────────────────
+  const dotR = 5 + glowIntensity * 18;
   const dotGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, dotR);
-  dotGrad.addColorStop(0, hsla(...WARM_CREAM, 0.5 + glowIntensity * 0.5));
+  dotGrad.addColorStop(0, rgba(...WARM_CREAM, 0.4 + glowIntensity * 0.6));
+  dotGrad.addColorStop(0.5, rgba(...HONEY_AMBER, 0.15 + glowIntensity * 0.3));
   dotGrad.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = dotGrad;
   ctx.beginPath();
@@ -309,7 +482,7 @@ function drawRipple(t) {
   ctx.fill();
 }
 
-// ─── Main Loop ───────────────────────────────────────────────────────
+// ─── Main Loop ─────────────────────────────────────────────────────────────
 let lastTime = 0;
 
 function loop(ts) {
