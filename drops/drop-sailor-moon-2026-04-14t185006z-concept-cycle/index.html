@@ -191,11 +191,12 @@
       .crew-member .role { font-size:0.55rem; }
     }
   </style>
+<style id="ystack-repair-hint-style">.ystack-repair-hint{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;padding:6px 10px;border:1px solid rgba(255,255,255,.28);background:rgba(0,0,0,.66);color:rgba(255,255,255,.9);font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:0;border-radius:4px;pointer-events:none;max-width:min(92vw,520px);text-align:center}</style>
 </head>
   <!-- Canvas for cursor drag mechanics -->
   <canvas id="cursor-canvas"></canvas>
 
-  <script>
+  <script type="application/json" id="legacy-corrupt-cursor-script">
     // Initialize cursor drag mechanics
     function initCursorDrag() {
       const canvas = document.getElementById(cursor-canvas);
@@ -229,7 +230,8 @@
 
           oscillator.start();
         } catch (e) {
-          console.warn(Web
+	          console.warn(Web
+  </script>
 <body data-studio-slug="sailor-moon">
   <div id="nav"></div>
 
@@ -575,6 +577,7 @@
         });
     });
   </script>
+<div class="ystack-repair-hint">Click, tap, drag, or use the controls to interact.</div>
 </body>
 </html>
 

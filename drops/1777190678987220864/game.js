@@ -156,8 +156,6 @@
                 px[idx + 3] = 255;
               }
           }
-        }
-
         offCtx.putImageData(imgData, 0, 0);
 
         ctx.imageSmoothingEnabled = true;
