@@ -332,6 +332,8 @@
 
       // -- SVG Overlay: Detailed Park Bench + Strawberry Mochi --
     function buildOverlay() {
+        W = Number.isFinite(W) && W > 0 ? W : window.innerWidth;
+        H = Number.isFinite(H) && H > 0 ? H : window.innerHeight;
         overlay.setAttribute('viewBox', `0 0 ${W} ${H}`);
         const ox = W * 0.12;
         const oy = H * 0.72;

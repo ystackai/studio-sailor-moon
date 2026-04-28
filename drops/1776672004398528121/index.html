@@ -233,11 +233,14 @@ let hapticActive = false;
 let hapticInterval = null;
 const VIB_PATTERN = [80, 40, 80]; // ms on, ms off, ms on — gentle ripple
 
+function safeVibrate(pattern) {
+  if (!navigator.vibrate || (navigator.userActivation && !navigator.userActivation.isActive)) return;
+  navigator.vibrate(pattern);
+}
+
 function triggerTingHaptic() {
   // Single burst on lock engagement
-  if (navigator.vibrate) {
-    navigator.vibrate(VIB_PATTERN);
-  }
+  safeVibrate(VIB_PATTERN);
 }
 
 function startLockedHaptics() {
@@ -245,17 +248,17 @@ function startLockedHaptics() {
   hapticActive = true;
   // Gentle pulse loop: brief vibration + pause, sustaining the locked feel
   const gentleVibe = [60, 30]; // soft buzz + tiny gap
-  navigator.vibrate(gentleVibe);
+  safeVibrate(gentleVibe);
   hapticInterval = setInterval(() => {
     if (!hapticActive) return;
-    navigator.vibrate(gentleVibe);
+    safeVibrate(gentleVibe);
   }, 120);
 }
 
 function stopLockedHaptics() {
   hapticActive = false;
   if (hapticInterval) { clearInterval(hapticInterval); hapticInterval = null; }
-  navigator.vibrate(0);
+  safeVibrate(0);
 }
 
 // ═══════════════════════════════════════════

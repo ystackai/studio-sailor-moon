@@ -67,7 +67,7 @@ function createToneBuffer(freq, dur, type) {
     const d = buf.getChannelData(ch);
     for (let i = 0; i < len; i++) {
       const t = i / sr;
-      const env = Math.min(1, t * 40) * Math.exp(-((t - dur * 0.3) / (dur * 0.6)) ** 2);
+      const env = Math.min(1, t * 40) * Math.exp(-(((t - dur * 0.3) / (dur * 0.6)) ** 2));
       const noise = (Math.random() * 2 - 1) * 0.005;
       d[i] = Math.sin(2 * Math.PI * freq * t) * env * 0.35 + noise;
     }
