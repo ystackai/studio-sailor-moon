@@ -386,7 +386,7 @@
         blog_posts: []
       };
     }
-    StudioShell.init(studioSlug).catch(function() {
+    Promise.resolve().then(function() {
       StudioShell.data = fallbackStudioData();
     }).then(function() {
       var d = StudioShell.data || fallbackStudioData();
