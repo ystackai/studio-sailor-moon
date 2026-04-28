@@ -600,7 +600,8 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
 
       // Vignette intensifies as drag approaches threshold
     if (!trapState.triggered) {
-      const vigAlpha = 0.3 + (drag.displacement / THRESHOLD) * 0.2;
+      const safeDisplacement = Number.isFinite(drag.displacement) ? drag.displacement : 0;
+      const vigAlpha = Math.max(0, Math.min(0.8, 0.3 + (safeDisplacement / THRESHOLD) * 0.2));
       const vigGrad = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.25, W/2, H/2, Math.max(W,H)*0.7);
       vigGrad.addColorStop(0, 'rgba(0,0,0,0)');
       vigGrad.addColorStop(1, `rgba(0,0,0,${vigAlpha})`);

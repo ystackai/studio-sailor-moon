@@ -236,7 +236,7 @@
     var dist = getDistFromCenter(n.el);
     var fade = Math.max(0, 1 - dist / (window.innerHeight * FADE_DISTANCE));
 
-    n.scale += ((scaleSettle) - n.scale) * 0.08;
+    n.scale += (1 - n.scale) * 0.08;
     n.blur *= 0.82;
     n.opacity += ((0.2 + 0.8 * fade) - n.opacity) * 0.1;
     n.parallax *= 0.88;

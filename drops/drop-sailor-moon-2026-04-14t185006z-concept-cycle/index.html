@@ -377,8 +377,19 @@
 
     // Init
     var studioSlug = StudioShell.detectSlug('sailor-moon');
-    StudioShell.init(studioSlug).then(function() {
-      var d = StudioShell.data;
+    function fallbackStudioData() {
+      return {
+        studio: { name: 'Sailor Moon', hero_text: 'Cozy interactive toys, built by moonlight.' },
+        cast: [],
+        drops: [],
+        games: [],
+        blog_posts: []
+      };
+    }
+    StudioShell.init(studioSlug).catch(function() {
+      StudioShell.data = fallbackStudioData();
+    }).then(function() {
+      var d = StudioShell.data || fallbackStudioData();
       var homepageReleaseId = d.studio && d.studio.live_homepage_release_id;
       var homepageDrop = (d.drops || []).find(function(drop) {
         return drop && drop.id === homepageReleaseId && drop.canonical_url;

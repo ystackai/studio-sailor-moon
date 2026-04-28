@@ -104,7 +104,7 @@ function resize() {
   canvas.height = H * dpr;
   canvas.style.width  = W + 'px';
   canvas.style.height = H + 'px';
-  ctx.setTransform(dpr, 0, 0, dpr, 0);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   cx = W / 2; cy = H / 2;
 }
 window.addEventListener('resize', resize);
