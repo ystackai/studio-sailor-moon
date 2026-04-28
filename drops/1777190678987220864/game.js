@@ -214,10 +214,10 @@
         // Soft-knee compressor at -3dB threshold
         compNode = audioCtx.createDynamicsCompressor();
         compNode.threshold.value = -3;
-        compNode.knee = 10;
-        compNode.ratio = 12;
-        compNode.attack = 0.003;
-        compNode.release = 0.15;
+        compNode.knee.value = 10;
+        compNode.ratio.value = 12;
+        compNode.attack.value = 0.003;
+        compNode.release.value = 0.15;
 
         // Analyser for amplitude tracking
         analyserNode = audioCtx.createAnalyser();
