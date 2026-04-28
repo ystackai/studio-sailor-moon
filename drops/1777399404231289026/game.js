@@ -1,13 +1,25 @@
 // ============================================================
-// Honey Drop — Core Interactive Object
+// Honey Drop — WebGL Melt Shader + Drop Rendering
 // Normalized 0‑1 pressure → haptic intensity + melt shader glow
 // 70% threshold heartbeat pulse — pre‑rendered decay envelope
 // ============================================================
 
 const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
 
-// --- Canvas sizing (60fps target, cap blur kernel to 3x) ---
+// --- WebGL context setup ---
+let gl = null;
+let mainProgram = null;
+let particleProgram = null;
+let mainVAO = null;
+let particleVAO = null;
+let particleBuffer = null;
+
+// Uniform locations
+let uTime = null, uPressure = null, uResolution = null, uDecayT = null;
+let uPMatrix = null;
+let uPColor = null;
+
+// --- Canvas sizing (60fps target) ---
 let W = 0, H = 0, DPR = 1;
 function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -15,14 +27,369 @@ function resize() {
   H = window.innerHeight;
   canvas.width = W * DPR;
   canvas.height = H * DPR;
-  canvas.style.width  = W + 'px';
+  canvas.style.width = W + 'px';
   canvas.style.height = H + 'px';
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (gl) {
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  }
 }
 window.addEventListener('resize', resize);
-resize();
 
-// --- Normalized pressure state (0‑1 API, raw coordinates rejected) ---
+// ============================================================
+// SHADER SOURCES
+// ============================================================
+
+// --- Main pass: background + drop shape ---
+const MAIN_VS = `
+attribute vec2 aPos;
+varying vec2 vUV;
+void main() {
+  vUV = aPos * 0.5 + 0.5;
+  gl_Position = vec4(aPos, 0.0, 1.0);
+}`;
+
+const MAIN_FS = `
+precision highp float;
+
+varying vec2 vUV;
+uniform float uTime;
+uniform float uPressure;
+uniform vec2 uResolution;
+uniform float uDecayT;
+
+// --- Noise helpers ---
+float hash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float noise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
+    f.y
+  );
+}
+
+float fbm(vec2 p) {
+  float v = 0.0;
+  float a = 0.5;
+  for (int i = 0; i < 4; i++) {
+    v += a * noise(p);
+    p = p * 2.0 + vec2(0.13, 0.27);
+    a *= 0.5;
+  }
+  return v;
+}
+
+// --- Drop SDF: teardrop shape ---
+float dropSDF(vec2 p, float melt) {
+  vec2 q = p;
+  
+  // Melt deformation: the top stretches downward, bottom sags
+  float meltX = sin(q.y * 3.0 + uTime * 1.5) * melt * 0.15;
+  float meltY = cos(q.x * 2.5 + uTime * 1.2) * melt * 0.1;
+  q += vec2(meltX, meltY);
+  
+  // Wobble breathing
+  float wobble = sin(uTime * 3.0) * uPressure * 0.03;
+  q.x *= 1.0 + wobble;
+  q.y *= 1.0 - wobble * 0.5;
+  
+  // Teardrop shape SDF
+  float r = length(q);
+  float angle = atan(q.y, q.x);
+  // Elongate upward
+  float elongation = 0.35;
+  float topPull = max(0.0, cos(angle)) * elongation;
+  float d = r - 1.0 - topPull;
+  
+  // Smooth edges
+  return d;
+}
+
+// --- Color palette ---
+// Soft amber: (1.0, 0.71, 0.2)
+// Warm cream: (1.0, 0.88, 0.6)  
+// Moonlit indigo: (0.1, 0.06, 0.16)
+// Amber glow: (1.0, 0.7, 0.2)
+
+void main() {
+  vec2 uv = vUV;
+  
+  // Aspect correction for drop center
+  float aspect = uResolution.x / uResolution.y;
+  vec2 normUV = (uv - 0.5) * vec2(aspect, 1.0);
+  
+  // Background: moonlit indigo gradient
+  vec3 bgTop = vec3(0.04, 0.04, 0.1);   // deep indigo
+  vec3 bgBot = vec3(0.09, 0.09, 0.19);   // lighter indigo
+  vec3 bg = mix(bgBot, bgTop, pow(uv.y, 0.8));
+  
+  // Drop center in screen space
+  vec2 dropCenter = vec2(0.0); // center
+  vec2 toDrop = normUV - dropCenter;
+  
+  // Scale drop to screen
+  float dropRadius = 0.18 * aspect; // relative to shorter dimension
+  
+  // Breathing scale
+  float scale = 1.0;
+  if (uPressure >= 0.7 || uDecayT > 0.0) {
+    float beatPhase = sin(uTime * 2.0 / 0.3 * 3.14159 * 2.0);
+    float beatStrength = uDecayT > 0.0 ? exp(-uDecayT * 3.0) : 0.25;
+    scale = 1.0 + beatPhase * beatStrength * 0.08;
+  }
+  
+  vec2 dropUV = toDrop / (dropRadius * scale);
+  
+  // Melt intensity = pressure
+  float melt = uPressure;
+  float d = dropSDF(dropUV, melt);
+  
+  // Inside/outside of drop
+  float inside = smoothstep(0.05, -0.05, d);
+  float edge = smoothstep(0.02, -0.02, d) - smoothstep(0.08, 0.02, d);
+  
+  // --- Drop body color ---
+  // Radial gradient inside the drop
+  float radialDist = length(dropUV);
+  
+  // Warm cream to amber gradient
+  vec3 creamColor = vec3(1.0, 0.95, 0.84);   // soft cream highlight
+  vec3 amberColor = vec3(1.0, 0.71, 0.2);     // soft amber
+  vec3 deepAmber = vec3(0.77, 0.47, 0.1);      // deep amber
+  vec3 indigoShadow = vec3(0.1, 0.06, 0.16);   // moonlit indigo
+  
+  // Offset highlight for 3D effect
+  vec2 highlightUV = dropUV + vec2(-0.15, -0.2);
+  float highlightDist = length(highlightUV);
+  
+  // Body gradient: cream center -> amber mid -> indigo edge
+  vec3 bodyColor;
+  if (radialDist < 0.3) {
+    bodyColor = mix(amberColor, creamColor, 1.0 - radialDist / 0.3);
+  } else if (radialDist < 0.75) {
+    bodyColor = mix(amberColor, deepAmber, (radialDist - 0.3) / 0.45);
+  } else {
+    bodyColor = mix(deepAmber, indigoShadow, (radialDist - 0.75) / 0.25);
+  }
+  
+  // Viscous melt texture
+  float meltNoise = fbm(dropUV * 4.0 + uTime * 0.3 * (1.0 + melt));
+  float meltStream = smoothstep(0.35, 0.7, meltNoise);
+  bodyColor += vec3(0.1, 0.05, 0.0) * meltStream * melt * 0.3;
+  
+  // Highlight
+  float highlight = smoothstep(0.5, 0.0, highlightDist);
+  highlight = pow(highlight, 2.0) * 0.5;
+  bodyColor += vec3(1.0, 0.94, 0.78) * highlight * inside;
+  
+  // --- Edge glow + shadow ---
+  // Amber glow ring outside the drop, scales with pressure
+  float glowDist = max(0.0, d);
+  float glowWidth = 0.3 + melt * 0.5;
+  float glowIntensity = melt * 0.35;
+  vec3 glowColor = vec3(1.0, 0.7, 0.2);
+  
+  // Glow falloff (cap bloom to ~3 equivalent for 60fps)
+  float glow = glowIntensity * exp(-glowDist / (glowWidth * 0.4));
+  vec3 glowContrib = glowColor * glow;
+  
+  // Second glow layer for warmth
+  float glow2 = glowIntensity * 0.5 * exp(-glowDist / (glowWidth * 0.7));
+  glowContrib += vec3(0.9, 0.55, 0.15) * glow2;
+  
+  // Indigo shadow beneath drop
+  float shadowDist = length(vec2(0.0, 0.1) + toDrop) / dropRadius;
+  float shadow = smoothstep(1.4, 0.5, shadowDist) * 0.3;
+  vec3 shadowColor = vec3(0.05, 0.03, 0.1) * shadow;
+  
+  // Heartbeat glow peak (at threshold)
+  float heartbeatGlow = 0.0;
+  if (uPressure >= 0.7 || uDecayT > 0.0) {
+    float beatPhase = sin(uTime * (6.0 / 0.3) * 3.14159);
+    float beatStr = uDecayT > 0.0 ? exp(-uDecayT * 3.0) : 0.5;
+    heartbeatGlow = max(0.0, beatPhase) * beatStr * 0.3;
+    glowContrib += vec3(1.0, 0.6, 0.15) * heartbeatGlow * smoothstep(0.2, 0.0, abs(d));
+  }
+  
+  // --- Composite ---
+  vec3 finalColor = bg - shadowColor;
+  
+  // Add drop body
+  finalColor = mix(finalColor, bodyColor, inside);
+  
+  // Add edge crispness
+  finalColor = mix(finalColor, bodyColor * 0.9, edge * 0.5);
+  
+  // Add glow (additive)
+  finalColor += glowContrib * (1.0 - inside * 0.5);
+  
+  // Vignette
+  float vignette = 1.0 - 0.3 * length(uv - 0.5);
+  finalColor *= vignette;
+  
+  // Tone mapping
+  finalColor = finalColor / (1.0 + finalColor);
+  finalColor = pow(finalColor, vec3(0.95));
+  
+  gl_FragColor = vec4(finalColor, 1.0);
+}`;
+
+// --- Particle pass: honey droplets ---
+const PARTICLE_VS = `
+attribute vec3 aParticle; // xy=position, z=life
+uniform mat4 uPMatrix;
+uniform float uTime;
+uniform vec2 uResolution;
+
+varying float vLife;
+varying vec2 vPos;
+
+void main() {
+  vLife = aParticle.z;
+  vec2 pos = aParticle.xy;
+  
+  // Subtle drift
+  pos += vec2(sin(uTime * 0.5 + pos.y * 3.0), cos(uTime * 0.3 + pos.x * 2.0)) * 0.01;
+  
+  vPos = pos;
+  vec4 screenPos = uPMatrix * vec4(pos * vec2(uResolution.x / uResolution.y, 1.0), 0.0, 1.0);
+  gl_Position = screenPos;
+  gl_PointSize = (2.0 + vLife * 4.0) * min(uResolution.x, uResolution.y) / 500.0;
+}`;
+
+const PARTICLE_FS = `
+precision highp float;
+varying float vLife;
+varying vec2 vPos;
+uniform vec3 uPColor;
+
+void main() {
+  vec2 c = gl_PointCoord - 0.5;
+  float d = length(c);
+  float alpha = smoothstep(0.5, 0.1, d) * vLife * 0.6;
+  if (alpha < 0.01) discard;
+  
+  // Warm amber/cream color with slight variation
+  vec3 color = uPColor + vec3(0.05, -0.03, -0.02) * vLife;
+  // Add soft glow center
+  float glow = exp(-d * 4.0) * 0.3;
+  color += vec3(1.0, 0.9, 0.6) * glow;
+  
+  gl_FragColor = vec4(color, alpha);
+}`;
+
+// ============================================================
+// WebGL compilation helpers
+// ============================================================
+function compileShader(src, type) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+    console.error('Shader compile error:', gl.getShaderInfoLog(s));
+    return null;
+  }
+  return s;
+}
+
+function createProgram(vs, fs, attribs) {
+  const v = compileShader(vs, gl.VERTEX_SHADER);
+  const f = compileShader(fs, gl.FRAGMENT_SHADER);
+  const p = gl.createProgram();
+  gl.attachShader(p, v);
+  gl.attachShader(p, f);
+  if (attribs) {
+    const idx = [];
+    for (let i = attribs.length - 1; i >= 0; i--) {
+      idx.push(i);
+      gl.bindAttribLocation(p, i, attribs[i]);
+    }
+  }
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+    console.error('Program link error:', gl.getProgramInfoLog(p));
+    return null;
+  }
+  return p;
+}
+
+// ============================================================
+// Initialize WebGL
+// ============================================================
+function initWebGL() {
+  gl = canvas.getContext('webgl', {
+    alpha: false,
+    antialias: false,
+    premultipliedAlpha: false,
+    powerPreference: 'high-performance'
+  });
+  
+  if (!gl) {
+    console.warn('WebGL not available, using fallback');
+    return false;
+  }
+  
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  
+  // --- Main program ---
+  mainProgram = createProgram(MAIN_VS, MAIN_FS, ['aPos']);
+  
+  // Fullscreen quad
+  const quadVerts = new Float32Array([-1,-1, 1,-1, -1,1, 1,1]);
+  const buf = gl.createBuffer();
+  mainVAO = buf; // store buffer reference
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, quadVerts, gl.STATIC_DRAW);
+  
+  // Get uniform locations
+  uTime     = gl.getUniformLocation(mainProgram, 'uTime');
+  uPressure  = gl.getUniformLocation(mainProgram, 'uPressure');
+  uResolution = gl.getUniformLocation(mainProgram, 'uResolution');
+  uDecayT    = gl.getUniformLocation(mainProgram, 'uDecayT');
+  
+  // --- Particle program ---
+  particleProgram = createProgram(PARTICLE_VS, PARTICLE_FS, ['aParticle']);
+  
+  uPMatrix  = gl.getUniformLocation(particleProgram, 'uPMatrix');
+  uPColor   = gl.getUniformLocation(particleProgram, 'uPColor');
+  
+  // Particles attribute locations
+  const pTimeLoc = gl.getAttribLocation(particleProgram, 'uTime');
+  const pResLoc  = gl.getAttribLocation(particleProgram, 'uResolution');
+  
+  // Particle buffer
+  particleBuffer = gl.createBuffer();
+  
+  // Store extra uniform locations on the program object
+  particleProgram._uTimeLoc = gl.getUniformLocation(particleProgram, 'uTime');
+  particleProgram._uResLoc = gl.getUniformLocation(particleProgram, 'uResolution');
+  
+  return true;
+}
+
+// ============================================================
+// Matrix math
+// ============================================================
+function orthoMatrix(left, right, bottom, top, near, far) {
+  const w = right - left, h = top - bottom, d = far - near;
+  return new Float32Array([
+    2/w, 0, 0, 0,
+    0, 2/h, 0, 0,
+    0, 0, -2/d, 0,
+    -(left+right)/w, -(bottom+top)/h, -(near+far)/d, 1
+  ]);
+}
+
+// ============================================================
+// Normalized pressure state (0‑1 API, raw coordinates rejected)
+// ============================================================
 let pressure = 0;
 let active = false;
 let heartbeatFired = false;
@@ -58,8 +425,7 @@ function ensureAudioCtx() {
   }
 }
 
-// Generate a pre‑rendered tone buffer (frequency, duration, type, rolloff)
-function createToneBuffer(freq, dur, type) {
+function createToneBuffer(freq, dur) {
   const sr = audioCtx.sampleRate;
   const len = Math.floor(sr * dur);
   const buf = audioCtx.createBuffer(2, len, sr);
@@ -75,7 +441,6 @@ function createToneBuffer(freq, dur, type) {
   return buf;
 }
 
-// Generate a soft click buffer for squeeze onset
 function createClickBuffer() {
   const sr = audioCtx.sampleRate;
   const dur = 0.08;
@@ -92,7 +457,6 @@ function createClickBuffer() {
   return buf;
 }
 
-// Generate decay "drip" buffer matching decay envelope
 function createDripBuffer() {
   const sr = audioCtx.sampleRate;
   const dur = DECAY_DURATION;
@@ -112,7 +476,6 @@ function createDripBuffer() {
   return buf;
 }
 
-// Generate ambient pad buffer (warm, slow‑attack, C minor / G major, 60bpm pulse)
 function createPadBuffer() {
   const sr = audioCtx.sampleRate;
   const dur = 2.0;
@@ -142,9 +505,9 @@ let dripBuffer = null;
 
 function initBuffers() {
   if (!audioCtx) return;
-  heartbeatBuffer = createToneBuffer(120, 0.4, 'sine');
-  clickBuffer   = createClickBuffer();
-  dripBuffer    = createDripBuffer();
+  heartbeatBuffer = createToneBuffer(120, 0.4);
+  clickBuffer    = createClickBuffer();
+  dripBuffer     = createDripBuffer();
 }
 
 function playSource(buf) {
@@ -167,7 +530,6 @@ function playSource(buf) {
   return src;
 }
 
-// Start ambient pad loop
 function startAmbientPad() {
   if (!audioCtx) return;
   const padBuf = createPadBuffer();
@@ -190,152 +552,84 @@ function startAmbientPad() {
   ambientPad = src;
 }
 
-// --- Drawing helpers ---
-function dropRadius() {
-  return Math.min(W, H) * 0.22;
+// ============================================================
+// Particle system (positions stored as NDC coordinates)
+// ============================================================
+function dropNDCRadius() {
+  const aspect = W / H;
+  return 0.18 * (aspect > 1 ? 1 : aspect);
 }
 
-function dropCenter() {
-  return { x: W / 2, y: H / 2 };
-}
-
-// --- Honey‑like melt shader (2D canvas approximation, blur capped at 3x) ---
-function drawDrop(p, dt) {
-  const c = dropCenter();
-  const r = dropRadius();
-
-  // Breathing / heartbeat scale
-  let scale = 1;
-  let glowIntensity = p;
-
-  // Heartbeat visual pulse
-  if (p >= THRESHOLD || inDecay) {
-    const beatPhase = Math.sin(performance.now() / 300 * Math.PI * 2);
-    const beatStrength = inDecay ? Math.exp(-decayT / DECAY_DURATION * 3) : 0.25;
-    scale = 1 + beatPhase * beatStrength * 0.08;
-    glowIntensity = Math.max(glowIntensity, beatPhase * beatStrength * 0.5);
-  }
-
-  const cr = r * scale;
-
-  // Glow layers (max 3 kernel passes, capped for 60fps stability)
-  const glowPasses = Math.min(3, 1 + Math.floor(glowIntensity * 3));
-  for (let g = glowPasses; g >= 1; g--) {
-    const gr = cr * (1 + g * 0.35 * glowIntensity);
-    const alpha = 0.06 * glowIntensity * (glowPasses - g + 1) / glowPasses;
-    const grad = ctx.createRadialGradient(c.x, c.y, cr * 0.2, c.x, c.y, gr);
-    grad.addColorStop(0, `rgba(255, 191, 60, ${alpha})`);
-    grad.addColorStop(0.5, `rgba(220, 150, 40, ${alpha * 0.5})`);
-    grad.addColorStop(1, 'rgba(220, 150, 40, 0)');
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, gr, 0, Math.PI * 2);
-    ctx.fillStyle = grad;
-    ctx.fill();
-  }
-
-  // Main drop body — organic rounded shape
-  const bodyGrad = ctx.createRadialGradient(c.x - cr * 0.2, c.y - cr * 0.2, cr * 0.05, c.x, c.y, cr);
-  bodyGrad.addColorStop(0, '#ffe099');
-  bodyGrad.addColorStop(0.4, '#ffb533');
-  bodyGrad.addColorStop(0.75, '#c4781a');
-  bodyGrad.addColorStop(1, '#1a1028');
-
-  // Viscous distortion: slight wobble proportional to pressure
-  const wobble = Math.sin(performance.now() / 200) * p * 6;
-
-  ctx.save();
-  ctx.translate(c.x, c.y);
-  ctx.scale(1 + wobble * 0.002, 1 - wobble * 0.0015);
-
-  // Draw organic drop shape using bezier curves
-  ctx.beginPath();
-  const k = cr;
-  ctx.moveTo(0, -k * 1.3);
-  ctx.bezierCurveTo(k * 0.8, -k * 1.1, k * 1.0, -k * 0.3, k * 0.9, k * 0.3);
-  ctx.bezierCurveTo(k * 0.7, k * 1.1, -k * 0.7, k * 1.1, -k * 0.9, k * 0.3);
-  ctx.bezierCurveTo(-k * 1.0, -k * 0.3, -k * 0.8, -k * 1.1, 0, -k * 1.3);
-  ctx.closePath();
-
-  // Shadow / moonlit indigo tint
-  ctx.shadowColor = 'rgba(60, 40, 100, 0.6)';
-  ctx.shadowBlur = 20 + p * 30;
-  ctx.fillStyle = bodyGrad;
-  ctx.fill();
-
-  // Highlight
-  const hl = ctx.createRadialGradient(-k * 0.25, -k * 0.5, 0, -k * 0.25, -k * 0.5, k * 0.5);
-  hl.addColorStop(0, 'rgba(255, 240, 200, 0.6)');
-  hl.addColorStop(1, 'rgba(255, 240, 200, 0)');
-  ctx.fillStyle = hl;
-  ctx.fill();
-
-  ctx.restore();
-
-  // Melt shader glow: amber bloom ring, intensity = pressure
-  if (p > 0.05) {
-    const bloomR = cr * (1.1 + p * 0.5);
-    const bloom = ctx.createRadialGradient(c.x, c.y, cr * 0.9, c.x, c.y, bloomR);
-    bloom.addColorStop(0, `rgba(255, 180, 50, ${p * 0.35})`);
-    bloom.addColorStop(0.6, `rgba(240, 140, 30, ${p * 0.15})`);
-    bloom.addColorStop(1, 'rgba(240, 140, 30, 0)');
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, bloomR, 0, Math.PI * 2);
-    ctx.fillStyle = bloom;
-    ctx.fill();
-  }
-
-  // Particles: honey‑like droplets
-  updateAndDrawParticles(p, dt);
-}
-
-// --- Particle system ---
 function spawnParticle(p) {
   if (particles.length >= MAX_PARTICLES) return;
-  const c = dropCenter();
-  const r = dropRadius() * (1 + p * 0.3);
+  const r = dropNDCRadius() * (1 + p * 0.3);
   const angle = Math.random() * Math.PI * 2;
   const dist = r * (0.6 + Math.random() * 0.6);
   particles.push({
-    x: c.x + Math.cos(angle) * dist,
-    y: c.y + Math.sin(angle) * dist,
-    vx: (Math.random() - 0.5) * 30 * p,
-    vy: (Math.random() - 0.5) * 20 + 15,
+    x: Math.cos(angle) * dist,
+    y: Math.sin(angle) * dist,
+    vx: (Math.random() - 0.5) * 0.03 * p,
+    vy: (Math.random() - 0.5) * 0.02 + 0.015,
+    vyAccel: 0.012,
     life: 1,
-    size: 2 + Math.random() * 4 * p,
-    hue: 35 + Math.random() * 15,
+    decay: 0.6,
   });
 }
 
-function updateAndDrawParticles(p, dt) {
+function updateParticles(p, dt) {
   if (p > 0.2 && Math.random() < p * 0.15) {
     spawnParticle(p);
   }
-
+  
   for (let i = particles.length - 1; i >= 0; i--) {
     const pt = particles[i];
     pt.x += pt.vx * dt;
     pt.y += pt.vy * dt;
-    pt.vy += 12 * dt;
-    pt.life -= dt * 0.6;
-
-    if (inDecay) {
-      pt.life -= dt * 0.4;
-    }
-
+    pt.vy += pt.vyAccel * dt;
+    pt.life -= dt * (inDecay ? pt.decay + 0.4 : pt.decay);
     if (pt.life <= 0) {
       particles.splice(i, 1);
-      continue;
     }
-
-    const alpha = pt.life * 0.6;
-    ctx.beginPath();
-    ctx.arc(pt.x, pt.y, pt.size * pt.life, 0, Math.PI * 2);
-    ctx.fillStyle = `hsla(${pt.hue}, 85%, 65%, ${alpha})`;
-    ctx.fill();
   }
 }
 
-// --- Touch / Mouse handlers with normalized 0‑1 pressure ---
+function renderParticles(time) {
+  if (particles.length === 0) return;
+  
+  gl.useProgram(particleProgram);
+  
+  // Orthographic matrix for NDC space
+  const aspect = W / H;
+  const proj = orthoMatrix(-aspect, aspect, -1, 1, -1, 1);
+  gl.uniformMatrix4fv(uPMatrix, false, proj);
+  gl.uniform1f(particleProgram._uTimeLoc, time);
+  gl.uniform2f(particleProgram._uResLoc, W, H);
+  
+  // Particle color: warm amber with variation
+  gl.uniform3f(uPColor, 1.0, 0.75, 0.35);
+  
+  // Build particle data: xy position + life
+  const data = new Float32Array(particles.length * 3);
+  for (let i = 0; i < particles.length; i++) {
+    data[i * 3 + 0] = particles[i].x;
+    data[i * 3 + 1] = particles[i].y;
+    data[i * 3 + 2] = particles[i].life;
+  }
+  
+  gl.bindBuffer(gl.ARRAY_BUFFER, particleBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW);
+  
+  const loc = gl.getAttribLocation(particleProgram, 'aParticle');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
+  
+  gl.drawArrays(gl.POINTS, 0, particles.length);
+  gl.disableVertexAttribArray(loc);
+}
+
+// ============================================================
+// Touch / Mouse handlers with normalized 0‑1 pressure
+// ============================================================
 function getPressure(e) {
   if (e.touches && e.touches.length > 0) {
     const t = e.touches[0];
@@ -348,17 +642,12 @@ function handleStart(e) {
   e.preventDefault();
   ensureAudioCtx();
   if (!heartbeatBuffer) initBuffers();
-
   if (!ambientPad) startAmbientPad();
-
   active = true;
   heartbeatFired = false;
   inDecay = false;
-
   const p = getPressure(e);
   pressure = p;
-
-  // Squeeze onset: soft click + haptic
   playSource(clickBuffer);
   triggerHaptic(15);
 }
@@ -368,8 +657,6 @@ function handleMove(e) {
   e.preventDefault();
   const p = getPressure(e);
   pressure = p;
-
-  // 70% threshold heartbeat trigger
   if (p >= THRESHOLD && !heartbeatFired) {
     heartbeatFired = true;
     onHeartbeat();
@@ -379,13 +666,10 @@ function handleMove(e) {
 function handleEnd(e) {
   if (!active) return;
   active = false;
-
-  // Trigger pre‑rendered decay envelope
   startDecay();
 }
 
 function onHeartbeat() {
-  // 120Hz thrum audio synced to haptic motor + shader glow peak
   playSource(heartbeatBuffer);
   triggerHaptic(300);
   if (padGain) {
@@ -399,14 +683,8 @@ function onHeartbeat() {
 function startDecay() {
   inDecay = true;
   decayT = 0;
-
-  // Pre‑rendered drip/drop sound matching decay envelope
   playSource(dripBuffer);
-
-  // Soft haptic release pulse
   triggerHaptic(80);
-
-  // Fade ambient pad
   if (padGain) {
     const now = audioCtx.currentTime;
     padGain.gain.cancelScheduledValues(now);
@@ -423,42 +701,68 @@ canvas.addEventListener('mouseleave', () => { if (active) handleEnd(); });
 
 // Touch events
 canvas.addEventListener('touchstart', handleStart, { passive: false });
-canvas.addEventListener('touchmove',  handleMove,  { passive: false });
-canvas.addEventListener('touchend',   handleEnd,   { passive: false });
+canvas.addEventListener('touchmove',  handleMove,   { passive: false });
+canvas.addEventListener('touchend',   handleEnd,    { passive: false });
 canvas.addEventListener('touchcancel', handleEnd, { passive: false });
 
-// --- Main render loop (targets 60fps, blur capped at 3x) ---
+// ============================================================
+// Main render loop (WebGL, 60fps target)
+// ============================================================
 let lastTs = 0;
 
 function frame(ts) {
   const dt = Math.min((ts - lastTs) / 1000, 0.05);
   lastTs = ts;
-
-  // Background: moonlit indigo gradient
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#0a0a1a');
-  bg.addColorStop(0.5, '#111128');
-  bg.addColorStop(1, '#161630');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-
+  
+  if (!gl) {
+    requestAnimationFrame(frame);
+    return;
+  }
+  
   // Update pressure during decay
   if (inDecay) {
     decayT += dt;
     const progress = decayT / DECAY_DURATION;
     if (progress >= 1) {
-      // Soft noise floor: never hard‑cut, maintain minimum intensity
       pressure = 0.005;
       inDecay = false;
     } else {
-      // Exponential decay with soft noise floor (-60dB ≈ 0.001)
       pressure = Math.exp(-progress * 4) + 0.001;
     }
   }
-
-  drawDrop(pressure, dt);
-
+  
+  // Update particles
+  updateParticles(pressure, dt);
+  
+  // --- Pass 1: Main drop shader ---
+  gl.clearColor(0.04, 0.04, 0.1, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  
+  gl.useProgram(mainProgram);
+  
+  gl.uniform1f(uTime, ts / 1000);
+  gl.uniform1f(uPressure, pressure);
+  gl.uniform2f(uResolution, W, H);
+  gl.uniform1f(uDecayT, inDecay ? decayT : 0.0);
+  
+  gl.bindBuffer(gl.ARRAY_BUFFER, mainVAO);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  gl.disableVertexAttribArray(0);
+  
+  // --- Pass 2: Particles (additive blend) ---
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+  renderParticles(ts / 1000);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  
   requestAnimationFrame(frame);
 }
 
+// --- Boot ---
+resize();
+const webglOK = initWebGL();
+if (!webglOK) {
+  console.warn('WebGL init failed, app will not render.');
+}
 requestAnimationFrame(frame);
