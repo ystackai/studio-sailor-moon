@@ -23,7 +23,7 @@ window.addEventListener('resize', resize);
 resize();
 
 // ============================================================
-// DOM helpers — guard against missing elements
+// DOM helpers
 // ============================================================
 const el = {
   title: document.getElementById('title-screen'),
@@ -34,7 +34,7 @@ const el = {
 };
 
 // ============================================================
-// Moon phases — drives rhythm
+// Moon phases
 // ============================================================
 const MOON_PHASES = [
   { name: 'New Moon',        icon: '\u{1F311}', freq: 0.4 },
@@ -51,6 +51,16 @@ let moonPhase = 0;
 let moonTime = 0;
 const MOON_CYCLE = 12000;
 let moonX = 0, moonY = 0;
+
+// Stable moon crater positions (generated once, not per frame)
+const moonCraters = [];
+for (let i = 0; i < 4; i++) {
+  moonCraters.push({
+    cx: (Math.random() - 0.5) * 19,
+    cy: (Math.random() - 0.5) * 17,
+    r: 1.5 + Math.random() * 2.5,
+  });
+}
 
 // ============================================================
 // Garden state
@@ -70,7 +80,7 @@ const groundPlants = [];
 const MAX_GROUND = 120;
 
 // ============================================================
-// Audio engine (soft, generative, phone-speaker safe)
+// Audio engine
 // ============================================================
 let audioCtx = null;
 let masterGain = null;
@@ -111,23 +121,29 @@ function startAmbientPad() {
   ambientGain.gain.value = 0;
   ambientGain.connect(filter);
 
+  const oscillators = [];
   for (const f of baseFreqs) {
     const osc = audioCtx.createOscillator();
     osc.type = 'sine';
     osc.frequency.value = f + (Math.random() - 0.5) * 2;
     osc.connect(ambientGain);
     osc.start();
+    oscillators.push(osc);
   }
 
-  // Gentle random detune every 3s
-  setInterval(function () {
-    if (!audioCtx || !ambientGain) return;
-    const freqs = [130.81, 196.00, 246.94, 329.63, 392.00];
-    // Detune by ±5 cents
-    for (let i = 0; i < ambientGain.channelCount; i++) {
-      // cannot iterate oscillators directly — handled by frequency.value reassign
+  // Gentle random detune every 2.5s
+  const detuneInterval = setInterval(function () {
+    if (!audioCtx) { clearInterval(detuneInterval); return; }
+    for (let i = 0; i < oscillators.length && i < baseFreqs.length; i++) {
+      osc = oscillators[i];
+      if (osc && osc.frequency) {
+        osc.frequency.value = baseFreqs[i] + (Math.random() - 0.5) * 3;
+      }
     }
-  }, 3000);
+  }, 2500);
+
+  // eslint-disable-next-line no-unused-vars
+  var osc; // avoid strict mode error
 
   ambientGain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 6);
 }
@@ -137,7 +153,6 @@ function playBloomChime(freq, intensity) {
   const now = audioCtx.currentTime;
   const dur = 0.25 + intensity * 0.35;
 
-  // Soft harmonic stack — bell-like
   const harmonics = [1, 2.01, 3.0, 4.02];
   for (const mult of harmonics) {
     const osc = audioCtx.createOscillator();
@@ -153,7 +168,7 @@ function playBloomChime(freq, intensity) {
     osc.stop(now + dur);
   }
 
-  // Noise burst — soft breath
+  // Noise burst
   const sr = audioCtx.sampleRate;
   const burstLen = Math.floor(sr * 0.05);
   const buf = audioCtx.createBuffer(1, burstLen, sr);
@@ -184,13 +199,11 @@ function onRhythmPulse() {
     }, 600);
   }
 
-  // Pulse blooms stems gently
   for (const s of stems) {
     s.wobbleTarget = 1 + Math.random() * 0.25;
     s.bloomLevel = Math.min(s.bloomLevel + 0.08, 1);
   }
 
-  // Random bloom chime
   if (stems.length > 0 && audioStarted) {
     const idx = Math.floor(Math.random() * stems.length);
     playBloomChime(stems[idx].pitch, 0.25);
@@ -202,13 +215,11 @@ function updateMoon(dt) {
   const cyclePos = (moonTime % MOON_CYCLE) / MOON_CYCLE;
   moonPhase = Math.floor(cyclePos * 8) % 8;
 
-  // Moon position — arc across the sky
   const angle = cyclePos * Math.PI - Math.PI / 2;
   const radius = H * 0.35;
   moonX = W * 0.5 + Math.cos(angle) * radius;
   moonY = H * 0.35 + Math.sin(angle) * radius * 0.45;
 
-  // Phase indicator
   if (el.phaseIcon) {
     const pct = (moonPhase + 1) * 12.5;
     el.phaseIcon.style.background =
@@ -218,18 +229,15 @@ function updateMoon(dt) {
     el.phaseName.textContent = MOON_PHASES[moonPhase].name;
   }
 
-  // Rhythm timing
   const freq = MOON_PHASES[moonPhase].freq;
   rhythmInterval = Math.max(400, 2800 - freq * 1400);
 
-  // Auto-stem spawn
   stemTimer += dt * 1000;
   if (stemTimer >= STEM_SPACING && stems.length < MAX_STEMS) {
     stemTimer = 0;
     spawnStem();
   }
 
-  // Rhythm pulse
   rhythmTime += dt * 1000;
   if (rhythmTime >= rhythmInterval) {
     rhythmTime = 0;
@@ -238,7 +246,7 @@ function updateMoon(dt) {
 }
 
 // ============================================================
-// Stem / Plant system
+// Stems
 // ============================================================
 function spawnStem(x, y) {
   const gx = x !== undefined ? x : W * (0.15 + Math.random() * 0.7);
@@ -273,7 +281,6 @@ function spawnStem(x, y) {
     stemWidth: 2 + Math.random() * 2,
   });
 
-  // Ground plants nearby
   for (let i = 0; i < 3; i++) {
     if (groundPlants.length >= MAX_GROUND) break;
     groundPlants.push({
@@ -301,7 +308,6 @@ function updateStems(dt) {
 
     if (s.touched) {
       s.touchTime += dt;
-      // Hold for glow — decays after 2s of inactivity
       if (s.touchTime > 2) {
         s.touched = false;
         s.touchTime = 0;
@@ -322,19 +328,18 @@ function smoothStep(t) {
 }
 
 function drawStem(s) {
-  const currentHeight = s.height;
-  if (currentHeight < 2) return;
+  const h = s.height;
+  if (h < 2) return;
 
-  const wobble = (s.wobbleTarget || 1) * 3 * Math.sin(s.wobble);
+  const wobble = s.wobbleTarget * 3 * Math.sin(s.wobble);
   const glow = Math.min(s.glow * 0.35, 0.5);
   const bloom = Math.max(0.05, s.bloomLevel);
 
   ctx.save();
   ctx.translate(s.x, s.y);
 
-  // Stem line
   const tipX = wobble;
-  const tipY = -currentHeight;
+  const tipY = -h;
   const grad = ctx.createLinearGradient(0, 0, 0, tipY);
   grad.addColorStop(0, shadeColor(s.color, -25));
   grad.addColorStop(1, s.color);
@@ -345,12 +350,9 @@ function drawStem(s) {
   ctx.lineTo(tipX, tipY);
   ctx.stroke();
 
-  // Top detail
   const topSize = 6 + 7 * bloom;
-  const already = s.type;
 
-  if (already === 'flower') {
-    // Petal ring
+  if (s.type === 'flower') {
     const petalLen = topSize * 1.1;
     for (let i = 0; i < s.petalCount; i++) {
       const a = (i / s.petalCount) * Math.PI * 2 + s.wobble * 0.08;
@@ -364,13 +366,11 @@ function drawStem(s) {
       ctx.fillStyle = 'rgba(212, 197, 240, ' + (0.25 + bloom * 0.35) + ')';
       ctx.fill();
     }
-    // Center disc
     ctx.beginPath();
     ctx.arc(tipX, tipY, topSize * 0.3, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255, 245, 230, ' + (0.35 + bloom * 0.45) + ')';
     ctx.fill();
-  } else if (already === 'leaf') {
-    // Leaf pair
+  } else if (s.type === 'leaf') {
     for (let s2 = -1; s2 <= 1; s2 += 2) {
       ctx.beginPath();
       ctx.ellipse(
@@ -383,7 +383,6 @@ function drawStem(s) {
       ctx.fill();
     }
   } else {
-    // Spike / crystal
     ctx.beginPath();
     ctx.moveTo(tipX - topSize * 0.2, tipY);
     ctx.lineTo(tipX, tipY - topSize * 1.2);
@@ -393,7 +392,6 @@ function drawStem(s) {
     ctx.fill();
   }
 
-  // Glow ring around top
   if (glow > 0.02) {
     const gr = ctx.createRadialGradient(tipX, tipY, 2, tipX, tipY, 18 * glow);
     gr.addColorStop(0, 'rgba(196, 132, 252, ' + (glow * 0.45) + ')');
@@ -408,7 +406,7 @@ function drawStem(s) {
 }
 
 function shadeColor(color, percent) {
-  if (!color || color.charAt(0) !== '#') return color;
+  if (!color || color.charAt(0) !== '#') return color || '#fff';
   const num = parseInt(color.slice(1), 16);
   const amt = Math.round(2.55 * percent);
   const R = Math.min(255, Math.max(0, (num >> 16) + amt));
@@ -432,7 +430,7 @@ function drawGround() {
 }
 
 // ============================================================
-// Sparkle particles
+// Sparkles
 // ============================================================
 function spawnBloom(x, y, color, count) {
   for (let i = 0; i < count; i++) {
@@ -468,15 +466,12 @@ function drawSparkles(dt) {
     }
 
     const alpha = sp.life * 0.55;
-    const baseColor = sp.color;
-    // Convert rgb(...) to rgba
-    const rgba = baseColor.replace('rgb', 'rgba').replace(')', ', ' + alpha + ')');
+    const rgba = sp.color.replace('rgb', 'rgba').replace(')', ', ' + alpha + ')');
     ctx.beginPath();
     ctx.arc(sp.x, sp.y, sp.size * sp.life, 0, Math.PI * 2);
     ctx.fillStyle = rgba;
     ctx.fill();
 
-    // Glow trail
     ctx.beginPath();
     ctx.arc(sp.x, sp.y, sp.size * 2 * sp.life, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(196, 132, 252, ' + (alpha * 0.12) + ')';
@@ -485,7 +480,7 @@ function drawSparkles(dt) {
 }
 
 // ============================================================
-// Fireflies (ambient)
+// Fireflies
 // ============================================================
 const fireflies = [];
 for (let i = 0; i < 18; i++) {
@@ -506,14 +501,13 @@ function drawFireflies(dt) {
     f.x += f.vx * dt * 60;
     f.y += f.vy * dt * 60;
 
-    // Re-enter bounds
     if (f.x < -10) f.x = W + 10;
     if (f.x > W + 10) f.x = -10;
     if (f.y < H * 0.25) f.y = H * 0.7;
     if (f.y > H * 0.88) f.y = H * 0.35;
 
     const flicker = 0.5 + 0.5 * Math.sin(f.flicker);
-    const alpha = (0.25 + 0.45 * flicker);
+    const alpha = 0.25 + 0.45 * flicker;
 
     ctx.beginPath();
     ctx.arc(f.x, f.y, f.size * (0.4 + 0.6 * flicker), 0, Math.PI * 2);
@@ -530,7 +524,7 @@ function drawFireflies(dt) {
 }
 
 // ============================================================
-// Stars background
+// Stars
 // ============================================================
 const stars = [];
 for (let i = 0; i < 120; i++) {
@@ -567,7 +561,7 @@ function drawMoon() {
   const R = 38;
   const mr = R * 3;
 
-  // Soft ambient glow
+  // Ambient glow
   const glow = ctx.createRadialGradient(moonX, moonY, R * 0.3, moonX, moonY, mr);
   glow.addColorStop(0, 'rgba(212, 197, 240, 0.12)');
   glow.addColorStop(1, 'rgba(212, 197, 240, 0)');
@@ -582,7 +576,7 @@ function drawMoon() {
   ctx.fillStyle = '#d4c5f0';
   ctx.fill();
 
-  // Phase shadow (dark crescent)
+  // Phase shadow
   const shadowAngle = (moonPhase / 8) * Math.PI * 2;
   const sx = moonX + Math.cos(shadowAngle) * R * 0.55;
   const sy = moonY + Math.sin(shadowAngle) * R * 0.25;
@@ -591,19 +585,17 @@ function drawMoon() {
   ctx.fillStyle = 'rgba(5, 5, 16, 0.55)';
   ctx.fill();
 
-  // Subtle craters
-  for (let i = 0; i < 4; i++) {
-    const cx = moonX + (Math.random() - 0.5) * R * 0.5;
-    const cy = moonY + (Math.random() - 0.5) * R * 0.45;
+  // Stable craters
+  for (const c of moonCraters) {
     ctx.beginPath();
-    ctx.arc(cx, cy, 1.5 + Math.random() * 2.5, 0, Math.PI * 2);
+    ctx.arc(moonX + c.cx, moonY + c.cy, c.r, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(200, 190, 220, 0.15)';
     ctx.fill();
   }
 }
 
 // ============================================================
-// Ground / terrain
+// Terrain
 // ============================================================
 function drawTerrain(groundY) {
   const grad = ctx.createLinearGradient(0, groundY, 0, H);
@@ -613,7 +605,6 @@ function drawTerrain(groundY) {
   ctx.fillStyle = grad;
   ctx.fillRect(0, groundY, W, H - groundY);
 
-  // Grass silhouette — subtle wave
   ctx.strokeStyle = 'rgba(30, 50, 40, 0.25)';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -637,14 +628,12 @@ function handleTap(x, y) {
     titleVisible = false;
     gardenStarted = true;
     if (el.title) el.title.classList.add('hidden');
-    // Spawn initial garden staggered
     for (let i = 0; i < 6; i++) {
       setTimeout(function () { spawnStem(); }, i * 280);
     }
     return;
   }
 
-  // Find closest grown stem
   let closest = null;
   let closestDist = Infinity;
   for (const s of stems) {
@@ -687,7 +676,7 @@ canvas.addEventListener('touchstart', function (e) {
 }, { passive: false });
 
 // ============================================================
-// Main render loop
+// Main loop
 // ============================================================
 let lastTs = 0;
 
@@ -704,20 +693,17 @@ function frame(ts) {
 
   const groundY = H * 0.65;
   drawTerrain(groundY);
-
   drawGround();
 
   updateMoon(dt);
   updateStems(dt);
 
-  // Back-to-front sort
   const sorted = [...stems].sort(function (a, b) { return a.y - b.y; });
   for (const s of sorted) drawStem(s);
 
   drawFireflies(dt);
   drawSparkles(dt);
 
-  // Hide hint bar after garden starts
   if (gardenStarted && el.hintBar) {
     el.hintBar.style.opacity = '0';
   }
@@ -728,7 +714,7 @@ function frame(ts) {
 requestAnimationFrame(frame);
 
 // ============================================================
-// Accessibility: reduce motion preference
+// Accessibility
 // ============================================================
 if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   document.documentElement.style.setProperty('--reduce-motion', 'true');
