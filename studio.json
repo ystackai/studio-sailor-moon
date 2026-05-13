@@ -54,7 +54,21 @@
     "last_reset_at": ""
   },
   "games": {
-    "shipped": [],
+    "shipped": [
+      {
+        "title": "Lunar Rhythm Garden",
+        "summary": "A moonlit garden that grows to the moon's pulse. Tap stems to bloom, hold for glow.",
+        "mashup": "Sailor Moon \u00d7 lunar phases \u00d7 generative garden",
+        "play_url": "/sailor-moon/drops/lunar-rhythm-garden/index.html",
+        "studio_url": "/sailor-moon/drops/lunar-rhythm-garden/index.html",
+        "tags": [
+          "interactive",
+          "generative",
+          "audio"
+        ],
+        "status": "shipped"
+      }
+    ],
     "upcoming": {},
     "building": {}
   },
