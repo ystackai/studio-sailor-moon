@@ -56,8 +56,27 @@
   "games": {
     "shipped": [],
     "upcoming": {},
-    "building": {}
+    "building": {
+      "moonbeam-collector": {
+        "slug": "moonbeam-collector",
+        "title": "Moonbeam Collector",
+        "path": "drops/moonbeam-collector/",
+        "status": "building"
+      }
+    }
   },
   "blog_posts": [],
-  "drops": []
+  "drops": [
+    {
+      "id": "1778759879392",
+      "slug": "moonbeam-collector",
+      "title": "Moonbeam Collector",
+      "description": "Catch falling moonbeams in your basket \u2014 a cozy star-catching game for quiet moments.",
+      "released_at": null,
+      "is_published": true,
+      "type": "game",
+      "path": "drops/moonbeam-collector/",
+      "entry": "index.html"
+    }
+  ]
 }

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Moonbeam Collector</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;background:#050518;font-family:'Georgia','Times New Roman',serif;user-select:none;-webkit-user-select:none}
+canvas{display:block;position:absolute;top:0;left:0;touch-action:none}
+
+/* Title Screen */
+#title-screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;transition:opacity 1.5s;pointer-events:none}
+#title-screen.hidden{opacity:0;pointer-events:none}
+#title-screen.hidden *{pointer-events:none}
+#title-screen h1{color:#c0a8ff;font-size:clamp(28px,6vw,48px);font-weight:300;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:8px;text-shadow:0 0 60px rgba(192,168,255,0.3)}
+#title-screen .sub{color:rgba(192,168,255,0.45);font-size:clamp(13px,2.5vw,17px);letter-spacing:0.1em;margin-bottom:40px}
+#title-screen .start{color:rgba(192,168,255,0.4);font-size:14px;letter-spacing:0.3em;animation:pulse-text 3s ease-in-out infinite}
+@keyframes pulse-text{0%,100%{opacity:0.3}50%{opacity:0.9}}
+
+/* HUD */
+#hud{position:fixed;top:20px;left:0;right:0;z-index:15;display:flex;justify-content:space-between;padding:0 16px;pointer-events:none;opacity:0;transition:opacity 0.8s}
+#hud.show{opacity:1}
+#score{color:rgba(192,168,255,0.9);font-size:18px;letter-spacing:0.1em;text-shadow:0 0 20px rgba(192,168,255,0.15);padding:6px 14px;background:rgba(192,168,255,0.05);border:1px solid rgba(192,168,255,0.1);border-radius:100px;backdrop-filter:blur(4px);font-family:Georgia,serif}#streak{color:rgba(255,200,120,0.5);font-size:13px;letter-spacing:0.05em;position:absolute;top:48px;left:50%;transform:translateX(-50%);white-space:nowrap;transition:opacity 0.3s}#missed{color:rgba(255,120,120,0.35);font-size:12px;letter-spacing:0.05em;padding:6px 14px;background:rgba(255,120,120,0.04);border:1px solid rgba(255,120,120,0.08);border-radius:100px}
+
+/* Game Over */
+#gameover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;transition:opacity 1s;opacity:0;pointer-events:none}
+#gameover.show{opacity:1;pointer-events:auto}
+#gameover h2{color:#c0a8ff;font-size:clamp(24px,5vw,40px);font-weight:300;letter-spacing:0.1em;margin-bottom:8px}
+#gameover .final-score{color:rgba(192,168,255,0.6);font-size:18px;letter-spacing:0.1em;margin-bottom:24px}
+#gameover .restart{display:inline-block;padding:12px 32px;border:1px solid rgba(192,168,255,0.25);border-radius:100px;color:rgba(192,168,255,0.6);font-size:14px;letter-spacing:0.15em;background:rgba(192,168,255,0.06);cursor:pointer;transition:all 0.3s;pointer-events:auto}
+#gameover .restart:hover{background:rgba(192,168,255,0.15);border-color:rgba(192,168,255,0.5);color:rgba(192,168,255,0.9)}
+
+.credit{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:rgba(192,168,255,0.1);font-size:10px;letter-spacing:0.1em;pointer-events:none;z-index:14}
+
+@media (prefers-reduced-motion:reduce){
+  #title-screen .start{animation:none}
+  canvas{animation:none}
+}
+@media (prefers-color-scheme:light){
+  body{background:#e8e0f0}
+  #title-screen h1{color:#7b6fa8}
+  #score{color:#7b6fa8}
+}
+</style>
+</head>
+<body>
+<div id="title-screen">
+  <h1>Moonbeam Collector</h1>
+  <p class="sub">catch falling moonbeams in your basket</p>
+  <span class="start">tap or press any key</span>
+</div>
+
+<div id="hud">
+  <span id="score">✦ 0</span>
+  <span id="streak"></span>
+  <span id="missed"></span>
+</div>
+
+<div id="gameover">
+  <h2>✨ moonbeams gathered</h2>
+  <p class="final-score">score: <span id="final-score">0</span></p>
+  <span class="restart" id="restart-btn">play again</span>
+</div>
+
+<div class="credit">SaiLOR MOON — cozy interactive toys, built by moonlight</div>
+
+<canvas id="c"></canvas>
+<script>
+(function(){
+'use strict';
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d',{alpha:false});
+const titleScreen = document.getElementById('title-screen');
+const hudEl = document.getElementById('hud');
+const scoreEl = document.getElementById('score');
+const streakEl = document.getElementById('streak');
+const missedEl = document.getElementById('missed');
+const gameoverEl = document.getElementById('gameover');
+const finalScoreEl = document.getElementById('final-score');
+const restartBtn = document.getElementById('restart-btn');
+
+// ── Sizing ──────────────────────────
+let W,H,dpr;
+function resize(){
+  dpr=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth;
+  H=window.innerHeight;
+  canvas.width=W*dpr;
+  canvas.height=H*dpr;
+  canvas.style.width=W+'px';
+  canvas.style.height=H+'px';
+}
+resize();
+window.addEventListener('resize',resize);
+
+// ── Audio ───────────────────────────
+let audioCtx=null;
+function ensureAudio(){
+  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+}
+function playTone(freq,dur,type,gain){
+  if(!audioCtx) return;
+  try{
+    const osc=audioCtx.createOscillator();
+    const g=audioCtx.createGain();
+    osc.type=type||'sine';
+    osc.frequency.setValueAtTime(freq,audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(freq*0.01,audioCtx.currentTime+dur);
+    g.gain.setValueAtTime(gain||0.08,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+    osc.connect(g);g.connect(audioCtx.destination);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime+dur);
+  }catch(e){/*ignore*/}
+}
+function playCaught(){ensureAudio();playTone(660,0.1,'triangle',0.06);setTimeout(()=>playTone(880,0.08,'triangle',0.04),60);}
+function playMiss(){ensureAudio();playTone(180,0.15,'sawtooth',0.04);}
+function playGameOver(){ensureAudio();playTone(440,0.3,'sine',0.05);setTimeout(()=>playTone(554,0.2,'sine',0.04),200);setTimeout(()=>playTone(660,0.6,'sine',0.03),400);}
+
+// ── Game State ──────────────────────
+let gameState='title'; // title|playing|over
+let score=0,streak=0,missed=0,highStreak=0,maxMissed=20;
+let elapsed=0,bucketX,bucketY,bucketW=60,bucketH=20;
+let beams=[],sparkles=[],stars=[];
+let targetX,frameCount=0;
+let lastMsgTime=0;
+
+// ── Touch / Pointer ────────────────
+let pointerActive=false,pointerX=W/2;
+function handlePointer(x,y){
+  pointerX=x;pointerActive=true;
+  if(gameState==='title'){startGame();return;}
+}
+canvas.addEventListener('pointerdown',e=>{
+  const rect=canvas.getBoundingClientRect();
+  handlePointer(e.clientX-rect.left,e.clientY-rect.top);
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!pointerActive) pointerActive=true;
+  const rect=canvas.getBoundingClientRect();
+  pointerX=e.clientX-rect.left;
+});
+canvas.addEventListener('pointerup',()=>{pointerActive=false;});
+// keyboard
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'||e.code==='Enter'||e.key===' '){
+    e.preventDefault();
+    if(gameState==='title'){startGame();return;}
+    // for restart when gameover
+  }
+});
+document.addEventListener('keydown',e=>{
+  if(e.code==='ArrowLeft'){targetX=Math.max(bucketW/2,targetX-120);}
+  if(e.code==='ArrowRight'){targetX=Math.min(W-bucketW/2,targetX+120);}
+});
+
+// ── Bucket physics ─────────────────
+const bucketRestY=()=>H*0.70;
+function initBucket(){bucketX=W/2;bucketY=bucketRestY();targetX=bucketX;}
+
+// ── Ambient particles ──────────────
+let ambientParticles=[];
+function initAmbientParticles(n){
+  ambientParticles=[];
+  for(let i=0;i<n;i++){
+    ambientParticles.push({
+      x:Math.random()*W,y:Math.random()*H,
+      r:Math.random()*2+0.5,vx:(Math.random()-0.5)*8,
+      vy:(Math.random()-0.5)*3-1,life:Math.random()*3+2
+    });
+  }
+}
+
+
+// ── Stars background ───────────────
+function initStars(n){
+  stars=[];
+  for(let i=0;i<n;i++){
+    stars.push({
+      x:Math.random()*W,y:Math.random()*H*0.6,
+      r:Math.random()*1.5+0.5,sp:Math.random()*0.3+0.1,
+      ph:Math.random()*Math.PI*2
+    });
+  }
+}
+function drawStars(time){
+  for(const s of stars){
+    const bright=0.15+0.1*Math.sin(time*0.5*s.sp+s.ph);
+    const a=Math.min(1,bright*(s.r/2));
+    ctx.fillStyle=`rgba(192,168,255,${a})`;
+    ctx.beginPath();ctx.arc(s.x*dpr,s.y*dpr,s.r*dpr,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// ── Moonbeam particle ──────────────
+function spawnBeam(){
+  const x=Math.random()*W*0.8+W*0.1;
+  const speed=H*0.25+Math.random()*H*0.1;
+  const sz=8+Math.random()*10;
+  beams.push({
+    x,y:16,
+    targetY:H-8,
+    speed,
+    size:sz,
+    drift:(Math.random()-0.5)*30,
+    phase:Math.random()*Math.PI*2,
+    caught:false,
+    glow:0.5+Math.random()*0.3,
+    hue:240+Math.floor(Math.random()*40) // blue-purple range
+  });
+}
+function drawFadeBeams(time,dt){
+  for(let i=fadeBeams.length-1;i>=0;i--){
+    const fb=fadeBeams[i];
+    fb.life-=dt*0.5;
+    fb.y-=0.6*dt*60;
+    if(fb.life<=0){fadeBeams.splice(i,1);continue;}
+    const aa=fb.life*0.4;
+    const bob=Math.sin(time*4+fb.x)*2*fb.life;
+    const x=fb.x*dpr,y=(fb.y+bob)*dpr,s=14*fb.life*dpr;
+    const g=ctx.createRadialGradient(x,0,0,x,0,s);
+    g.addColorStop(0,`hsla(${fb.hue},80%,85%,${aa})`);
+    g.addColorStop(1,`hsla(${fb.hue},60%,50%,0)`);
+    ctx.beginPath();ctx.arc(x,0,s,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+  }
+}
+function drawBeam(b,time){
+  if(b.caught) return;
+  const dpr=canvas.width/W;
+  const x=b.x*dpr,y=b.y*dpr,s=b.size*dpr;
+  const pulse=1+0.08*Math.sin(time*3+b.phase);
+  const g=ctx.createRadialGradient(x,0,s*0.3,x,0,s*pulse);
+  g.addColorStop(0,`hsla(${b.hue},80%,75%,0.9)`);
+  g.addColorStop(0.5,`hsla(${b.hue},70%,50%,${b.glow*0.6})`);
+  g.addColorStop(1,`hsla(${b.hue},60%,40%,0)`);
+  ctx.beginPath();ctx.arc(x,0,s*pulse,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();
+  // core
+  ctx.fillStyle=`hsla(${b.hue},80%,85%,0.95)`;
+  ctx.beginPath();ctx.arc(x,y,s*0.3*pulse,0,Math.PI*2);ctx.fill();
+}
+
+// ── Sparkles ───────────────────────
+// ── Caught beam fade trail ──────
+let fadeBeams=[];
+function addSparkles(x,y,n,color){
+  for(let i=0;i<n;i++){
+    const angle=Math.random()*Math.PI*2;
+    const v=Math.random()*120+40;
+    sparkles.push({x,y,vx:Math.cos(angle)*v,vy:Math.sin(angle)*v-20,life:1,color});
+  }
+}
+function updateSparkles(dt){
+  for(let i=sparkles.length-1;i>=0;i--){
+    const s=sparkles[i];
+    s.x+=s.vx*dt;s.y+=s.vy*dt;
+    s.vy+=160*dt;
+    s.life-=dt*0.7;
+    if(s.life<=0){sparkles.splice(i,1);}
+  }
+}
+function drawSparkles(){
+  for(const s of sparkles){
+    const a=s.life*0.9;
+    ctx.fillStyle=s.color.replace('1',a.toFixed(2));
+    const sz=3*dpr;
+    ctx.beginPath();ctx.arc(s.x*dpr,s.y*dpr,sz,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// ── Messages ───────────────────────
+const CATCH_MSGS=[
+  'sparkling!','lovely!','charming!','glistening!','delightful!',
+  'moonlit!','glowing!','twinkling!','radiant!','beautiful!'
+];
+const STREAK_MSGS=[
+  '✨ comet streak!','🌙 lunar flurry!','✨ star shower!','🌌 cosmic flow!'
+];
+function showStreakMsg(count){
+  if(count%5===0&&count>0){
+    const msg = count>=20?STREAK_MSGS[3] : count>=15?STREAK_MSGS[2] : count>=10?STREAK_MSGS[1] : count>=5?STREAK_MSGS[0] : '';
+    if(msg){
+      streakEl.textContent=msg;
+      setTimeout(()=>{if(streakEl.textContent===msg) streakEl.textContent='';},1200);
+    }
+  }
+}
+
+// ── Moon names for game-over flavor ──
+const MOON_NAMES=[
+  'crescent glow','silver tide','celestial drift','stargazer\'s rest',
+  'aurora dream','nightbloom','velvet sky','pearl horizon',
+  'lunar whisper','cosmic hush','moondance','galaxy sigh',
+  'starfall','moonpetal','ether breeze','planetfall'
+];
+
+// ── Game Logic ─────────────────────
+function startGame(){
+  if(gameState==='playing') return;
+  ensureAudio();
+  gameState='playing';
+  score=0;streak=0;missed=0;highStreak=0;elapsed=0;
+  beams=[];sparkles=[];
+  initBucket();
+  titleScreen.classList.add('hidden');
+  gameoverEl.classList.remove('show');
+  gameoverEl.style.opacity=0;
+  hudEl.classList.add('show');
+  updateHUD();
+  // pre-spawn
+  for(let i=0;i<3;i++) spawnBeam();
+}
+
+function endGame(){
+  gameState='over';
+  playGameOver();
+  hudEl.classList.remove('show');
+  finalScoreEl.textContent=score;
+  const idx=Math.min(Math.floor(score/5),MOON_NAMES.length-1);
+  document.querySelector('#gameover h2').textContent=`✨ ${MOON_NAMES[idx]}`;
+  setTimeout(()=>{
+    gameoverEl.style.opacity=1;
+    gameoverEl.classList.add('show');
+  },500);
+}
+
+function restartGame(){
+  startGame();
+}
+
+restartBtn.addEventListener('click',restartGame);
+document.addEventListener('keydown',e=>{
+  if((e.code==='Space'||e.code==='Enter')&&gameState==='over') restartGame();
+});
+
+function updateHUD(){
+  scoreEl.textContent=`✦ ${score}`;
+  missedEl.textContent=missed>0?`✧ ${missed}`:'';
+}
+
+// ── Main Loop ──────────────────────
+let lastTime=0;
+function loop(time){
+  if(!lastTime) lastTime=time;
+  const dt=Math.min((time-lastTime)/1000,0.05);
+  lastTime=time;
+  frameCount++;
+
+  ctx.fillStyle='#050518';ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // stars always
+  drawStars(time/1000);
+
+  if(gameState==='title'){
+    // draw title scene with gentle floating particles
+    const cx=W/2*dpr,cy=H/2*dpr;
+    // faint glow ring
+    const rg=ctx.createRadialGradient(cx,cy,0,cx,cy,200*dpr);
+    rg.addColorStop(0,'rgba(192,168,255,0.04)');
+    rg.addColorStop(1,'rgba(192,168,255,0)');
+    ctx.fillStyle=rg;ctx.beginPath();ctx.arc(cx,cy,200*dpr,0,Math.PI*2);ctx.fill();
+    ctx.font=`${14*dpr}px Georgia,serif`;
+    ctx.fillStyle='rgba(192,168,255,0.06)';
+    ctx.textAlign='center';
+    ctx.fillText('✦',cx,cy-20*dpr);
+    // drifting moon icon
+    const moonX=W*0.15*dpr+Math.sin(time/1000*0.2)*W*0.3*dpr;
+    const moonY=H*0.25*dpr+Math.cos(time/1000*0.15)*H*0.1*dpr;
+    ctx.fillStyle='rgba(192,168,255,0.08)';
+    ctx.beginPath();
+    ctx.arc(moonX-6*dpr,moonY,14*dpr,0,Math.PI*2);
+    ctx.arc(moonX+6*dpr,moonY+4*dpr,14*dpr,0,Math.PI*2);
+    ctx.fill();
+    // draw some idle beams
+    if(frameCount%30===0&&beams.length<3) spawnBeam();
+    for(const b of beams){
+      b.y+=b.speed*dt;
+      if(b.y>b.targetY) b.y=-20;
+      drawBeam(b,time/1000);
+    }
+  }else if(gameState==='playing'){
+    // spawn beams
+    const spawnRate=Math.max(1.2,3-elapsed*0.02);
+    if(frameCount%Math.max(1,Math.floor(spawnRate*15))===0) spawnBeam();
+
+    // bucket movement
+    if(pointerActive){
+      targetX=pointerX;
+    }
+    bucketX+=(targetX-bucketX)*0.1;
+    bucketY=bucketRestY()+Math.sin(time/1000*0.8)*4;
+
+    // update & draw beams
+    const caught=[];
+    for(let i=beams.length-1;i>=0;i--){
+      const b=beams[i];
+      if(b.caught){beams.splice(i,1);continue;}
+      b.x+=b.drift*dt;
+      b.y+=b.speed*dt;
+      // clamp x
+      b.x=Math.max(4,Math.min(W-4,b.x));
+      // check catch
+      const dx=b.x-bucketX;
+      const dy=b.y-bucketY;
+      if(dy<10&&dy>-12&&Math.abs(dx)<bucketW/2+4){
+        b.caught=true;
+        score++;streak++;highStreak=Math.max(highStreak,streak);
+        playCaught();
+        fadeBeams.push({x:b.x,y:b.y,hue:b.hue,life:1});
+        const colors=['hsla(240,80%,85%,0.9)','hsla(300,70%,80%,0.9)','hsla(200,90%,90%,0.9)','hsla(280,60%,85%,0.9)'];
+addSparkles(b.x,b.y,12,colors[Math.floor(Math.random()*4)]);
+        showStreakMsg(streak);
+        updateHUD();
+        continue;
+      }
+      if(b.y>H+10){missed++;streak=0;playMiss();updateHUD();}
+      if(b.y>H+10||b.y< -40){beams.splice(i,1);continue;}
+      drawBeam(b,time/1000);
+    }
+
+    // check game over
+    if(missed>=maxMissed){endGame();}
+
+    // draw bucket
+    const bx=bucketX*dpr,by=bucketY*dpr;
+    // glow under bucket
+    const bg=ctx.createRadialGradient(bx,by+16*dpr,0,bx,by+16*dpr,60*dpr);
+    bg.addColorStop(0,`rgba(192,168,255,${0.08+0.04*Math.sin(time/1000*2)})`);
+    bg.addColorStop(0.4,'rgba(192,168,255,0.03)');
+    bg.addColorStop(1,'rgba(192,168,255,0)');
+    ctx.fillStyle=bg;ctx.beginPath();ctx.arc(bx,by+16*dpr,60*dpr,0,Math.PI*2);ctx.fill();
+    // bucket body
+    ctx.fillStyle='rgba(192,168,255,0.1)';
+    ctx.strokeStyle='rgba(192,168,255,0.25)';
+    ctx.lineWidth=1.5*dpr;
+    const bw=bucketW*dpr,bh=bucketH*dpr;
+    ctx.beginPath();
+    ctx.roundRect(bx-bw/2,by-bh/2-4*dpr,bw,bh,4*dpr);
+    ctx.fill();ctx.stroke();
+    // basket weave lines
+    ctx.strokeStyle='rgba(192,168,255,0.08)';
+    ctx.lineWidth=0.5*dpr;
+    for(let i=0;i<3;i++){
+      const yOff=by-bh/2-4*dpr+(i+1)*bh/4;
+      ctx.beginPath();ctx.moveTo(bx-bw/2+2*dpr,yOff);
+      ctx.lineTo(bx+bw/2-2*dpr,yOff);ctx.stroke();
+    }
+    // handle
+    ctx.strokeStyle='rgba(192,168,255,0.15)';
+    ctx.lineWidth=1*dpr;
+    ctx.beginPath();
+    ctx.arc(bx,by-bh/2-10*dpr,10*dpr,Math.PI,0);
+    ctx.stroke();
+
+    elapsed+=dt;
+  }else if(gameState==='over'){
+    // draw lingering beams fading
+    for(const b of beams){
+      if(b.caught) continue;
+      b.y+=b.speed*dt*0.3;
+      drawBeam(b,time/1000);
+    }
+    // glowing overlay
+    const ox=W/2*dpr,oy=H/2*dpr;
+    const og=ctx.createRadialGradient(ox,oy,0,ox,oy,H*0.6*dpr);
+    og.addColorStop(0,'rgba(192,168,255,0.03)');
+    og.addColorStop(1,'rgba(192,168,255,0)');
+    ctx.fillStyle=og;ctx.beginPath();ctx.arc(ox,oy,H*0.6*dpr,0,Math.PI*2);ctx.fill();
+  }
+
+  // sparkles across all states
+  updateSparkles(dt);
+  drawFadeBeams(time/1000,dt);
+drawSparkles();
+
+  // time indicator
+  if(gameState==='playing'){
+    ctx.fillStyle='rgba(192,168,255,0.03)';
+    ctx.font=`${10*dpr}px Georgia,serif`;
+    ctx.textAlign='right';ctx.textBaseline='top';
+    ctx.fillText(`~  ${Math.floor(elapsed)}s`,(W-12)*dpr,12*dpr);
+  }
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ── Canvas roundRect polyfill ──────
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    if(r>w/2) r=w/2;
+    if(r>h/2) r=h/2;
+    this.moveTo(x+r,y);
+    this.arcTo(x+w,y,x+w,y+h,r);
+    this.arcTo(x+w,y+h,x,y+h,r);
+    this.arcTo(x,y+h,x,y,r);
+    this.arcTo(x,y,x+w,y,r);
+    this.closePath();
+    return this;
+  };
+}
+
+window.addEventListener('resize',()=>{
+  resize();
+  targetX=Math.min(W-bucketW/2,Math.max(bucketW/2,targetX));
+  pointerX=Math.min(W-bucketW/2,Math.max(bucketW/2,pointerX));
+});
+
+})();
+</script>
+</body>
+</html>
