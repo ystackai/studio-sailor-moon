@@ -63,17 +63,21 @@
     @media (pointer: coarse) {
       #cursor-glow { display: none !important; }
     }
+    @media (prefers-reduced-motion: reduce) {
+      canvas { image-rendering: crisp-edges; }
+      #hud, #hint { transition-duration: 0.01s !important; }
+    }
   </style>
 </head>
 <body>
-  <div id="scene"><canvas id="garden"></canvas></div>
+  <div id="scene" role="img" aria-label="Moonlight Glow Garden — a cozy interactive garden where you plant glowing flowers"><canvas id="garden"></canvas></div>
   <div id="cursor-glow"></div>
-  <div id="hud" class="visible">
-    <span class="icon">🌸</span>
+  <div id="hud" class="visible" role="status" aria-live="polite" aria-label="Flower count">
+    <span class="icon" aria-hidden="true">🌸</span>
     <span>blooming</span>
-    <span class="count" id="flower-count">0</span>
+    <span class="count" id="flower-count" aria-label="active flowers">0</span>
   </div>
-  <div id="hint">tap anywhere to plant a seed 🌱</div>
+  <div id="hint" role="tooltip">tap anywhere to plant a seed 🌱</div>
 
   <script>
     (function () {
@@ -96,8 +100,7 @@
       document.addEventListener('mousemove', function (e) {
         cursorX = e.clientX;
         cursorY = e.clientY;
-        const isTouch = window.matchMedia('(pointer: coarse)').matches;
-        if (!isTouch) {
+        if (!window.matchMedia('(pointer: coarse)').matches) {
           cursorGlow.style.display = 'block';
           cursorGlow.style.left = cursorX + 'px';
           cursorGlow.style.top = cursorY + 'px';
@@ -120,29 +123,60 @@
       const flowers = [];
       const MAX_FLOWERS = 40;
       const FLOWER_LIFETIME = 14000;
+      const BLOOM_DURATION = 1400;
       let frame = 0;
       let audioCtx = null;
 
       function initAudio() {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
+        if (audioCtx) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // Start ambient drone (very quiet pad)
+        startAmbientDrone();
+      }
+
+      // ---- Ambient drone ----
+      let droneNodes = null;
+      function startAmbientDrone() {
+        if (!audioCtx || droneNodes) return;
+        try {
+          const now = audioCtx.currentTime;
+          // Two detuned sine oscillators for warm pad
+          const osc1 = audioCtx.createOscillator();
+          const osc2 = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc1.type = 'sine';
+          osc2.type = 'sine';
+          osc1.frequency.setValueAtTime(55, now); // A1
+          osc2.frequency.setValueAtTime(65.41, now); // C2
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.012, now + 2);
+
+          osc1.connect(gain);
+          osc2.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc1.start(now);
+          osc2.start(now);
+
+          droneNodes = { osc1, osc2, gain };
+        } catch(e) {}
       }
 
       function playChime(freq, duration) {
         if (!audioCtx) return;
         try {
+          const now = audioCtx.currentTime;
+          // Main note
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
           osc.connect(gain);
           gain.connect(audioCtx.destination);
           osc.type = 'sine';
-          const now = audioCtx.currentTime;
           osc.frequency.setValueAtTime(freq, now);
           gain.gain.setValueAtTime(0, now);
-          gain.gain.linearRampToValueAtTime(0.06, now + 0.02);
+          gain.gain.linearRampToValueAtTime(0.055, now + 0.015);
           gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-          // Add gentle harmonic
+          // Harmonic
           const osc2 = audioCtx.createOscillator();
           const gain2 = audioCtx.createGain();
           osc2.connect(gain2);
@@ -150,11 +184,10 @@
           osc2.type = 'sine';
           osc2.frequency.setValueAtTime(freq * 1.5, now);
           gain2.gain.setValueAtTime(0, now);
-          gain2.gain.linearRampToValueAtTime(0.02, now + 0.04);
-          gain2.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.7);
+          gain2.gain.linearRampToValueAtTime(0.018, now + 0.03);
+          gain2.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.6);
           osc2.start(now);
-          osc2.stop(now + duration * 0.7);
-
+          osc2.stop(now + duration * 0.6);
           osc.start(now);
           osc.stop(now + duration);
         } catch(e) {}
@@ -168,29 +201,29 @@
         { inner: '#fbbf24', outer: '#f59e0b', petal: '#fde68a' },
       ];
 
-      // ---- Motes ----
+      // ---- Mote particles ----
       class Mote {
         constructor(x, y, color) {
           this.x = x; this.y = y;
           this.color = color;
           const angle = Math.random() * Math.PI * 2;
-          const speed = Math.random() * 0.6 + 0.15;
+          const speed = Math.random() * 0.5 + 0.1;
           this.vx = Math.cos(angle) * speed;
-          this.vy = Math.sin(angle) * speed - 0.4;
+          this.vy = Math.sin(angle) * speed - 0.35;
           this.life = 1.0;
-          this.decay = 0.006 + Math.random() * 0.005;
+          this.decay = 0.005 + Math.random() * 0.004;
           this.size = Math.random() * 2 + 0.8;
         }
         update() {
           this.x += this.vx;
           this.y += this.vy;
-          this.vy += 0.002;
+          this.vy += 0.0015;
           this.life -= this.decay;
         }
         draw(ctx) {
           if (this.life <= 0) return;
           ctx.save();
-          ctx.globalAlpha = this.life * 0.55;
+          ctx.globalAlpha = this.life * 0.5;
           ctx.fillStyle = this.color;
           ctx.beginPath();
           ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
@@ -204,9 +237,45 @@
         }
       }
 
+      // ---- Sparkle burst on full bloom ----
+      class Sparkle {
+        constructor(x, y, color) {
+          this.x = x; this.y = y;
+          this.color = color;
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 2 + 1;
+          this.vx = Math.cos(angle) * speed;
+          this.vy = Math.sin(angle) * speed;
+          this.life = 1.0;
+          this.decay = 0.02 + Math.random() * 0.015;
+          this.size = Math.random() * 2.5 + 1;
+        }
+        update() {
+          this.x += this.vx;
+          this.y += this.vy;
+          this.life -= this.decay;
+        }
+        draw(ctx) {
+          if (this.life <= 0) return;
+          ctx.save();
+          ctx.globalAlpha = this.life * 0.7;
+          ctx.fillStyle = this.color;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      function spawnBloomSparkles(f) {
+        for (let i = 0; i < 12; i++) {
+          f.sparkles.push(new Sparkle(f.x, f.y, '#ffffff'));
+        }
+      }
+
+      let plantedRecently = false;
+
       function addFlower(x, y) {
         if (flowers.length >= MAX_FLOWERS) return;
-        // Restrict to ground area
         const groundY = H * 0.65;
         if (y < groundY) y = groundY + (groundY - y) * 0.1;
         y = Math.min(y, H - 20);
@@ -222,12 +291,16 @@
           petalColor: palette.petal,
           moteTimer: 0,
           motes: [],
+          sparkles: [],
           glowPhase: Math.random() * Math.PI * 2,
+          bloomed: false,
         });
-        const notes = [523.25, 587.33, 659.25, 783.99, 1046.5, 698.46, 880];
+        const notes = [523.25, 587.33, 659.25, 783.99, 1046.5, 698.46, 880, 392];
         const freq = notes[Math.floor(Math.random() * notes.length)];
-        playChime(freq, 0.5);
+        playChime(freq, 0.55);
         hintEl.classList.add('hidden');
+        plantedRecently = true;
+        setTimeout(() => { plantedRecently = false; }, 2000);
       }
 
       function handlePlant(e) {
@@ -242,6 +315,8 @@
           cx = e.clientX;
           cy = e.clientY;
         }
+        // Guard against weird rect values
+        if (!rect.width || !rect.height) return;
         const x = (cx - rect.left) / rect.width * W;
         const y = (cy - rect.top) / rect.height * H;
         addFlower(x, y);
@@ -250,7 +325,6 @@
       canvas.addEventListener('touchstart', handlePlant, { passive: false });
 
       // ---- Draw loop ----
-      let lastFrameTime = 0;
       function draw(timestamp) {
         frame++;
         const now = performance.now();
@@ -321,10 +395,16 @@
           if (life <= 0) { flowers.splice(fi, 1); continue; }
           activeCount++;
 
-          f.phase = Math.min(1, age / 1400);
+          f.phase = Math.min(1, age / BLOOM_DURATION);
           const grow = f.phase;
           f.glowPhase += 0.03;
           const glow = Math.sin(f.glowPhase) * 0.12 + 0.88;
+
+          // Sparkle burst on first full bloom
+          if (grow >= 1 && !f.bloomed) {
+            f.bloomed = true;
+            spawnBloomSparkles(f);
+          }
 
           // Motes
           f.moteTimer += 0.35;
@@ -332,6 +412,11 @@
           for (let mi = f.motes.length - 1; mi >= 0; mi--) {
             f.motes[mi].update();
             if (f.motes[mi].life <= 0) f.motes.splice(mi, 1);
+          }
+          // Sparkles
+          for (let si = f.sparkles.length - 1; si >= 0; si--) {
+            f.sparkles[si].update();
+            if (f.sparkles[si].life <= 0) f.sparkles.splice(si, 1);
           }
 
           // Glow
@@ -345,6 +430,18 @@
           ctx.beginPath();
           ctx.arc(f.x, f.y, gs, 0, Math.PI * 2);
           ctx.fill();
+          ctx.restore();
+
+          // Stem
+          ctx.save();
+          ctx.globalAlpha = life * 0.3 * grow;
+          ctx.strokeStyle = 'rgba(192,132,252,0.15)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(f.x, f.y);
+          const stemEnd = Math.min(groundY + 40, f.y + f.size * 0.8 * grow);
+          ctx.lineTo(f.x, stemEnd);
+          ctx.stroke();
           ctx.restore();
 
           // Petals
@@ -382,6 +479,8 @@
 
           // Motes
           for (const m of f.motes) m.draw(ctx);
+          // Sparkles
+          for (const s of f.sparkles) s.draw(ctx);
         }
 
         countEl.textContent = activeCount;
