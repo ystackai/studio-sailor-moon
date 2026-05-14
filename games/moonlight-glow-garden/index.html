@@ -95,11 +95,14 @@
       resize();
       window.addEventListener('resize', resize);
 
-      // Cursor follow (mouse only)
+      // Cursor trail positions
       let cursorX = W/2, cursorY = H/2;
+      let cursorHistory = [];
       document.addEventListener('mousemove', function (e) {
         cursorX = e.clientX;
         cursorY = e.clientY;
+        cursorHistory.push({ x: cursorX, y: cursorY, time: performance.now() });
+        if (cursorHistory.length > 12) cursorHistory.shift();
         if (!window.matchMedia('(pointer: coarse)').matches) {
           cursorGlow.style.display = 'block';
           cursorGlow.style.left = cursorX + 'px';
@@ -119,6 +122,20 @@
         });
       }
 
+      // ---- Comet ----
+      let comet = null;
+      function spawnComet() {
+        if (comet && comet.life > 0.3) return;
+        comet = {
+          x: Math.random() * W * 0.5 + W * 0.1,
+          y: Math.random() * H * 0.3 + 10,
+          vx: 2 + Math.random() * 2,
+          vy: 0.5 + Math.random() * 0.8,
+          life: 1.0,
+          tailLen: 60 + Math.random() * 40,
+        };
+      }
+
       // ---- Flowers ----
       const flowers = [];
       const MAX_FLOWERS = 40;
@@ -130,7 +147,6 @@
       function initAudio() {
         if (audioCtx) return;
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        // Start ambient drone (very quiet pad)
         startAmbientDrone();
       }
 
@@ -140,33 +156,30 @@
         if (!audioCtx || droneNodes) return;
         try {
           const now = audioCtx.currentTime;
-          // Two detuned sine oscillators for warm pad
           const osc1 = audioCtx.createOscillator();
           const osc2 = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
           osc1.type = 'sine';
           osc2.type = 'sine';
-          osc1.frequency.setValueAtTime(55, now); // A1
-          osc2.frequency.setValueAtTime(65.41, now); // C2
+          osc1.frequency.setValueAtTime(55, now);
+          osc2.frequency.setValueAtTime(65.41, now);
           gain.gain.setValueAtTime(0, now);
-          gain.gain.linearRampToValueAtTime(0.012, now + 2);
-
+          gain.gain.linearRampToValueAtTime(0.01, now + 2);
           osc1.connect(gain);
           osc2.connect(gain);
           gain.connect(audioCtx.destination);
-
           osc1.start(now);
           osc2.start(now);
-
           droneNodes = { osc1, osc2, gain };
         } catch(e) {}
       }
+
+      let arpeggioTimer = 0;
 
       function playChime(freq, duration) {
         if (!audioCtx) return;
         try {
           const now = audioCtx.currentTime;
-          // Main note
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
           osc.connect(gain);
@@ -174,9 +187,8 @@
           osc.type = 'sine';
           osc.frequency.setValueAtTime(freq, now);
           gain.gain.setValueAtTime(0, now);
-          gain.gain.linearRampToValueAtTime(0.055, now + 0.015);
+          gain.gain.linearRampToValueAtTime(0.05, now + 0.015);
           gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-          // Harmonic
           const osc2 = audioCtx.createOscillator();
           const gain2 = audioCtx.createGain();
           osc2.connect(gain2);
@@ -184,13 +196,21 @@
           osc2.type = 'sine';
           osc2.frequency.setValueAtTime(freq * 1.5, now);
           gain2.gain.setValueAtTime(0, now);
-          gain2.gain.linearRampToValueAtTime(0.018, now + 0.03);
+          gain2.gain.linearRampToValueAtTime(0.016, now + 0.03);
           gain2.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.6);
           osc2.start(now);
           osc2.stop(now + duration * 0.6);
           osc.start(now);
           osc.stop(now + duration);
         } catch(e) {}
+      }
+
+      function playArpeggio() {
+        if (!audioCtx) return;
+        const notes = [523.25, 659.25, 783.99, 1046.5, 783.99, 659.25, 523.25];
+        notes.forEach((freq, i) => {
+          setTimeout(() => playChime(freq, 0.3), i * 80);
+        });
       }
 
       const COLORS = [
@@ -201,7 +221,10 @@
         { inner: '#fbbf24', outer: '#f59e0b', petal: '#fde68a' },
       ];
 
-      // ---- Mote particles ----
+      // ---- Ease-out cubic ----
+      function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+      // ---- Motes ----
       class Mote {
         constructor(x, y, color) {
           this.x = x; this.y = y;
@@ -237,7 +260,7 @@
         }
       }
 
-      // ---- Sparkle burst on full bloom ----
+      // ---- Sparkle ----
       class Sparkle {
         constructor(x, y, color) {
           this.x = x; this.y = y;
@@ -267,12 +290,43 @@
         }
       }
       function spawnBloomSparkles(f) {
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 14; i++) {
           f.sparkles.push(new Sparkle(f.x, f.y, '#ffffff'));
         }
       }
 
-      let plantedRecently = false;
+      // ---- Seed indicator (small dot rising before bloom) ----
+      class SeedDot {
+        constructor(x, y) {
+          const groundY = Math.max(y, H * 0.65 + 20);
+          this.x = x;
+          this.startY = groundY;
+          this.y = groundY;
+          this.targetY = y;
+          this.birth = performance.now();
+          this.duration = 400;
+          this.size = 3;
+        }
+        update() {
+          const age = performance.now() - this.birth;
+          const progress = Math.min(1, age / this.duration);
+          this.y = this.startY + (this.targetY - this.startY) * easeOut(progress);
+          return progress < 1;
+        }
+        draw(ctx) {
+          const age = performance.now() - this.birth;
+          const progress = Math.min(1, age / this.duration);
+          const alpha = progress > 0.5 ? 1 - progress * 2 : progress * 2;
+          ctx.save();
+          ctx.globalAlpha = alpha * 0.7;
+          ctx.fillStyle = '#c084fc';
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      const seeds = [];
 
       function addFlower(x, y) {
         if (flowers.length >= MAX_FLOWERS) return;
@@ -281,6 +335,10 @@
         y = Math.min(y, H - 20);
         const palette = COLORS[Math.floor(Math.random() * COLORS.length)];
         const size = 7 + Math.random() * 14;
+
+        // Show seed rising
+        seeds.push(new SeedDot(x, y));
+
         flowers.push({
           x, y,
           size,
@@ -299,8 +357,6 @@
         const freq = notes[Math.floor(Math.random() * notes.length)];
         playChime(freq, 0.55);
         hintEl.classList.add('hidden');
-        plantedRecently = true;
-        setTimeout(() => { plantedRecently = false; }, 2000);
       }
 
       function handlePlant(e) {
@@ -315,7 +371,6 @@
           cx = e.clientX;
           cy = e.clientY;
         }
-        // Guard against weird rect values
         if (!rect.width || !rect.height) return;
         const x = (cx - rect.left) / rect.width * W;
         const y = (cy - rect.top) / rect.height * H;
@@ -325,9 +380,12 @@
       canvas.addEventListener('touchstart', handlePlant, { passive: false });
 
       // ---- Draw loop ----
-      function draw(timestamp) {
+      function draw() {
         frame++;
         const now = performance.now();
+
+        // Periodic comet
+        if (frame % 600 === 0 && Math.random() < 0.4) spawnComet();
 
         // --- Sky ---
         const grad = ctx.createLinearGradient(0, 0, 0, H);
@@ -375,7 +433,30 @@
           ctx.restore();
         }
 
-        // Moon glow
+        // --- Comet ---
+        if (comet && comet.life > 0) {
+          comet.x += comet.vx;
+          comet.y += comet.vy;
+          comet.life -= 0.003;
+          ctx.save();
+          ctx.globalAlpha = comet.life * 0.6;
+          // Tail
+          ctx.strokeStyle = 'rgba(192,132,252,0.5)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(comet.x, comet.y);
+          ctx.lineTo(comet.x - comet.tailLen, comet.y - comet.tailLen * 0.5);
+          ctx.stroke();
+          // Head
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(comet.x, comet.y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          if (comet.life <= 0) comet = null;
+        }
+
+        // --- Moon glow ---
         const moonX = W * 0.82;
         const moonY = H * 0.2;
         const moonGrad = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, 60 + Math.sin(frame * 0.003) * 8);
@@ -386,6 +467,13 @@
         ctx.arc(moonX, moonY, 70, 0, Math.PI * 2);
         ctx.fill();
 
+        // --- Seeds ---
+        for (let si = seeds.length - 1; si >= 0; si--) {
+          const alive = seeds[si].update();
+          seeds[si].draw(ctx);
+          if (!alive) seeds.splice(si, 1);
+        }
+
         // --- Flowers ---
         let activeCount = 0;
         for (let fi = flowers.length - 1; fi >= 0; fi--) {
@@ -395,15 +483,17 @@
           if (life <= 0) { flowers.splice(fi, 1); continue; }
           activeCount++;
 
-          f.phase = Math.min(1, age / BLOOM_DURATION);
-          const grow = f.phase;
+          const rawPhase = age / BLOOM_DURATION;
+          f.phase = Math.min(1, rawPhase);
+          const grow = easeOut(Math.min(1, rawPhase));
           f.glowPhase += 0.03;
           const glow = Math.sin(f.glowPhase) * 0.12 + 0.88;
 
-          // Sparkle burst on first full bloom
+          // Sparkle burst on full bloom + arpeggio
           if (grow >= 1 && !f.bloomed) {
             f.bloomed = true;
             spawnBloomSparkles(f);
+            playArpeggio();
           }
 
           // Motes
@@ -413,7 +503,6 @@
             f.motes[mi].update();
             if (f.motes[mi].life <= 0) f.motes.splice(mi, 1);
           }
-          // Sparkles
           for (let si = f.sparkles.length - 1; si >= 0; si--) {
             f.sparkles[si].update();
             if (f.sparkles[si].life <= 0) f.sparkles.splice(si, 1);
@@ -432,17 +521,19 @@
           ctx.fill();
           ctx.restore();
 
-          // Stem
-          ctx.save();
-          ctx.globalAlpha = life * 0.3 * grow;
-          ctx.strokeStyle = 'rgba(192,132,252,0.15)';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(f.x, f.y);
-          const stemEnd = Math.min(groundY + 40, f.y + f.size * 0.8 * grow);
-          ctx.lineTo(f.x, stemEnd);
-          ctx.stroke();
-          ctx.restore();
+          // Stem (only for fully grown flowers)
+          if (grow > 0.3) {
+            ctx.save();
+            ctx.globalAlpha = life * 0.3 * Math.min(1, (grow - 0.3) * 2);
+            ctx.strokeStyle = 'rgba(192,132,252,0.15)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(f.x, f.y);
+            const stemEnd = Math.min(groundY + 40, f.y + f.size * 0.8 * grow);
+            ctx.lineTo(f.x, stemEnd);
+            ctx.stroke();
+            ctx.restore();
+          }
 
           // Petals
           const pc = 6 + Math.sin(f.glowPhase * 0.5) * 0.5;
@@ -485,20 +576,33 @@
 
         countEl.textContent = activeCount;
 
-        // Hover glow on canvas
+        // Cursor trail shimmer
         if (!window.matchMedia('(pointer: coarse)').matches) {
           const gx = cursorX / window.innerWidth * W;
           const gy = cursorY / window.innerHeight * H;
+          // Main hover glow
           ctx.save();
-          ctx.globalAlpha = 0.3;
-          const hg = ctx.createRadialGradient(gx, gy, 0, gx, gy, 28);
-          hg.addColorStop(0, 'rgba(192,132,252,0.25)');
+          ctx.globalAlpha = 0.25;
+          const hg = ctx.createRadialGradient(gx, gy, 0, gx, gy, 26);
+          hg.addColorStop(0, 'rgba(192,132,252,0.2)');
           hg.addColorStop(1, 'transparent');
           ctx.fillStyle = hg;
           ctx.beginPath();
-          ctx.arc(gx, gy, 28, 0, Math.PI * 2);
+          ctx.arc(gx, gy, 26, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
+          // Trail
+          for (let ti = 0; ti < cursorHistory.length; ti++) {
+            const t = cursorHistory[ti];
+            const alpha = (ti / cursorHistory.length) * 0.12;
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = 'rgba(192,132,252,0.15)';
+            ctx.beginPath();
+            ctx.arc(t.x / window.innerWidth * W, t.y / window.innerHeight * H, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
         }
 
         requestAnimationFrame(draw);
