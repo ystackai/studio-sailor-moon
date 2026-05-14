@@ -54,17 +54,17 @@
     "last_reset_at": ""
   },
   "games": {
-    "shipped": [],
-    "upcoming": {},
-    "building": {
-      "moonlight-glow-garden": {
+    "shipped": [
+      {
         "title": "Moonlight Glow Garden 🌸",
         "summary": "Plant glowing seeds and watch them bloom into gentle light patterns. A cozy interactive toy.",
         "mashup": "canvas + audio + particle glow",
         "play_url": "/sailor-moon/games/moonlight-glow-garden/",
-        "status": "building"
+        "status": "shipped"
       }
-    }
+    ],
+    "upcoming": {},
+    "building": {}
   },
   "blog_posts": [],
   "drops": []
