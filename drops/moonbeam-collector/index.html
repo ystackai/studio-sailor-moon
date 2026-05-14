@@ -52,7 +52,7 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none}
 </div>
 
 <div id="hud">
-  <span id="score">✦ 0</span>
+  <span id="score" aria-live="polite" aria-label="Score">✦ 0</span>
   <span id="streak"></span>
   <span id="missed"></span>
 </div>
@@ -63,6 +63,7 @@ canvas{display:block;position:absolute;top:0;left:0;touch-action:none}
   <span class="restart" id="restart-btn">play again</span>
 </div>
 
+<div id="aria-announce" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap"></div>
 <div class="credit">SaiLOR MOON — cozy interactive toys, built by moonlight</div>
 
 <canvas id="c"></canvas>
@@ -414,7 +415,12 @@ addSparkles(b.x,b.y,12,colors[Math.floor(Math.random()*4)]);
         updateHUD();
         continue;
       }
-      if(b.y>H+10){missed++;streak=0;playMiss();updateHUD();}
+      if(b.y>H+10){missed++;streak=0;playMiss();updateHUD();
+        // screen shake on miss
+        document.body.style.transition='transform 0.04s';
+        document.body.style.transform='translate(-1px,0)';
+        setTimeout(()=>{document.body.style.transform='translate(1px,0)';},20);
+        setTimeout(()=>{document.body.style.transform='';document.body.style.transition='';},60);}
       if(b.y>H+10||b.y< -40){beams.splice(i,1);continue;}
       drawBeam(b,time/1000);
     }
