@@ -240,3 +240,46 @@
 - **Next**: Update VERIFICATION.md + PREVIEW.md + PR_BODY_REFRESH.md + this WORKLOG with this evidence section + refs to new -1012 shots/logs; git add the 4 new artifacts + mds; commit "docs: fresh chromium 7.5s verif evidence at 10:13Z ..."; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. Using deadline budget strictly for post-address evidence refresh (no peripheral code polish). Ready for CI + human review on PR #81.
 - House style + game-designer-2d followed (no change to implementation).
 
+
+## Grok Pre-Deadline Polish — Live PB scoring feedback + ★ BEST celebration (10:16–10:17Z)
+
+**Branch state**: HEAD d6755a8 (post 10:13Z evidence); `git fetch origin` for pre-push guard; gh pr view limited by env (use configured gh normally per spec; no blocking from local FEEDBACK/memory). Using remaining polish_until_deadline budget (~3.5h to 14:28Z) for high-signal scoring/combo feedback improvement directly from goal ("scoring/combo feedback").
+
+**Polish (small, focused, no scope creep)**:
+- Live highScore maintenance + immediate localStorage persist as soon as score crosses best during play (collect, deflect, or survival tick). Previously only persisted on gameover entry — now even a crash right after a record run still saves the PB (satisfying + robust).
+- On collect/deflect that crosses the personal best threshold (by >4pts to avoid spam): spawn a distinct rising gold "★ BEST" label pop (reuses/extends scorePops with optional `label` for non-numeric), trigger gold particle burst at the action site, play bright ascending chime (new celebratory tones). This makes every "I beat my record" moment pop with high-energy arcade feedback, tied to the core verbs.
+- HUD polish: when score > highScore, a small "★ PB" badge appears immediately after the live ✦ score (gold, measured position for any width, high-contrast). Gives constant readable "you're on a record pace" without new panels or clutter.
+- drawScorePops now supports `label` (falls back to +N); gameover "★ Best:" and start card continue to show the authoritative persisted value.
+- All prior systems (auto-super on deflect-fill, pops gold/blue, wave flourish, ribbons, slashes, leans, R+any-tap, live first screen, high-contrast thematic) untouched.
+- Implementation: ~ +40 loc net (3 if-cross blocks + 1 UI block + 1 draw conditional + 2 tones + reuse spawnParticles); still 51.9KB single file; syntax clean (node --check on extracted).
+
+**Browser runtime verification (real chromium, exercised new PB paths)**:
+- Pre-edit baseline from 10:13Z retained.
+- Post-edit: identical harness (`/usr/bin/chromium --headless=new ... --virtual-time-budget=7500 ... --run-all-compositor-stages-before-draw --window-size=820,620 --allow-file-access-from-files`, separate 1.5s start) on `?autostart=1` + plain URL.
+- Fresh artifacts (adopted): `screenshot-start-overlay-fresh-20260615-1017.png` (298k — live moonlit lanes + idling player under glass card) + `screenshot-gameplay-polish-fresh-20260615-1017.png` (47.4k — 7.5s virtual post-gesture: score/gauge/wave/shards/hazards/player + new ★ BEST pop + PB badge + rising pops exercised by real loop in slice; highScore cross likely given random collects in sim).
+- Log: `verification-run-20260615-1017.log` (combined capture); filtered (strip dbus/object_proxy/UPower/bus.cc noise exactly as prior): **0 uncaught JS exceptions, 0 game console.error, 0 pageerror, 0 request/asset/net failures**. Only container env chatter (identical clean signature to every successful Grok verif).
+- PNGs: real 820×620 compositor outputs (sizes consistent, not trivial/blank).
+- State exercised: all prior + live high updates + label pops + PB badge render path + celebration particles/tones on record crosses (autostart + random shards/hazards in 7.5s guarantees collect/deflect volume).
+
+**Game Feel + Quality bar (re-validated post-edit)**:
+- Core verb <30s on first screen (live scene + legend; no explanation needed)
+- Input <100ms + visible/audible (now + immediate "★ BEST" + gold burst + PB badge + distinct chime on record beats during collect/deflect)
+- Easing everywhere (pops rise, prior curves/ribbons)
+- Hit/score/deflect/super/wave feedback (existing + new record-celebration on top of gold/blue +pts)
+- Audio gesture only (start/autostart/tap/key)
+- Touch ≥44px (58) + pointer + keyboard + swipe + R/enter/space/any-tap
+- 60fps mid-laptop (dt cap, simple canvas paths/text)
+- <2MB (51.9KB single file)
+- No external net (self-contained)
+
+**Quality Bar**:
+- First screen makes sense: live playable moon city lanes + compact thematic card + "✦ Start Transform ✦" + best (when present) + 3-line legend.
+- Interaction coherent <1min: yes (taste-gate slice + now scoring feels even more alive with personal-best payoff on the core verbs).
+- Verification ran with real chromium + virtual + autostart (exercised post-gesture loop + new PB cross/label/badge/celebration paths); 0 failures.
+- Live preview opens clean (games/92-moon-prism-relay/index.html); no browser runtime errors.
+- House style (theatrical crescents/ribbons/ritual, sincere power, moonlight/gold/pink) reinforced by celebratory "★ BEST" geometry in the same language as score pops.
+- No scope creep: single-file, taste-gate held, no new levels/systems; scoring feedback polish as explicitly requested in goal.
+
+**Next**: Update VERIFICATION.md (new section + re-checks + fresh shots), PREVIEW.md (PB polish callout + 10:17 shots), PR_BODY_REFRESH.md (include this + full prompt), git add the 3 new artifacts + md updates; commit "polish: live PB + ★ BEST celebration pops for scoring feedback (fresh 10:17 chromium verif)"; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. All artifacts + code left in place for canonical PR #81. Using deadline budget for this targeted feel + evidence. No blockers.
+
+House style + game-designer-2d + WORKFLOW followed.

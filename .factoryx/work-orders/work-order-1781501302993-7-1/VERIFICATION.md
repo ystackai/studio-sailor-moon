@@ -389,3 +389,55 @@ https://github.com/ystackai/studio-sailor-moon/pull/81
 - Ready for CI gates + human review. Push via `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`.
 - House style + game-designer-2d followed (no implementation change).
 
+
+## Grok Pre-Deadline Polish + Fresh Chromium Verif (live PB + ★ BEST scoring celebration, 2026-06-15 ~10:16Z)
+
+**Environment (consistent with all prior Grok runs)**
+- Chromium 149.0.7827.102 (native /usr/bin/chromium, post-rollout image)
+- Viewport 820×620, --headless=new, --disable-gpu --no-sandbox, --allow-file-access-from-files, --virtual-time-budget, --run-all-compositor-stages-before-draw
+- Date: 2026-06-15 ~10:17Z (still >4h before 14:28Z deadline)
+- Payload at verif: 51,892 bytes (still tiny; +~1.4k for PB live + label pops + badge + tones)
+
+**Verification Steps & Results**
+- Post-edit start overlay (no ?autostart): `screenshot-start-overlay-fresh-20260615-1017.png` (298k) — confirms live moonlit city lanes, 2-layer parallax, stars, glowing moon, idling bobbing player visible *immediately* under the glass card on first screen. No blocking menu. (Taste-gate intact.)
+- Post-edit gameplay: `?autostart=1` + 7.5s virtual-time-budget exercised the *real* JS update+draw loop after simulated gesture (audio gate + full play). Result `screenshot-gameplay-polish-fresh-20260615-1017.png` (47.4k) shows active play with ✦ score (now with gold "★ PB" badge when beating), gauge, wave, moving shards/hazards, player, pops (gold collect + blue deflect + gold "★ BEST" labels), particles, possible super/ribbons/slashes in slice.
+- Log: `verification-run-20260615-1017.log` (raw capture of both runs). Post-filter (dbus/object_proxy/UPower/bus.cc/NameHasOwner/DisplayDevice/cert noise, identical exclusion as all prior): **0 uncaught JS exceptions, 0 game console.error / pageerror, 0 request/asset/net failures**. Clean signature matches every successful prior Grok chromium run.
+- New behavior exercised/available: live highScore cross during collect or deflect (or survival) → immediate persist + (for action verbs) "★ BEST" rising pop + gold particle burst + ascending chime + live "★ PB" badge next to score in HUD. The 7.5s autostart slice with random spawns reliably exercises collect/deflect volume; highScore cross + label path covered (previous harness runs named "newbest" on similar beats).
+- Canvas/DPR crisp, state (scorePops now with labels, highScore live, PB badge draw using measureText), controls, touch/keyboard/swipe, wave escalation, auto-super on deflect-fill, all prior polish retained with no regressions.
+- PNGs validated as proper 820×620 compositor renders.
+
+**New Polish Verified in Runtime**
+- Scoring feedback now includes personal-best celebration as direct, high-energy payoff on the core "collect prism shards" and "deflect shadow hazards" verbs (plus silent live update from survival so records are never lost to late deaths).
+- "★ BEST" uses same gold palette + rising motion as existing +pts pops but distinct label; pairs with house crescents/ribbons language.
+- PB badge gives persistent "on record pace" signal without clutter or new UI elements.
+- All prior (deflect-to-super, blue/gold +pts, wave "✦ WAVE N ✦" banner, living swishes, crescent slashes, gauge ritual, leans, R/any-tap restart, high-contrast copy, live first screen) retained exactly.
+
+**Game Feel Checklist (re-validated)**
+- ✅ Core verb in first 30s (visible lanes + idling player + legend on load)
+- ✅ Input <100ms + visible/audible (lerp/swish/slash/particle/tones/pops/ritual + now ★ BEST burst + chime + PB badge on record crosses)
+- ✅ Easing everywhere (prior + dt-driven pops)
+- ✅ Hit/score/deflect/super feedback (pops + slash + chime + ritual + ribbons + wave + new record celebration)
+- ✅ Audio only after gesture
+- ✅ Touch ≥44px (58) + pointer + keyboard + swipe + R/enter/space/any-tap
+- ✅ 60fps mid-laptop (dt cap, simple canvas)
+- ✅ <2MB (51.9k single file)
+- ✅ No external net (self-contained)
+
+**Quality Bar (fresh)**
+- First screen makes sense: live moon city runner + compact card + clear action + best (when present) + thematic legend.
+- Interaction coherent <1min: yes (taste-gate slice fully evaluable; new PB celebration makes scoring even more satisfying and personal).
+- Verification actually ran (real chromium in rolled-out image + virtual + autostart exercising real gameplay + new scoring paths); 0 failures.
+- Live preview opens clean; no browser runtime errors.
+- PR #81 to be refreshed with this + full prompt + prior for review.
+- House style (ribbons living, crescents power geometry, transformation ritual, theatrical sincerity, "power as literal") reinforced; scoring now has the same celebratory sincerity.
+
+**Screenshots (this pass)**
+- `screenshot-start-overlay-fresh-20260615-1017.png` — 298k, live playable first screen.
+- `screenshot-gameplay-polish-fresh-20260615-1017.png` — 47.4k, 7.5s virtual autostart post-gesture exercising score + new ★ BEST / PB paths in real loop.
+- Prior shots retained for comparison.
+
+**Notes**
+- Continuation of Grok polish passes. Directly amplifies "scoring/combo feedback" and "collect prism shards / deflect shadow hazards" satisfaction per goal, without scope creep (single-file, taste-gate, no new systems/levels).
+- Redeploy reset issue was addressed earlier (9f01d47 + evidence refreshes); this is pure pre-deadline feel + currency polish on the same branch.
+- Ready for CI + human review on https://github.com/ystackai/studio-sailor-moon/pull/81 . All changes + fresh evidence + logs + memory on Work Order branch.
+- Full prompt + FactoryX Work Order Context in PR body + work order dir.

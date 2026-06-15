@@ -460,6 +460,10 @@ function update(dt) {
 
     // Score from survival
     score += Math.floor(dt * 10 * difficulty);
+    if (score > highScore) {
+      highScore = score;
+      try { localStorage.setItem('mprHighScore', String(highScore)); } catch (e) {}
+    }
 
     // Combo timer
     if (comboTimer > 0) {
@@ -686,6 +690,17 @@ function collectShard(shard) {
   const points = Math.floor(10 * comboMultiplier);
   score += points;
   scorePops.push({ x: shard.x, y: shard.y - 8, val: points, life: 0.85, color: '#fde68a' });
+  if (score > highScore) {
+    const prevBest = highScore;
+    highScore = score;
+    try { localStorage.setItem('mprHighScore', String(highScore)); } catch (e) {}
+    if (score - prevBest > 4) {
+      scorePops.push({ x: shard.x + 8, y: shard.y - 20, label: '★ BEST', life: 1.0, color: '#fef08c' });
+      spawnParticles(shard.x, shard.y - 12, '#fde68a', 10, 65);
+      playTone(1320, 0.12, 'sine', 0.16);
+      playTone(1760, 0.18, 'sine', 0.1, 0.06);
+    }
+  }
   const prevGauge = moonGauge;
   moonGauge = Math.min(MOON_MAX, moonGauge + (3 + combo * 0.5));
   if (prevGauge < MOON_MAX && moonGauge >= MOON_MAX) {
@@ -781,6 +796,17 @@ function deflectHazard(obs, kind) {
   const bonus = 8;
   score += bonus;
   scorePops.push({ x: obs.x, y: (obs.y || player.y) - 10, val: bonus, life: 0.65, color: '#93c5fd' });
+  if (score > highScore) {
+    const prevBest = highScore;
+    highScore = score;
+    try { localStorage.setItem('mprHighScore', String(highScore)); } catch (e) {}
+    if (score - prevBest > 4) {
+      scorePops.push({ x: obs.x + 6, y: (obs.y || player.y) - 18, label: '★ BEST', life: 0.95, color: '#fef08c' });
+      spawnParticles(obs.x, (obs.y || player.y) - 10, '#fde68a', 9, 60);
+      playTone(1320, 0.12, 'sine', 0.16);
+      playTone(1760, 0.18, 'sine', 0.1, 0.06);
+    }
+  }
   const prevG = moonGauge;
   moonGauge = Math.min(MOON_MAX, moonGauge + 5);
   if (prevG < MOON_MAX && moonGauge >= MOON_MAX) {
@@ -1244,7 +1270,8 @@ function drawScorePops() {
     gctx.font = `bold ${Math.min(13, W * 0.028)}px sans-serif`;
     gctx.shadowColor = '#1e1135';
     gctx.shadowBlur = 4;
-    gctx.fillText('+' + p.val, p.x, p.y);
+    const txt = p.label ? p.label : '+' + p.val;
+    gctx.fillText(txt, p.x, p.y);
   }
   gctx.globalAlpha = 1;
   gctx.shadowBlur = 0;
@@ -1404,7 +1431,14 @@ function drawUI() {
   uctx.font = `bold ${Math.min(16, W*0.028)}px sans-serif`;
   uctx.shadowColor = '#6b21a8';
   uctx.shadowBlur = 3;
-  uctx.fillText(`✦ ${score.toLocaleString()}`, 16, H - 16);
+  const scoreLabel = `✦ ${score.toLocaleString()}`;
+  uctx.fillText(scoreLabel, 16, H - 16);
+  if (score > highScore) {
+    const scoreW = uctx.measureText(scoreLabel).width;
+    uctx.fillStyle = '#fef08c';
+    uctx.font = `bold ${Math.min(11, W*0.022)}px sans-serif`;
+    uctx.fillText(' ★ PB', 16 + scoreW + 2, H - 16);
+  }
   if (combo > 2) {
     uctx.fillStyle = combo >= 10 ? '#fde68a' : combo >= 5 ? '#f0abfc' : '#c4b5fd';
     uctx.font = `bold ${Math.min(13, W*0.022)}px sans-serif`;

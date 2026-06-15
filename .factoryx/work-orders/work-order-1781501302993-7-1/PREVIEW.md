@@ -83,3 +83,13 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - **Next**: Update VERIFICATION.md + this PREVIEW + PR_BODY_REFRESH + WORKLOG with this section + new shot refs; git add new artifacts + mds; commit "docs: ..."; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. Using deadline budget for continued evidence strength post the explicit redeploy reset address (no peripheral code polish). Ready for CI + human review on PR #81.
 - House style + game-designer-2d + WORKFLOW (browser-game-2d) followed (no implementation change).
 
+
+## Latest Pre-Deadline Polish Evidence (Grok, live PB + ★ BEST scoring pops, 10:17Z)
+
+- **Branch**: up-to-date post d6755a8; redeploy reset addressed prior (9f01d47 + 10:09/10:13 evidence refreshes, no code change then); now using budget for scoring feedback polish per goal.
+- **Change (high-signal, small diff)**: Live highScore update + persist on every score cross (collect/deflect/survival); ★ BEST rising gold label pop + particle burst + ascending chime only on collect/deflect record beats (the verbs); gold "★ PB" badge rendered live next to ✦ score in HUD (measureText positioned). Reuses scorePops label support. Makes "scoring/combo feedback" and the core actions feel personal and celebratory. 51.9kB still tiny. No other systems touched.
+- **Fresh real-chromium verification (post-edit, rolled-out env)**: native /usr/bin/chromium, 820x620, --headless=new + full flags + --virtual-time-budget=7500 (game) / 1500 (start) + --run-all-compositor-stages-before-draw + ?autostart=1 for post-gesture real loop exercise. 0 game errors (filtered logs clean, dbus-only). 
+  - New shots adopted: `screenshot-start-overlay-fresh-20260615-1017.png` (298k — live playable moonlit lanes + idling player under glass card on first screen) + `screenshot-gameplay-polish-fresh-20260615-1017.png` (47.4k — 7.5s virtual: score + gauge + wave + shards/hazards/player + gold/blue +pts + ★ BEST pops + PB badge exercised).
+  - Log: verification-run-20260615-1017.log (clean).
+- **Checklists**: All 9 Game Feel + Quality bar + taste-gate (live first screen) + house style re-hold with no drift. New PB celebration directly improves "scoring/combo feedback", "collect prism shards", "deflect shadow hazards" satisfaction. Preview entrypoint `games/92-moon-prism-relay/index.html` + .factoryx/preview-entrypoint stable.
+- **Next**: Update this PREVIEW + WORKLOG/VERIFICATION/PR_BODY_REFRESH; commit; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. PR #81 is the canonical (body to include full original prompt + this context for reviewers). Ready for CI/human review. Using deadline budget for polish + evidence currency.
