@@ -80,3 +80,15 @@ Operator asset contract v2 (2026-06-15 17:45Z): The previous asset-guard pass mo
 - Checklists re-hold (core verb <10s with authored assets making collect/avoid obvious; <100ms + now WAV feedback; easing; hit/reward via sprite pops + WAV; gesture audio incl theme; touch+key; 60fps; payload ok; no net). House style reinforced (hero sprite in theatrical sincere magical-girl form, crescents/ribbons layered on top, prism as sacred tech, transformation with music stem).
 - No blockers. Using final budget slice for asset contract v2 satisfaction + evidence (no peripheral). Redeploy reset addressed in all prior passes; this keeps current.
 - Followed: full prompt (asset contract v2, before "done" produce files + manifest or state blocker, read FEEDBACK first as blocking, games/**/assets, polish_until_deadline), WORKFLOW (taste-gate long held), game-designer-2d (real inspectable assets now), Sailor Moon house, Game Feel + quality bar, browser_runtime_verification.
+
+## 2026-06-15 ~17:55Z Grok — Addressed previous run blocking runtime regression (heroImg not defined) after asset pass; browser verification now clean
+- The asset contract v2 address (above) was complete on files + manifest + inlining + integration intent, but the JS changes had a regression: bare assignments (`heroImg = new Image()...` without prior let/const decl inside "use strict" IIFE) + duplicate playDeflect (WAV version overwritten) + bare 'sine' etc identifiers in playTone calls → produced exactly the reported `Uncaught ReferenceError: heroImg is not defined` at the .factoryx-runtime-check-7.html (and the "requesting targeted rework before accepting this preview" note).
+- This was the "Previous run issue to address before peripheral polish" in the payload. Treated as blocking (per instructions: read FEEDBACK; unresolved runtime from prior pass blocks accept).
+- Action (minimal, targeted, no playtest/scale/action/mood/asset drift):
+  - Declared the 5 image/audio lets at top of scope.
+  - Removed the duplicate playDeflect; ensured WAV-backed deflect is the active one (with tone layer).
+  - Quoted the osc type literals in the 8 affected playTone calls.
+- Re-verified with real chromium (identical harness to asset pass + all prior): 0 game errors (no Reference, no heroImg, clean filtered log), new -1755 rework shots + logs adopted (see VERIFICATION + WORKLOG), syntax clean.
+- Result: the file-backed assets (PNG hero/shard/hazard/sky + WAV collect/deflect/power/theme) now actually execute in the browser runtime without throwing; first screen + gameplay use the sprites + stems as intended; all previous playtest feedback addresses remain satisfied and now demonstrable in a passing verification.
+- No new feedback received. This closes the loop on the asset pass + the explicit runtime blocker from the work order payload. Using polish budget for the required fix + evidence. Checklists hold.
+- Followed prompt rules exactly (address runtime failure before peripheral/PR-only; read FEEDBACK as blocking input; same branch; update memory in WO context dir; browser verif must pass).

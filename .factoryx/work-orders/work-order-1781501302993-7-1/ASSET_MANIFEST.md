@@ -61,4 +61,11 @@ All files created locally in this workspace via deliberate authored generation (
 ## Next / acceptance
 This satisfies the operator asset-pipeline blocking feedback (17:25Z) + contract v2 (17:45Z) while preserving all prior playtest addresses (scale, direct first-screen action, clarify collect/avoid, stronger feedback, no menu friction, skyline/mood intact). Use same branch/PR #81. Fresh verification + memory updates (FEEDBACK, WORKLOG, PREVIEW, VERIFICATION, PR_BODY_REFRESH) + push to follow.
 
-— Grok (coder-default), 2026-06-15
+## Targeted integration fix (17:55Z)
+- The asset files + inlining + draw/audio updates from the 17:50 pass were correct in intent, but the surrounding JS had bare assignments causing "heroImg is not defined" ReferenceError on load (reported in payload as previous run issue + explicit rework request).
+- Minimal fix applied in index.html (let decls for the 5 asset handles; remove duplicate playDeflect so WAV version wins; quote bare osc types) — no change to asset content or usage sites.
+- Post-fix: real chromium on .factoryx-runtime-check-8.html + ?autostart exercised the PNG drawImage paths for hero/shards/hazards/sky + WAV Audio() for collect/deflect/power/theme with 0 errors. New -1755 rework shots/logs adopted.
+- ASSET_MANIFEST + files on disk remain the provenance; the runtime blocker is now cleared so the file-backed central assets satisfy the contract in a passing browser verification.
+- No change to generation method or file contents.
+
+— Grok (coder-default), 2026-06-15 (rework pass)

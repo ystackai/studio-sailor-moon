@@ -140,6 +140,7 @@ const gctx = gameCanvas.getContext('2d');
 const uctx = uiCanvas.getContext('2d');
 
 let W, H, DPR;
+let heroImg, shardImg, hazardImg, skyImg, themeAudio;
 function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth;
@@ -191,47 +192,43 @@ function playCollect() {
   // File-backed authored WAV (prism collect chime) — not oscillator blip
   try { const a = new Audio(ASSET_COLLECT); a.volume = 0.68; a.play().catch(()=>{}); } catch(e){}
   // light layer for house sparkle
-  playTone(1760, 0.09, sine, 0.06, 0.03);
+  playTone(1760, 0.09, 'sine', 0.06, 0.03);
 }
 
 function playHit() {
-  playTone(150, 0.3, sawtooth, 0.12);
-  playTone(80, 0.25, square, 0.06, 0.05);
+  playTone(150, 0.3, 'sawtooth', 0.12);
+  playTone(80, 0.25, 'square', 0.06, 0.05);
 }
 
 function playJump() {
-  playTone(400, 0.15, sine, 0.08);
-  playTone(600, 0.12, sine, 0.06, 0.08);
+  playTone(400, 0.15, 'sine', 0.08);
+  playTone(600, 0.12, 'sine', 0.06, 0.08);
 }
 
 function playDash() {
-  playTone(200, 0.2, triangle, 0.1);
-  playTone(300, 0.15, sine, 0.06, 0.1);
+  playTone(200, 0.2, 'triangle', 0.1);
+  playTone(300, 0.15, 'sine', 0.06, 0.1);
 }
 
 function playPowerUp() {
   // File-backed transformation stinger (music-led super moment)
   try { const a = new Audio(ASSET_POWER); a.volume = 0.72; a.play().catch(()=>{}); } catch(e){}
-  playTone(1318, 0.22, sine, 0.09, 0.35);
+  playTone(1318, 0.22, 'sine', 0.09, 0.35);
 }
 
 function playDeflect(kind) {
-  // File-backed ribbon chime for deflect success
+  // File-backed ribbon chime for deflect success (central avoid feedback, per asset contract)
   try { const a = new Audio(ASSET_DEFLECT); a.volume = 0.65; a.play().catch(()=>{}); } catch(e){}
-  // keep prior light layer if needed
+  // light house-style layer for continuity
+  const base = kind === 'dash' ? 980 : 1240;
+  playTone(base, 0.12, 'sine', 0.13);
+  playTone(base * 1.25, 0.09, 'triangle', 0.07, 0.04);
 }
 
 function playCombo(level) {
   const base = 660 + level * 60;
   playTone(base, 0.2, 'sine', 0.1);
   playTone(base * 1.5, 0.15, 'sine', 0.08, 0.08);
-}
-
-function playDeflect(kind) {
-  // Bright, high-energy chime for successful deflect (ritual precision)
-  const base = kind === 'dash' ? 980 : 1240;
-  playTone(base, 0.12, 'sine', 0.13);
-  playTone(base * 1.25, 0.09, 'triangle', 0.07, 0.04);
 }
 
 // ========== GAME STATE ==========

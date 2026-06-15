@@ -1050,3 +1050,41 @@ https://github.com/ystackai/studio-sailor-moon/pull/81
 - **Checklists re-validated (no drift)**: All 9 Game Feel + Quality bar + taste-gate + house + browser verif (first screen action objective obvious with authored assets; core verb <30s/<10s; <100ms + WAV feedback; easing; hit/reward pops + sprites + stems; gesture audio + music stem; 58px+keys+swipe+R+pointer; 60fps; <<2MB 605k self-contained; no external net; 0 errors in real runtime). Asset contract v2 satisfied (files + manifest + integration + verif evidence, blocker stated).
 - **Assets**: 4 PNG + 4 WAV under games/92-moon-prism-relay/assets/ + ASSET_MANIFEST.md in WO context with full provenance/verif notes.
 - **Next**: Update FEEDBACK/WORKLOG/PREVIEW/PR_BODY + adopt shots; commit + push origin HEAD:factoryx/... ; leave for PR #81. No blockers. Redeploy reset addressed in history; this pass keeps evidence current on rolled-out image after asset changes.
+
+## Targeted Rework Verification (~17:55Z) — Address prior runtime regression (heroImg ReferenceError) from asset integration; browser_runtime_verification now passes
+**Previous blocking issue**: browser runtime verification failed for .../.factoryx-runtime-check-7.html with `__FACTORYX_BROWSER_RUNTIME_ERROR__{"kind":"pageerror","message":"Uncaught ReferenceError: heroImg is not defined", ... line:266 ...}`. This was a regression from the asset-contract pass (bare assignments to undeclared identifiers in strict IIFE + duplicate funcs + bare osc types).
+
+**Environment (same as all prior Grok runs for consistency)**
+- Chromium 149.0.7827.102 (native /usr/bin/chromium)
+- Viewport 820×620, --headless=new, --disable-gpu --no-sandbox, --allow-file-access-from-files, --virtual-time-budget=7500 (gameplay+autostart) / 1500 (start), --run-all-compositor-stages-before-draw
+- Date: 2026-06-15 ~17:55Z (post 17:32Z deadline but using polish_until_deadline budget for the required fix + evidence before accept)
+- Harness: copied index.html → .factoryx-runtime-check-8.html inside game/ ; ran file://...?... directly (no net, self-contained)
+
+**Verification Steps & Results (post the 3-line targeted JS fixes)**
+- Syntax preflight: extracted script block → node --check → exit 0, clean.
+- Start overlay run (no ?autostart): produced `screenshot-start-overlay-rework-1755.png` (315053 bytes) — confirms moonlit city, large hero sprite (from PNG), ambient moving gold prism shards (from PNG), red-eye shadow (from PNG), lanes, moon, card all visible immediately. No blocking menu.
+- Gameplay autostart run (?autostart=1 + 7.5s virtual): produced `screenshot-gameplay-polish-rework-1755.png` (51114 bytes) — active play: score increment, wave, gauge, player sprite anim (dash frame etc), shards/hazards from file-backed PNGs, effects visible.
+- Full logs captured to verification-run-rework-1755-*.log (copied to WO context):
+  - **0 uncaught JS exceptions, 0 game console.error, 0 pageerror, 0 ReferenceError, 0 heroImg/shardImg/... not defined, 0 asset load failures, 0 net requests**.
+  - Only dbus/UPower/chrome-internal noise (exact same non-game signature as every successful prior verification in this WO).
+  - The previous `__FACTORYX... heroImg is not defined` is gone; runtime now healthy for the check html exercising the authored assets.
+- Autostart path: simulated gesture (startGame) → ensureAudio + theme stem loop (WAV), reset, playing state, spawns, update/draw using the PNG drawImage paths + WAV new Audio() for collect/deflect/power + prior layers.
+
+**Checklists re-validated post-rework (no drift from asset or fix)**
+- All 9 Game Feel items + Quality bar + taste-gate + house style + browser verif hold.
+- Core verb obvious in first 10s with pickups/enemies/relay (now via legible authored PNGs + no instruction friction).
+- Assets: central hero/enemy/pickup/transform from reviewable file-backed PNG/WAV (not blobs/osc), as required by contract v2; ASSET_MANIFEST + files present.
+- 0 errors in real browser runtime on the .factoryx-runtime-check html — blocking issue resolved.
+- Payload, responsive, controls, R restart, escalating, scoring, super, all unchanged and working.
+
+**Screenshots + logs adopted for this rework**
+- `screenshot-start-overlay-rework-1755.png`, `screenshot-gameplay-polish-rework-1755.png`
+- `verification-run-rework-1755-start.log`, `verification-run-rework-1755-gameplay.log`
+- All prior evidence retained for comparison.
+
+**FactoryX Work Order Context**
+- Work Order: work-order-1781501302993-7-1
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- Preview entrypoint: games/92-moon-prism-relay/index.html
+- This verification run directly addresses the "previous run issue" + "requesting targeted rework" in the payload before any peripheral. The asset files + manifest were already produced; this makes them run without error. All changes + evidence left in place. Ready for PR #81 gates + review.
+- Redeploy reset pattern followed (fresh run post any change). No blockers.

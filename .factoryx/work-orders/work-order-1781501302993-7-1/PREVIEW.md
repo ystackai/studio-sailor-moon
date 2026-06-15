@@ -423,3 +423,10 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 Screenshots (asset pass):
 - `screenshot-start-overlay-asset-1750.png` — first screen, hero sprite + prism shards + hazard visible in motion under card.
 - `screenshot-gameplay-polish-asset-1750.png` — 7.5s autostart, assets exercised (player from sprite sheet, collect/avoid from PNGs, super/WAV audio paths hit).
+
+**Targeted rework (17:55Z) for runtime regression**
+- Fixed heroImg (and related) ReferenceError that the asset integration introduced (bare decls + dups + bare types in strict mode). The file-backed assets are now both present on disk + executing without error in browser.
+- New verification evidence (0 errors on .factoryx-runtime-check-8.html):
+  - `screenshot-start-overlay-rework-1755.png` — live first screen with authored hero/prism/hazard PNGs.
+  - `screenshot-gameplay-polish-rework-1755.png` — gameplay slice exercising the sprites + WAVs.
+- All prior preview notes + direct first-screen action + legible assets + no menu friction remain accurate and now pass runtime. PR #81 body to include full context. No blockers.

@@ -23,6 +23,7 @@
 ## Evidence
 - Real browser runtime verification (chromium, virtual time, autostart exercised full loop + gesture + new asset paths): 0 game JS errors / console.error / pageerror / asset/net failures (filtered clean, identical dbus-only signature to all healthy prior).
 - Multiple fresh compositor screenshots in WO dir (latest post-asset: screenshot-*-asset-1750.png exercising sprite hero, PNG shards/hazards, WAV audio paths on first screen + gameplay).
+- **Targeted rework 17:55Z**: previous asset integration had introduced "heroImg is not defined" ReferenceError (exact payload failure on check-7.html); fixed with decls + dedup + quoted types (minimal, no behavior change); re-ran chromium on check-8.html: now 0 errors, new rework screenshots adopted (see VERIFICATION.md + WORKLOG). Runtime verification passes cleanly for the file-backed assets.
 - All 9 Game Feel checklist + quality bar + house style + taste-gate + browser verif hold at every pass.
 - Payload self-contained single index.html (~605kB with assets inlined) <<2MB; no external deps; works offline/file://.
 - Git history on branch + screenshots + logs + mds (WORKLOG/FEEDBACK/PREVIEW/VERIFICATION/ASSET_MANIFEST/PR_BODY_REFRESH) left in place.
