@@ -47,6 +47,7 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - Verification re-run at 09:42Z with improved chromium flags + autostart exercised the loop for ~6.5s virtual time: live score/gauge/wave/hazards/shards/player under controls; 0 runtime errors.
 - New shots: screenshot-start-overlay-fresh.png (293k), screenshot-gameplay-verified-fresh.png (48k) — added to work order dir alongside prior.
 - High score now actually persists (fix); restart with R key supported.
-- Payload 42.9k self-contained. Preview entrypoint unchanged.
+- Payload 47.8k self-contained (new lane-swish ribbons, deflect crescents, gauge-ready bursts, expressive leans, restart polish). Preview entrypoint unchanged.
 - PR body refresh prepared with full Work Order context + prompt.
+- Final Grok polish pass (pre 14:28Z deadline): added living ribbon swishes on lane swaps, bright crescent slash geometry on deflects, ritual gauge-full particle burst + chime, player body leans on dash/jump, extra ribbon flicks + super ground aura, larger restart button + any-tap + hint + start-card best. Real chromium verif (0 game errors) + fresh screenshots captured. All checklists hold.
 

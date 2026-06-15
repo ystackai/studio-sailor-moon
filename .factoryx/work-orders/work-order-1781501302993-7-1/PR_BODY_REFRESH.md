@@ -94,6 +94,17 @@ Workspace:
 - Fresh chromium headless verification (autostart + virtual-time 6.5s exercising real gameplay loop, state, spawns, deflect/collect/super possible): 0 game JS errors, new screenshots in work order dir (293k start live scene, 48k gameplay), payload 42.9k.
 - All prior ribbon/deflect/collect/live-first-screen/high-contrast polish retained. Game feel checklist + quality bar hold. No blockers.
 
+## Final Pre-Deadline Polish (Grok, 09:45Z, using polish_until_deadline budget)
+- Lane swaps: living pink/gold ribbon swish trails (quadratic, fabric-will motion) on ←→/swipe/pads — traversal has weight and house-style ribbons.
+- Deflects now satisfying: bright dual-crescent gold "slash" geometry arcs across cleared hazard (sacred geometry pop + particles + chime + small gauge/score).
+- Gauge ritual: reaching 100% (collect or deflect) triggers playPowerUp + radial burst of gold/pink mini-crescents around the player.
+- Player motion: expressive lean/tilt on dash (forward) and jump (apex counter), rotation from lane delta.
+- Super: middle ribbon gets extra living tip whip/flick curve; pulsing ground aura during 5s "MOON PRISM POWER!".
+- Controls/UX: larger 48px Run Again, "R · tap · space" hint, any-tap on gameover restarts (large target), highScore subtly shown on start card when present.
+- Real chromium verif (headless + virtual 7s + autostart): 0 game errors (only dbus env), fresh 298k start + 47k gameplay shots, payload 47.8KB.
+- All 9 Game Feel items + quality bar re-confirmed; taste-gate live playable slice first held; no generic copy, no static showcases.
+- Same branch/PR #81; full original prompt + context included for reviewers. Artifacts (screenshots, logs, memory) in .factoryx/work-orders/work-order-1781501302993-7-1/.
+
 ## FactoryX Work Order Context (full for reviewers)
 - Work Order: work-order-1781501302993-7-1
 - factory_id: factory-sailor-moon

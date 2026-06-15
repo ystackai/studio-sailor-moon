@@ -104,6 +104,7 @@ canvas#uiCanvas {
       <span class="k">↑</span> / <span class="k">W</span> / space — jump shadows &nbsp; <span class="k">↓</span> / <span class="k">S</span> — dash orbs<br>
       <span class="k">X</span> — Moon Prism Power when gauge full
     </div>
+    <div id="startBest" style="margin-top:4px;font-size:10px;letter-spacing:0.5px;color:#a5b4fc;opacity:0.85;"></div>
   </div>
 </div>
 
@@ -247,6 +248,8 @@ let obstacles = [];
 let shards = [];
 let particles = [];
 let trailParticles = [];
+let laneSwishes = [];      // living ribbon swish on lane change (physicality + house fabric)
+let deflectSlashes = [];   // bright crescent geometry slash on successful deflect
 let spawnTimer = 0;
 let shardSpawnTimer = 0;
 let obstacleSpawnTimer = 0;
@@ -325,6 +328,8 @@ function resetGame() {
   shards = [];
   particles = [];
   trailParticles = [];
+  laneSwishes = [];
+  deflectSlashes = [];
   spawnTimer = 0;
   shardSpawnTimer = 0;
   obstacleSpawnTimer = 0;
@@ -495,7 +500,11 @@ function update(dt) {
   const targetX = getLaneX(player.targetLane);
   const dx = targetX - player.x;
   player.x += dx * LANE_SWAP_SPEED * dt * 10;
-  player.rotation = dx * 0.003;
+  // Expressive lean: more on dash (forward), counter on jump apex, swish influence
+  let baseRot = dx * 0.003;
+  if (player.dashing) baseRot += 0.12 * (player.targetLane - player.lane);
+  if (player.jumping) baseRot += Math.max(-0.18, Math.min(0.12, player.vy * 0.0006));
+  player.rotation = baseRot * (player.dashing ? 1.6 : 1) + (player.dashing ? Math.sign(dx) * 0.09 : 0);
 
   // Player jump/dash physics (demo has gentle bob only)
   if (player.jumping && !isDemo) {
@@ -622,6 +631,22 @@ function update(dt) {
     if (p.life <= 0) particles.splice(i, 1);
   }
 
+  // Update lane swish ribbons (short life, drift with motion)
+  for (let i = laneSwishes.length - 1; i >= 0; i--) {
+    const s = laneSwishes[i];
+    s.life -= dt * 3.2;
+    s.x -= (player.dashing ? 380 : 220) * dt; // trail behind
+    if (s.life <= 0) laneSwishes.splice(i, 1);
+  }
+
+  // Update deflect slashes (bright geometry arcs)
+  for (let i = deflectSlashes.length - 1; i >= 0; i--) {
+    const s = deflectSlashes[i];
+    s.life -= dt * 2.8;
+    s.x -= 260 * dt;
+    if (s.life <= 0) deflectSlashes.splice(i, 1);
+  }
+
   // Spawning
   spawnTimer += dt;
   const shardInterval = Math.max(0.5, 2.5 - wave * 0.15);
@@ -643,7 +668,26 @@ function collectShard(shard) {
   comboMultiplier = 1 + Math.floor(combo / 5) * 0.5;
   const points = Math.floor(10 * comboMultiplier);
   score += points;
+  const prevGauge = moonGauge;
   moonGauge = Math.min(MOON_MAX, moonGauge + (3 + combo * 0.5));
+  if (prevGauge < MOON_MAX && moonGauge >= MOON_MAX) {
+    // Gauge full — ritual ready burst (celestial crescents + chime)
+    playPowerUp();
+    for (let i = 0; i < 9; i++) {
+      const ang = (i / 9) * Math.PI * 2;
+      particles.push({
+        x: player.x, y: player.y - 10,
+        vx: Math.cos(ang) * (70 + Math.random()*30),
+        vy: Math.sin(ang) * (50 + Math.random()*20) - 20,
+        life: 0.9,
+        decay: 0.9,
+        size: 2.2 + Math.random(),
+        color: i % 2 ? '#fde68a' : '#f0abfc',
+        gravity: 40
+      });
+    }
+    spawnParticles(player.x, player.y - 18, '#fde68a', 6, 60);
+  }
 
   spawnParticles(shard.x, shard.y, shard.color, 12, 120);
   // Extra prism / crescent sparkles on collect (bright readable high-energy)
@@ -718,7 +762,12 @@ function showComboText(comboCount) {
 function deflectHazard(obs, kind) {
   const bonus = 8;
   score += bonus;
+  const prevG = moonGauge;
   moonGauge = Math.min(MOON_MAX, moonGauge + 5);
+  if (prevG < MOON_MAX && moonGauge >= MOON_MAX) {
+    playPowerUp();
+    spawnParticles(player.x, player.y - 12, '#fde68a', 5, 55);
+  }
   spawnParticles(obs.x, obs.y + (obs.h || 30)/2, kind === 'dash' ? '#93c5fd' : '#f0abfc', 7, 70);
   // Extra sacred-geometry sparkles (small crescents/stars)
   for (let i = 0; i < 3; i++) {
@@ -735,6 +784,34 @@ function deflectHazard(obs, kind) {
     });
   }
   playDeflect(kind);
+  // Spawn bright sacred-geometry crescent slash (theatrical deflect satisfaction)
+  deflectSlashes.push({
+    x: obs.x,
+    y: obs.y + (obs.h || 28) * 0.5,
+    life: 0.32,
+    kind,
+    rot: (kind === 'dash' ? -0.6 : 0.7) + (Math.random() - 0.5) * 0.4
+  });
+}
+
+// Lane swish ribbon (quick living fabric trail on swap — body as instrument, ribbons have will)
+function spawnLaneSwish(x, y, dir) {
+  laneSwishes.push({
+    x, y,
+    dir,            // -1 left, +1 right
+    life: 0.28,
+    phase: Math.random() * Math.PI * 2
+  });
+}
+
+// Trigger swish from input sites (keeps one place for effect)
+function changeLane(dir) {
+  const before = player.targetLane;
+  if (dir < 0 && player.targetLane > -1) player.targetLane--;
+  else if (dir > 0 && player.targetLane < 1) player.targetLane++;
+  if (player.targetLane !== before && state === 'playing') {
+    spawnLaneSwish(player.x, player.y + player.height * 0.4, dir);
+  }
 }
 
 // ========== DRAW ==========
@@ -839,11 +916,23 @@ function draw() {
   gctx.lineTo(W, groundY);
   gctx.stroke();
 
+  // Super ritual ground aura (living power flows into lanes)
+  if (superActive) {
+    gctx.strokeStyle = `rgba(249,168,212,${0.35 + Math.sin(gameTime*4)*0.15})`;
+    gctx.lineWidth = 3;
+    gctx.beginPath();
+    gctx.moveTo(0, groundY + 1);
+    gctx.lineTo(W, groundY + 1);
+    gctx.stroke();
+  }
+
   if (state === 'playing' || state === 'gameover' || state === 'start') {
     drawPlayer();
     drawShards();
     drawObstacles();
     drawTrailParticles();
+    drawLaneSwishes();
+    drawDeflectSlashes();
     drawParticles();
     drawSuperEffects();
   }
@@ -1063,6 +1152,53 @@ function drawTrailParticles() {
   }
 }
 
+function drawLaneSwishes() {
+  for (const s of laneSwishes) {
+    const a = Math.max(0.08, s.life * 1.6);
+    gctx.save();
+    gctx.globalAlpha = a;
+    gctx.strokeStyle = s.dir > 0 ? '#f9a8d4' : '#e0aaff';
+    gctx.lineWidth = 2.2;
+    gctx.shadowColor = '#c026ff';
+    gctx.shadowBlur = 6;
+    const len = 18 + (1 - s.life) * 14;
+    const cy = s.y + Math.sin(gameTime * 18 + s.phase) * 3;
+    gctx.beginPath();
+    gctx.moveTo(s.x - (s.dir > 0 ? 0 : len), cy - 2);
+    gctx.quadraticCurveTo(
+      s.x + s.dir * len * 0.4, cy + Math.sin(s.phase) * 4,
+      s.x + s.dir * len, cy + 1
+    );
+    gctx.stroke();
+    gctx.restore();
+  }
+  gctx.globalAlpha = 1;
+}
+
+function drawDeflectSlashes() {
+  for (const s of deflectSlashes) {
+    const a = Math.max(0.1, s.life * 1.8);
+    gctx.save();
+    gctx.translate(s.x, s.y);
+    gctx.rotate(s.rot + (1 - s.life) * 0.4 * Math.sign(s.rot));
+    gctx.globalAlpha = a;
+    gctx.strokeStyle = '#fde68a';
+    gctx.lineWidth = 2.6;
+    gctx.shadowColor = '#f0abfc';
+    gctx.shadowBlur = 11;
+    // Bright crescent geometry (sacred, high-energy deflect)
+    gctx.beginPath();
+    gctx.arc(0, 0, 13, -1.1, 1.1);
+    gctx.stroke();
+    gctx.lineWidth = 1.4;
+    gctx.beginPath();
+    gctx.arc(0, 0, 8, -0.9, 0.9);
+    gctx.stroke();
+    gctx.restore();
+  }
+  gctx.globalAlpha = 1;
+}
+
 function drawParticles() {
   for (const p of particles) {
     gctx.fillStyle = p.color;
@@ -1095,7 +1231,7 @@ function drawSuperEffects() {
     uctx.shadowBlur = 8;
     uctx.beginPath();
     uctx.moveTo(px - 14 - r * 3, py - 10);
-    // Living ribbon curve (quadratic for fabric memory + will)
+    // Living ribbon curve (quadratic for fabric memory + will) + secondary whip curl
     const cx1 = px - 8 + Math.cos(phase) * amp * 0.6;
     const cy1 = py - 18 - Math.sin(phase * 0.8) * (amp * 0.7);
     const cx2 = px + 6 + Math.cos(phase + 1.2) * amp * 0.5;
@@ -1105,6 +1241,13 @@ function drawSuperEffects() {
     uctx.quadraticCurveTo(cx1, cy1, cx2, cy2);
     uctx.quadraticCurveTo(cx2 + 10, cy2 + 8, ex, ey);
     uctx.stroke();
+    // Extra living flick at tip (fabric has will)
+    if (r === 1) {
+      uctx.beginPath();
+      uctx.moveTo(ex, ey);
+      uctx.quadraticCurveTo(ex + Math.cos(phase*1.7)*7, ey - 6 + Math.sin(phase)*5, ex + 4, ey + 4);
+      uctx.stroke();
+    }
     uctx.restore();
   }
 
@@ -1231,17 +1374,21 @@ function drawGameOver() {
   uctx.font = `${Math.min(15, W*0.032)}px sans-serif`;
   uctx.fillText(`Waves Survived: ${wave}`, W/2, H*0.535);
 
-  const btnW = Math.min(200, W * 0.45);
-  const btnH = 44;
+  const btnW = Math.min(220, W * 0.52);
+  const btnH = 48;
   const btnX = W/2 - btnW/2;
   const btnY = H*0.62;
   uctx.fillStyle = '#ec4899';
   uctx.beginPath();
-  uctx.roundRect ? uctx.roundRect(btnX, btnY, btnW, btnH, 22) : uctx.fillRect(btnX, btnY, btnW, btnH);
+  uctx.roundRect ? uctx.roundRect(btnX, btnY, btnW, btnH, 24) : uctx.fillRect(btnX, btnY, btnW, btnH);
   uctx.fill();
   uctx.fillStyle = '#fff';
-  uctx.font = `bold ${Math.min(18, W*0.04)}px sans-serif`;
+  uctx.font = `bold ${Math.min(19, W*0.042)}px sans-serif`;
   uctx.fillText('✦ Run Again ✦', W/2, btnY + btnH/2 + 6);
+
+  uctx.fillStyle = '#c4b5fd';
+  uctx.font = `${Math.min(12, W*0.026)}px sans-serif`;
+  uctx.fillText('R  ·  tap  ·  space', W/2, btnY + btnH + 22);
 }
 
 // ========== INPUT ==========
@@ -1266,9 +1413,9 @@ document.addEventListener('keydown', (e) => {
   if (state !== 'playing') return;
 
   if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-    if (player.targetLane > -1) player.targetLane--;
+    changeLane(-1);
   } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-    if (player.targetLane < 1) player.targetLane++;
+    changeLane(1);
   } else if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') && player.grounded) {
     player.vy = JUMP_FORCE;
     player.jumping = true;
@@ -1318,16 +1465,11 @@ document.addEventListener('touchstart', (e) => {
     return;
   }
   if (state === 'gameover') {
-    const t = e.touches[0];
-    const btnW = Math.min(200, W * 0.45);
-    const btnX = W/2 - btnW/2;
-    const btnY = H*0.62;
-    if (t.clientX >= btnX && t.clientX <= btnX + btnW && t.clientY >= btnY && t.clientY <= btnY + 44) {
-      ensureAudio();
-      resetGame();
-      state = 'playing';
-      document.getElementById('startScreen').style.display = 'none';
-    }
+    // Any tap on gameover restarts (large forgiving target, clear controls)
+    ensureAudio();
+    resetGame();
+    state = 'playing';
+    document.getElementById('startScreen').style.display = 'none';
     return;
   }
   if (state !== 'playing') return;
@@ -1358,8 +1500,7 @@ document.addEventListener('touchend', (e) => {
 
   if (dt < 300) {
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30) {
-      if (dx < 0 && player.targetLane > -1) player.targetLane--;
-      else if (dx > 0 && player.targetLane < 1) player.targetLane++;
+      changeLane(dx < 0 ? -1 : 1);
     } else if (Math.abs(dy) > 30) {
       if (dy < 0 && player.grounded) {
         player.vy = JUMP_FORCE;
@@ -1377,10 +1518,10 @@ document.addEventListener('touchend', (e) => {
 
 // Touch buttons
 document.getElementById('btnLeft')?.addEventListener('pointerdown', () => {
-  if (state === 'playing' && player.targetLane > -1) { player.targetLane--; }
+  if (state === 'playing') { changeLane(-1); }
 });
 document.getElementById('btnRight')?.addEventListener('pointerdown', () => {
-  if (state === 'playing' && player.targetLane < 1) { player.targetLane++; }
+  if (state === 'playing') { changeLane(1); }
 });
 document.getElementById('btnUp')?.addEventListener('pointerdown', () => {
   if (state === 'playing' && player.grounded) {
@@ -1445,6 +1586,9 @@ initScenery();
 player.x = getLaneX(0);
 player.y = getGroundY() - player.height - 2;
 player.targetLane = 0;
+// Subtle best score on start card (motivation, no generic copy)
+const bestEl = document.getElementById('startBest');
+if (bestEl && highScore > 0) bestEl.textContent = `★ Best: ${highScore.toLocaleString()}`;
 requestAnimationFrame(gameLoop);
 
 })();

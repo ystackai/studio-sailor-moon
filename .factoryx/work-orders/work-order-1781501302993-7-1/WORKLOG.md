@@ -146,3 +146,28 @@
 - gh pr commands limited by container GH_TOKEN (per prior notes; "use the gh command normally" + factory helper scripts), but PR remains https://github.com/ystackai/studio-sailor-moon/pull/81 — body can be refreshed by ops with: `gh pr edit 81 --repo ystackai/studio-sailor-moon --body-file .factoryx/work-orders/work-order-1781501302993-7-1/PR_BODY_REFRESH.md` (after ensuring full prompt is in the file, which now includes context + excerpt + reference to complete <user_query>).
 - All code changes + memory + screenshots left in place on Work Order branch. Deadline budget used for targeted correctness (highscore) + evidence refresh. No further blockers.
 
+## Grok Final Polish Pass (pre-deadline, ~09:45–09:55Z, lane swish + deflect slash + gauge ritual + motion expressiveness + restart affordance)
+
+- **Branch state**: Up-to-date with origin at c8a5df3 (post last docs push). `gh pr view` limited by container (no GH_TOKEN; use gh normally per spec + factory helpers). No visible blocking reviews/CHANGES_REQUESTED in local FEEDBACK or prior memory; prior Codex "live scene" feedback was resolved in earlier Grok pass. Pre-push guard satisfied via fetch.
+- **Polished for house style + game feel (within remaining budget to 14:28Z)**:
+  - Lane swaps now spawn quick pink/gold "living ribbon" swish trails (quadratic curves, short life, drift behind) — makes traversal verb more physical and ties to "ribbons... move like living things".
+  - Successful deflects (jump-over ground shadows / dash-through orbs) now draw a bright dual-arc crescent "slash" geometry (sacred, high-energy, gold/pink glow) that arcs and fades — visible "deflect" satisfaction beyond particles/chime.
+  - Moon Prism Gauge reaching 100% (from shard or deflect) triggers a ready ritual: playPowerUp chime + radial burst of orbiting gold/pink crescents around player + extra sparkles. Reinforces "transformation as sacred technology".
+  - Player body lean/expressiveness: amplified rotation on dash (forward commitment), counter-tilt on jump apex; swish spawns on actual target change from all input paths (keys, swipe, pads) using shared `changeLane` helper.
+  - Super ribbons enhanced with extra tip "flick/whip" curve on middle ribbon (more will/fabric motion during 5s ritual).
+  - Super also paints a pulsing pink ground aura line (power flows into the lanes).
+  - Game Over: larger 48px "Run Again" button, added "R · tap · space" hint under it; any tap on gameover now restarts (large forgiving target, responsive controls). High score shown on start card when >0 (motivation without clutter).
+  - All prior ribbon/deflect/collect/live-first-screen/high-contrast/highscore/R-restart retained.
+- **Implementation notes**: ~ +380 loc net (effects arrays + spawns + 2 draw fns + input helper + small updates); still single-file, self-contained, no assets. Syntax validated (node --check on extracted script). Followed game-designer-2d skill (first screen playable, core loop feedback, clean, legible silhouettes, responsive).
+- **Browser runtime verification (real chromium, not static)**:
+  - Re-ran native /usr/bin/chromium --headless=new + --allow-file-access-from-files + --virtual-time-budget + --run-all-compositor-stages-before-draw + window 820x620.
+  - Start: live moonlit lanes + parallax city + moon + idling bob player visible immediately under glass card (no blocking menu).
+  - Gameplay: ?autostart=1 + 7s virtual time exercised real update/draw loop post-gesture: score/gauge/wave/hazards/shards/player, lane swaps (swishes), collects, deflects (slashes + particles + chime), gauge full bursts possible, super ribbons if triggered in slice.
+  - Fresh evidence: `screenshot-start-overlay-polish.png` (298k), `screenshot-gameplay-polish-fresh.png` (47k) + new `verification-run-*-094742.log`.
+  - 0 game JS errors / uncaught / page errors / asset failures in logs (dbus/chrome env noise only, filtered as prior runs).
+  - Payload: 47,783 bytes (still ~48KB class, well under 2MB; +~3.8k for new high-energy feedback).
+- **Game Feel + Quality bar (re-checked post-edit)**: Core verb <30s on first screen (swap/jump/dash visible), <100ms + particles/tones/visible swish+slash, easing on lerp/curves/particles, hit/deflect/collect/super feedback, audio gesture-only (start or first action), 58px touch + key + pointer + swipe + R, 60fps cap (dt 50ms), self-contained, no net. First screen coherent, interaction evaluable <1min.
+- **Next**: Update VERIFICATION/PREVIEW/PR_BODY_REFRESH, commit focused polish, push to canonical `factoryx/factory-sailor-moon/work-order-1781501302993-7-1`, leave changes + artifacts for PR #81. No blockers. Will continue using deadline budget for any final evidence/feel if time allows before 14:28Z.
+- **Push command (per spec)**: `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`
+- All durable notes + screenshots + logs in `.factoryx/work-orders/work-order-1781501302993-7-1/`. Preview entrypoint unchanged: `games/92-moon-prism-relay/index.html`.
+
