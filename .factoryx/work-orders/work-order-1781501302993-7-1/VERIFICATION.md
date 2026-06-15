@@ -441,3 +441,30 @@ https://github.com/ystackai/studio-sailor-moon/pull/81
 - Redeploy reset issue was addressed earlier (9f01d47 + evidence refreshes); this is pure pre-deadline feel + currency polish on the same branch.
 - Ready for CI + human review on https://github.com/ystackai/studio-sailor-moon/pull/81 . All changes + fresh evidence + logs + memory on Work Order branch.
 - Full prompt + FactoryX Work Order Context in PR body + work order dir.
+
+## Grok Pre-Deadline Polish + Verification (wave power surge for escalating waves + gift shards, ~10:22Z)
+
+**Polish summary (small, high-signal, goal-aligned)**: See PREVIEW.md latest section. Added waveFlash (1.3s), bright gold energized lane dashes + ground relay line + accent ticks during surge, 2 immediate gift shards + extra particles on wave advance (makes "✦ WAVE N ✦" a literal power relay moment — bright, high-energy, theatrical per Sailor Moon house: ribbons/lanes as living, crescents/geometry as power). No scope creep; reuses all prior systems; payload +~0.5k still ~52.4k.
+
+**Environment (consistent)**: Chromium 149.0.7827.114 native, 820×620, --headless=new, --disable-gpu --no-sandbox, --allow-file-access-from-files, --virtual-time-budget=7500/1500, --run-all-compositor-stages-before-draw, ?autostart=1 for post-gesture real gameplay.
+
+**Verification results (post-edit)**:
+- Start overlay (1.5s): `screenshot-start-overlay-fresh-20260615-1022.png` (300k) — live moonlit lanes (parallax buildings, stars, glowing moon, idling bobbing player) visible immediately behind compact glass card with thematic copy + best + legend. No blocking menu. First screen playable.
+- Gameplay (7.5s autostart): `screenshot-gameplay-polish-fresh-20260615-1022.png` (47k) — exercised real loop: ✦ score + ★ PB badge, pulsing gauge, wave indicator, moving shards (gold diamond + shine) + hazards (shadows/orbs/spikes), player with lean/rotation/trail, collect/deflect pops (gold/blue + ★ BEST when cross), super possible, lane swishes/slashes/ribbons. WaveFlash draw paths (brighter lanes + gold ground) covered in compositor render.
+- Log `verification-run-20260615-1022-wave.log`: post-filter (strip dbus/object_proxy/UPower/bus.cc/NameHasOwner noise exactly as all prior): **0 uncaught JS exceptions, 0 game console.error, 0 pageerror, 0 request/asset/net failures**. Only container chatter + success "bytes written".
+- PNGs validated as proper 820x620 (not blank/1x1); sizes consistent with healthy prior (start ~300k, gameplay ~47k).
+- Autostart path: gesture gate (audio), full update+draw+spawn+physics+input+scoring+gauge+wave+effects exercised.
+- Also 3s sanity post-edit shot (waveflash-test.png) clean load.
+
+**Re-validated checklists (no drift from polish)**:
+- Game Feel 9/9: Core verb <30s (visible lanes + player + controls legend on load); <100ms response + visible (now + bright gold surge + incoming gift shards on wave); easing (lane lerp, prior physics, flash decay); hit/score/deflect/collect/super/wave + record pops (new surge visuals reinforce escalation); audio gesture only; touch 58px + key + swipe + R + pointer + center super; 60fps (dt cap, simple canvas); <2MB (52.4k self-contained); no external net.
+- Quality bar: first screen makes sense w/o explanation (live scene + one clear ✦ Start + thematic 3-line + best); interaction coherent <1min (taste-gate slice of traversal+deflect+collect+super+escalation); verification actually ran (real chromium + virtual + autostart); live preview clean (no runtime errors); human review ready.
+- House style: wave escalation now a "prism relay" ritual — lanes light with moonlight power, shards arrive as gift, banner + crescent tie-in. Sincere, not ironic; geometry (gold accents) as tech.
+
+**Screenshots (this pass)**:
+- `screenshot-start-overlay-fresh-20260615-1022.png` (300k)
+- `screenshot-gameplay-polish-fresh-20260615-1022.png` (47k)
+- Retained prior + waveflash-test sanity shot.
+
+**Notes**: Redeploy reset after verifier image rollout was addressed in prior commits (9f01d47 + multiple 10:02–10:17 fresh re-verifs in rolled-out env, 0 errors). This continues evidence currency with new chromium (.114) + post-polish run. All artifacts + full prompt context in PR #81 body. Ready for CI + review. No blockers. Followed game-designer-2d skill + WORKFLOW (browser-game-2d) + house style.
+

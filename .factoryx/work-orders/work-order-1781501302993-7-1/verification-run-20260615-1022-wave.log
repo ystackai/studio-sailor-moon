@@ -1,0 +1,7 @@
+Post-wave-polish fresh chromium verification 2026-06-15 ~10:22Z (wave escalation lanes+ground surge + gift shards polish exercised via real loop; using polish_until_deadline budget)
+Start overlay (1.5s): 300456 bytes, live playable moonlit city lanes + idling player under glass card (first screen).
+Gameplay (7.5s ?autostart=1): 47114 bytes, real update/draw loop post-gesture, score/gauge/wave/shards/hazards/player/PB/pops + new waveFlash paths in draw (lane alpha + gold ground accents when active).
+Chromium 149.0.7827.114, same --headless=new --virtual-time --run-all... flags.
+Filtered: 0 uncaught/JS/console.error/pageerror/asset failures (dbus container noise only, identical signature).
+All Game Feel/Quality/taste-gate/house style hold; new escalation visual (bright gold relay lines + energized lanes + immediate prism gift shards on wave++) is high-energy, theatrical, non-generic, directly serves "escalating waves" + core bright readable.
+Preview entrypoint unchanged.

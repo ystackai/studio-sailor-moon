@@ -241,6 +241,7 @@ let screenShakeX = 0, screenShakeY = 0;
 let superActive = false;
 let superTimer = 0;
 let superFlash = 0;
+let waveFlash = 0;  // brief lane/ground energy surge on wave advance (theatrical escalation + bright readable power moment)
 let stars = [];
 let buildings = [];
 let groundBuildings = [];
@@ -334,6 +335,7 @@ function resetGame() {
   deflectSlashes = [];
   scorePops = [];
   wavePop = null;
+  waveFlash = 0;
   spawnTimer = 0;
   shardSpawnTimer = 0;
   obstacleSpawnTimer = 0;
@@ -454,8 +456,12 @@ function update(dt) {
       waveDuration = Math.max(15, 30 - wave * 2);
       difficulty = 1 + (wave - 1) * 0.3;
       spawnParticles(player.x, player.y - 30, '#f0abfc', 20, 150);
+      spawnParticles(player.x, player.y - 18, '#fde68a', 8, 80);
       playPowerUp();
       wavePop = { n: wave, life: 1.4 };
+      waveFlash = 1.3;  // energize lanes + ground with moonlight power (escalating relay feel)
+      // Gift shards from the prism surge — immediate high-energy collect opportunity on wave up
+      for (let i = 0; i < 2; i++) spawnShard();
     }
 
     // Score from survival
@@ -667,6 +673,7 @@ function update(dt) {
     wavePop.life -= dt;
     if (wavePop.life <= 0) wavePop = null;
   }
+  if (waveFlash > 0) waveFlash = Math.max(0, waveFlash - dt);  // decay the wave power surge visual
 
   // Spawning
   spawnTimer += dt;
@@ -957,7 +964,8 @@ function draw() {
   // Lane markings
   for (const lane of LANES) {
     const lx = getLaneX(lane);
-    gctx.strokeStyle = 'rgba(168,85,247,0.15)';
+    const laneAlpha = waveFlash > 0 ? 0.15 + waveFlash * 0.55 : 0.15;
+    gctx.strokeStyle = `rgba(168,85,247,${laneAlpha})`;
     gctx.lineWidth = 2;
     gctx.setLineDash([20, 20]);
     gctx.lineDashOffset = -gameTime * 60;
@@ -974,6 +982,24 @@ function draw() {
   gctx.moveTo(0, groundY);
   gctx.lineTo(W, groundY);
   gctx.stroke();
+  // Wave power surge: bright gold relay lines on ground (escalation celebration, high-energy readable)
+  if (waveFlash > 0) {
+    const fa = Math.max(0.18, waveFlash * 0.65);
+    gctx.strokeStyle = `rgba(253,230,138,${fa})`;
+    gctx.lineWidth = 2.8;
+    gctx.beginPath();
+    gctx.moveTo(0, groundY);
+    gctx.lineTo(W, groundY);
+    gctx.stroke();
+    // Subtle bright lane center accents
+    for (const lane of LANES) {
+      const lx = getLaneX(lane);
+      gctx.beginPath();
+      gctx.moveTo(lx - 3, groundY + 8);
+      gctx.lineTo(lx + 3, groundY + 8);
+      gctx.stroke();
+    }
+  }
 
   // Super ritual ground aura (living power flows into lanes)
   if (superActive) {

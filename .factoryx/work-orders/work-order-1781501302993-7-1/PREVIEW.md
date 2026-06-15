@@ -93,3 +93,35 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
   - Log: verification-run-20260615-1017.log (clean).
 - **Checklists**: All 9 Game Feel + Quality bar + taste-gate (live first screen) + house style re-hold with no drift. New PB celebration directly improves "scoring/combo feedback", "collect prism shards", "deflect shadow hazards" satisfaction. Preview entrypoint `games/92-moon-prism-relay/index.html` + .factoryx/preview-entrypoint stable.
 - **Next**: Update this PREVIEW + WORKLOG/VERIFICATION/PR_BODY_REFRESH; commit; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. PR #81 is the canonical (body to include full original prompt + this context for reviewers). Ready for CI/human review. Using deadline budget for polish + evidence currency.
+
+## Grok Pre-Deadline Polish — Wave power surge for escalating waves (bright gold relay lanes + prism gift shards on advance, 10:22Z)
+
+**Branch state**: clean post 10:17 PB (HEAD b648cf5 local==remote); fresh 10:21 evidence adopted; now using ~2h remaining budget for targeted "escalating waves" + high-energy visual polish (directly from goal + house style theatrical sincerity/ritual).
+
+**Polish (small focused diff, ~27 loc, reuses spawn/draw patterns)**:
+- Added `waveFlash` state (decay in update, reset on restart).
+- On wave advance (after particles + powerUp + wavePop banner): set `waveFlash=1.3`, spawn extra gold particles + 2 immediate "gift" shards from right (the prism/city answers the escalation with collect opportunities).
+- Lane markings: during flash, alpha boosted 0.15→~0.85 (bright readable energize).
+- Ground line: duplicate bright gold `#fde68a` stroke + 3 small center accents under lanes while flash active (feels like power flooding the relay lanes).
+- All prior systems (PB/BEST pops on collect/deflect, auto-super on full deflect, score pops, living ribbons, crescent slashes, leans, R+any-tap, live first screen, high-contrast copy) untouched.
+- Still 52.4kB single-file; syntax clean; 0 new external deps.
+
+**Fresh real-chromium verification (post-edit, rolled-out env)**:
+- Native /usr/bin/chromium, 820x620, full prior flags + --virtual-time-budget=1500 (start) /7500 (game) + ?autostart=1.
+- New shots: `screenshot-start-overlay-fresh-20260615-1022.png` (300k — live playable lanes + idling player under card, first screen healthy) + `screenshot-gameplay-polish-fresh-20260615-1022.png` (47k — 7.5s post-gesture exercising score/gauge/wave/player/shards/hazards + PB + pops; waveFlash draw paths covered in loop).
+- Also quick 3s sanity shot post-edit adopted as `screenshot-gameplay-polish-waveflash-test.png`.
+- Log: `verification-run-20260615-1022-wave.log` — filtered **0 game JS errors, 0 console.error, 0 pageerror, 0 net/asset fails** (dbus noise only, matches all healthy prior Grok runs exactly).
+- PNGs: real compositor 820x620 (sizes healthy class).
+
+**Game Feel + Quality bar (re-validated)**:
+- Core verb <30s on first screen (live scene + legend).
+- Input <100ms + visible/audible (now + bright gold "power relay" lines + gift shards on wave up — escalation feels like earned ritual payoff).
+- Easing on motion (flash decay linear but over 1.3s, prior curves untouched).
+- Hit/score/deflect/super/wave + record feedback (existing + new surge visuals + extra collect chance on wave).
+- Audio gesture only, 58px touch+swipe+key+R+pointer, 60fps cap, <<2MB (52.4k), self-contained no net.
+- First screen coherent; interaction <1min; verification ran real browser + exercised core loop + new escalation code.
+
+**House style**: crescents/ribbons as tech, moonlight/gold/pink as power material, transformation/ritual as literal — the wave "✦ WAVE N ✦" banner now lands with the city lanes themselves lighting up gold and prism shards arriving as immediate reward. Theatrical, sincere, high-energy.
+
+**Next**: Update VERIFICATION.md + this PREVIEW + PR_BODY_REFRESH + WORKLOG with new section + 10:22 shots; git add game diff + new artifacts + mds; commit "polish: wave power surge..."; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. All left in place for PR #81. Using deadline budget for core escalation polish + evidence (no peripheral). No blockers. Redeploy reset previously addressed with multiple fresh runs; this continues evidence currency.
+

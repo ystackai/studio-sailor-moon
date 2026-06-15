@@ -283,3 +283,23 @@
 **Next**: Update VERIFICATION.md (new section + re-checks + fresh shots), PREVIEW.md (PB polish callout + 10:17 shots), PR_BODY_REFRESH.md (include this + full prompt), git add the 3 new artifacts + md updates; commit "polish: live PB + ★ BEST celebration pops for scoring feedback (fresh 10:17 chromium verif)"; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. All artifacts + code left in place for canonical PR #81. Using deadline budget for this targeted feel + evidence. No blockers.
 
 House style + game-designer-2d + WORKFLOW followed.
+
+## 2026-06-15 ~10:22Z Grok (wave escalation surge polish + fresh post-edit chromium 7.5s evidence)
+
+- Inspected: branch up-to-date (local==remote 00), PR #81 (gh limited by env but FEEDBACK/memory show no unresolved CHANGES_REQUESTED or blocking admin; prior redeploy address complete), current HEAD b648cf5 (PB scoring), fresh 10:21 evidence already adopted, game code healthy.
+- **Targeted polish (escalating waves + high-energy visual payoff, per goal "escalating waves", "bright, readable, high-energy", avoid generic)**: 
+  - waveFlash timer + decay.
+  - On wave++: extra gold particles, 2 gift shards spawn (immediate collect reward from the "relay"), set flash.
+  - Draw: lane dashes alpha-boost + bright gold ground "power line" + 3 small lane-center accents while flash >0 (the lanes themselves become the ritual circle for a moment).
+  - Fits house: ribbons/lanes as living fabric/tech, gold/moonlight as material power, wave advance as sincere theatrical escalation not just number tick.
+  - Small diff (+27 loc), reuses spawnParticles/spawnShard/draw patterns, no new state machines or UI panels.
+  - Syntax: node --check on extracted <script> passed.
+  - Quick post-edit 3s chromium + full 7.5s+start verif: clean loads, 0 game errors, new draw paths exercised in compositor.
+- **Browser runtime verification (real native chromium, post-polish, rolled-out env, ?autostart exercised loop)**: 
+  - 10:22Z run: start-overlay-fresh-20260615-1022.png (300k, live first screen), gameplay-polish-fresh-20260615-1022.png (47k, active play + waveFlash visuals in render), verification-run-20260615-1022-wave.log (clean: 0 uncaught/JS/console/page/net errors after filter).
+  - Re-adopted waveflash-test.png from 3s sanity.
+  - Checklists: all 9 Game Feel + Quality bar + taste-gate + house re-hold exactly (escalation now has satisfying bright "power relay" feedback on the lanes + gift shards; core verb still immediate on first screen).
+- **Redeploy note**: Previous run issue "redeploy reset after verifier image rollout" was explicitly addressed (9f01d47 + 10:02–10:17 multiple fresh re-runs in post-rollout image, 0 errors, newbest/highscore exercised). This 10:21/10:22 evidence keeps currency on current image (.114) + post-polish.
+- **Next**: Append matching sections to PREVIEW/VERIFICATION/PR_BODY_REFRESH; git add -A (game + 10:22 pngs + logs + mds); commit "polish: wave power surge lanes + gift shards on escalation (bright readable high-energy relay feel); fresh chromium verif; update WORKLOG/VERIFICATION/PREVIEW/PR_BODY + adopt artifacts; pre 14:28Z deadline polish_until_deadline"; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. Leave all for canonical PR #81. Using remaining deadline budget for this core improvement + evidence. No blockers.
+- Followed: WORKFLOW.md (taste-gate held, playable slice first long ago, browser verif real), game-designer-2d skill, Sailor Moon house style, Game Feel Checklist, "polish_until_deadline", "browser_runtime_verification".
+
