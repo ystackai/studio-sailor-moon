@@ -79,11 +79,11 @@ canvas#uiCanvas {
   <h1>🌙 Moon Prism Relay 🌙</h1>
   <div class="subtitle">Moonlight Racing — Prism Shard Runner</div>
   <div class="controls">
-    ← → or swipe — switch lanes<br>
-    ↑ or swipe up — jump / moon leap<br>
-    ↓ or swipe down — dash / glide<br>
-    Collect prism shards. Dodge shadows.<br>
-    Fill the Moon Gauge for Moon Prism Power!
+    ← → / swipe ◀▶ — switch lanes<br>
+    ↑ / swipe ▲ — jump over shadows<br>
+    ↓ / swipe ▼ — dash through orbs<br>
+    Collect prism shards to fill Moon Gauge<br>
+    Tap screen when full → Moon Prism Power!
   </div>
   <button id="startBtn">✦ Start Transform ✦</button>
 </div>
@@ -1055,9 +1055,12 @@ function drawUI() {
     grad.addColorStop(0, '#ec4899');
     grad.addColorStop(1, '#a855f7');
     uctx.fillStyle = grad;
+    uctx.shadowColor = '#ec4899';
+    uctx.shadowBlur = 6;
     uctx.beginPath();
     uctx.roundRect ? uctx.roundRect(gaugeX, gaugeY, gaugeW * fill, gaugeH, 7) : uctx.fillRect(gaugeX, gaugeY, gaugeW * fill, gaugeH);
     uctx.fill();
+    uctx.shadowBlur = 0;
   }
   uctx.fillStyle = '#e2e8f0';
   uctx.font = `${Math.min(11, W*0.02)}px sans-serif`;
@@ -1070,12 +1073,17 @@ function drawUI() {
   uctx.font = `${Math.min(14, W*0.025)}px sans-serif`;
   uctx.fillText(`Wave ${wave}`, W/2, 28);
 
-  // Super ready flash
-  if (moonGauge >= MOON_MAX) {
-    uctx.fillStyle = `rgba(240,171,252,${0.5+Math.sin(gameTime*6)*0.5})`;
-    uctx.font = `bold ${Math.min(18, W*0.03)}px sans-serif`;
+    // Super ready flash — pulsing, eye-catching
+  if (moonGauge >= MOON_MAX && !superActive) {
+    const pulseAlpha = 0.7 + Math.sin(gameTime * 8) * 0.3;
+    uctx.fillStyle = `rgba(250,204,21,${pulseAlpha})`;
+    uctx.font = `bold ${Math.min(20, W*0.035)}px sans-serif`;
     uctx.textAlign = 'center';
-    uctx.fillText('✦ TAP TO ACTIVATE MOON PRISM POWER! ✦', W/2, 55);
+    uctx.shadowColor = '#ec4899';
+    uctx.shadowBlur = 15;
+    uctx.fillText('✦ MOON PRISM POWER — TAP NOW! ✦', W/2, 55);
+    uctx.shadowBlur = 0;
+    }
   }
 }
 
