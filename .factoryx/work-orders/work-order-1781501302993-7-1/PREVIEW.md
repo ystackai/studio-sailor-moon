@@ -192,3 +192,22 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - `screenshot-gameplay-polish-fresh-20260615-103829.png` (47k) — 7.5s virtual autostart gameplay exercised in rolled-out env.
 - Prior shots retained.
 
+
+## Grok Fresh Chromium Evidence Refresh (~10:42Z, continuing post-redeploy address + evidence currency, pre 14:28Z deadline)
+
+**Branch state**: HEAD c667a19 (local==remote post fetch, pre-push guard). Using polish_until_deadline budget for evidence currency after redeploy-reset address (multiple prior) and post wave polish. No blocking reviews (gh limited; use configured gh + helpers normally per spec; FEEDBACK has no new unresolved).
+
+**Action**: Re-ran exact established real chromium harness (native /usr/bin/chromium, 820x620, --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=7500/1500 --run-all-compositor-stages-before-draw, ?autostart=1 for post-gesture real gameplay loop + separate start overlay) on rolled-out verifier image. Produced/adopted `screenshot-*-fresh-20260615-1042.png` (299k start / 47.5k gameplay) + `verification-run-20260615-1042*.log`.
+
+**Results**:
+  - Filtered logs (dbus/... noise strip, identical to prior): **0 uncaught JS exceptions, 0 game console.error / pageerror / request/asset/net failures**. FILTERED section empty (clean).
+  - PNGs: proper 820×620 compositor renders (sizes healthy prior class).
+  - Autostart exercised: gesture/audio gate, full loop, spawns, player (swap/jump/dash), scoring/gauge/wave/effects (PB/pops/ribbons/slashes/surges/waveFlash) in real runtime slice.
+- **Checklists re-validated (no drift)**: All 9 Game Feel + Quality bar + taste-gate (live playable first screen; core verb <30s; <100ms + feedback; easing; hit/deflect/collect/super + record + wave; audio gesture; 58px touch+key+swipe+R; 60fps; <<2MB 53.1k self-contained; no net) hold exactly. Preview entrypoint `games/92-moon-prism-relay/index.html` + .factoryx/preview-entrypoint stable.
+- **Redeploy reset addressed prior**: This 10:42Z run keeps evidence current in rolled-out image using remaining budget (no peripheral polish).
+- **Next**: Update VERIFICATION/WORKLOG/PR_BODY_REFRESH + this; git add 4 artifacts + mds; commit "docs: fresh chromium 7.5s verif evidence at 10:42Z (post-redeploy address continuation); 0 game errors...; adopt -1042 ...; pre 14:28Z..."; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. All left for canonical PR #81. House style + game-designer-2d + WORKFLOW followed (no impl change).
+
+**Screenshots (10:42Z refresh)**
+- `screenshot-start-overlay-fresh-20260615-1042.png` (299k) — live playable first screen.
+- `screenshot-gameplay-polish-fresh-20260615-1042.png` (47.5k) — 7.5s virtual autostart gameplay exercised in rolled-out env.
+- Prior shots retained.

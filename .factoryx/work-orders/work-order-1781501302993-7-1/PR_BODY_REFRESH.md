@@ -35,3 +35,22 @@ Ambitious, bright, high-energy magical-girl 3-lane arcade runner: dash/jump/skat
 
 (For brevity in this file: refer to the work-order memory or the initiating admin UI payload. The diff + .factoryx/ files + this PR body must allow evaluation against the requested "Moon Prism Relay" goal, playable first screen, core loop, polish items, browser evidence, and PR with preview.)
 
+
+## Latest Evidence (Grok, 10:42Z fresh chromium, post-redeploy address continuation)
+
+- Re-ran native chromium 7.5s autostart + 1.5s start overlay in rolled-out verifier image (no code change; evidence currency pass using polish_until_deadline budget).
+- 0 game JS errors / uncaught / pageerror / asset/net failures in filtered logs (dbus noise only, clean signature matching all prior healthy runs).
+- New screenshots: `screenshot-start-overlay-fresh-20260615-1042.png` (299k — live playable first screen with moonlit lanes + idling player under glass card) + `screenshot-gameplay-polish-fresh-20260615-1042.png` (47.5k — 7.5s virtual post-gesture exercising score/gauge/wave/shards/hazards/player + PB/pops/ribbons/slashes/surges/waveFlash).
+- "bytes written" + PNG magic/sizes confirm real compositor outputs; autostart exercised gesture gate + real game loop + core verbs + all polish.
+- All 9 Game Feel items, Quality bar, taste-gate, house style, and self-contained checks re-hold with no drift. Payload 53.1kB. Redeploy reset addressed in prior commit + refreshes; this keeps current.
+- Commit + push: "docs: fresh chromium 7.5s verif evidence at 10:42Z (post-redeploy address continuation); 0 game errors in rolled-out env; adopt -1042 screenshots + logs; update WORKLOG/VERIFICATION/PREVIEW/PR_BODY + adopt artifacts; pre 14:28Z deadline polish_until_deadline"
+- PR #81 body must include the **full original <user_query>** (with Payload JSON, description, WORKFLOW, Game Feel Checklist, GitHub branch model, "Execute this...", head guard, etc.) in the FactoryX Work Order Context section so reviewers evaluate the diff against the exact requested goal.
+
+**FactoryX Work Order Context (update PR body with this + full prompt)**
+- Work Order: work-order-1781501302993-7-1
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- Preview entrypoint: games/92-moon-prism-relay/index.html (also .factoryx/preview-entrypoint)
+- See full memory: WORKLOG.md, PREVIEW.md, VERIFICATION.md, FEEDBACK.md, TECHNICAL_SYSTEM_DESIGN.md + all screenshots + verification-run-*.log in the work-order dir.
+- Changes follow browser-game-2d playbook/WORKFLOW (taste-gate slice first, playable browser-game, responsive controls, lightweight), Game Feel Checklist (all 9), polish_until_deadline, browser_runtime_verification. Previous run "redeploy reset after verifier image rollout" addressed with fresh post-rollout evidence before any peripheral. PR #81 is the canonical (update, do not create parallel).
+
+(When refreshing PR: `gh pr edit 81 --repo ystackai/studio-sailor-moon --body-file "$WO/PR_BODY_REFRESH.md"` after ensuring the complete original user_query text is pasted into the "Full Original Prompt" area.)
