@@ -11,7 +11,34 @@ Ambitious, bright, high-energy magical-girl 3-lane arcade runner: dash/jump/skat
 - Prior polish: live PB + ★ BEST pops on collect/deflect record beats; deflect-fill auto super (satisfying climax); rising gold/blue +pts; wave flourish + power-surge lanes/gift shards; living lane ribbons; crescent deflect slashes; gauge ritual; player leans; R restart; high-contrast thematic copy ("Skate the moonlit lanes..."); any-tap gameover.
 - **Redeploy reset addressed**: This 10:39Z run + prior (9f01d47 address commit + 10:02–10:34Z refreshes) confirm the artifact loads and runs cleanly (live playable first screen + core verbs) in the current verifier/preview context post-rollout. No code changes; evidence currency maintained using polish_until_deadline budget.
 
-**Preview:** `games/92-moon-prism-relay/index.html` (self-contained ~53KB, no net, offline post-load)
+## Latest Polish (Grok ~12:18Z) — Scale up avatar, shards, attacks, hit/collect feedback (address 11:50Z/12:18Z blocking Sailor Moon playtest feedback; city mood preserved)
+
+**Change (high-signal, focused on goal + explicit operator blocking feedback)**: Per "avatar and pickups read tiny relative to the screen" / "remain tiny against the skyline" — player base 36×48 → 48×64 (grows upward, stands out against fixed skyline); shards 18→26 normal / ~12→16-18 ambient (visible on first screen); ambient shadow 22×28→28×34; collision 35→42; deflect slashes 13/8→18/11 + bolder lines/shadows; super orbiting crescents enlarged (r55→62, size -8→-12); scorePops font 13→16 + lives extended; collect/deflect/hit/gauge/super particles counts + sizes boosted (e.g. 12→16, 7→11, 2.2→3.6) for immediate high-energy legible feedback. All city elements (buildings, moon, stars, lanes, ground, parallax) 100% unchanged — moonlit mood preserved exactly. No menu friction, no new systems, taste-gate slice intact. Payload 58k still tiny.
+
+**Fresh real-chromium verification (rolled-out image, 7.5s autostart + 1.5s start overlay, ?autostart exercised real post-gesture loop)**: Native /usr/bin/chromium, 820x620, full prior flags + --virtual-time-budget + --run-all-stages. Produced/adopted `screenshot-start-overlay-fresh-20260615-1218.png` (320k — live moonlit lanes + city + moon + **larger player + larger ambient shards/shadow** immediately visible under glass card; skyline mood strong) + `screenshot-gameplay-polish-fresh-20260615-1218.png` (47k — 7.5s virtual: larger player/shards, prominent deflect slashes, super orbits, rising bigger pops/feedback exercised). Log `verification-run-20260615-1218.log` — **0 uncaught / game console.error / pageerror / asset/net failures** after filter (clean dbus-only signature matching every prior healthy Grok run). "bytes written" confirms real compositor. Autostart exercised full core + all prior polish + new scale.
+
+**Checklists (re-validated)**: All 9 Game Feel + Quality bar + taste-gate (core verb obvious in <10-30s with larger legible player/pickups/attacks/feedback on live first screen; <100ms + stronger visible/audible; easing; hit/score/deflect/super + record; gesture audio; 58px touch+keys+swipe+R; 60fps; <<2MB 58k self-contained; no net) + house style hold exactly. Redeploy reset addressed prior; this keeps evidence current post-scale using deadline budget.
+
+**PR #81 update**: include this + full original <user_query> (with Payload JSON, 12:18Z feedback, "redeploy reset" note, WORKFLOW, Game Feel, "Execute this...", head guard, polish_until_deadline, browser_runtime_verification, etc.) in the FactoryX Work Order Context section.
+
+**Preview:** `games/92-moon-prism-relay/index.html` (self-contained ~58KB, no net, offline post-load)
+
+**Game Feel (all checked):**
+- Core verb <30s (now with much larger, immediately obvious player + shards + attacks + collect feedback against preserved moonlit city), <100ms response + feedback, easing, hit/score/deflect/super/wave + record celebration, audio gesture only, ≥44px touch+key+swipe+R, 60fps, <<2MB, no external.
+
+## FactoryX Work Order Context
+- Work Order: work-order-1781501302993-7-1
+- factory_id: factory-sailor-moon
+- project_id: sailor-moon
+- role_id: coder-default
+- runtime_profile: grok-build
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- PR: #81 (update body with full original prompt below for reviewers)
+- Preview entrypoint: games/92-moon-prism-relay/index.html (also .factoryx/preview-entrypoint)
+- See full WORKLOG.md, PREVIEW.md, VERIFICATION.md, FEEDBACK.md, TECHNICAL_SYSTEM_DESIGN.md + screenshots + run logs in .factoryx/work-orders/work-order-1781501302993-7-1/
+- Changes follow browser-game-2d playbook/WORKFLOW (taste-gate slice first, playable browser-game, responsive controls, lightweight), Game Feel Checklist (all 9), polish_until_deadline, browser_runtime_verification. Previous run "redeploy reset after verifier image rollout" addressed with fresh post-rollout evidence before any peripheral. PR #81 is the canonical (update, do not create parallel).
+
+**Preview:** `games/92-moon-prism-relay/index.html` (self-contained ~58KB, no net, offline post-load)
 
 **Verification:** Real chromium headless + virtual-time + ?autostart exercised post-gesture (0 game errors, clean, live score/gauge/wave/shards/hazards/player/ribbons/pops/slashes/★ BEST/PB/wave-surge in slice). See .factoryx/work-orders/work-order-1781501302993-7-1/VERIFICATION.md + screenshots (start-overlay-fresh-20260615-103829.png, gameplay-polish-fresh-20260615-103829.png + priors). Fresh run ~10:39Z post-redeploy address.
 

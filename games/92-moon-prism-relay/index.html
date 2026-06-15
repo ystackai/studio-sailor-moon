@@ -269,8 +269,8 @@ let player = {
   dashing: false,
   dashTimer: 0,
   grounded: true,
-  width: 36,
-  height: 48,
+  width: 48,
+  height: 64,
   invincible: false,
   invincibleTimer: 0,
   rotation: 0,
@@ -380,7 +380,7 @@ function spawnShard() {
     lane: lane,
     targetX: getLaneX(lane),
     y: getGroundY() - 30 - Math.random() * 60,
-    size: 18,
+    size: 26,
     rotation: 0,
     glow: 0,
     collected: false,
@@ -471,7 +471,7 @@ function updateDemoAmbience(dt, speedMul) {
       lane: lane,
       targetX: getLaneX(lane),
       y: getGroundY() - 26 - Math.random() * 52,
-      size: 13,
+      size: 18,
       rotation: Math.random() * 5,
       glow: 0.35,
       collected: false,
@@ -492,7 +492,7 @@ function updateDemoAmbience(dt, speedMul) {
         lane: lane,
         targetX: getLaneX(lane),
         y: getGroundY() - 34,
-        w: 24, h: 30,
+        w: 28, h: 34,
         type: 'shadow',
         eyes: 1,
         hit: false,
@@ -503,7 +503,7 @@ function updateDemoAmbience(dt, speedMul) {
 
   // Subtle prism feedback: twinkle particles when an ambient shard "passes" the player zone (clear relay/collect motion)
   for (const s of shards) {
-    if (s.ambient && !s._twinkled && s.x < player.x + 18 && s.x > player.x - 70) {
+    if (s.ambient && !s._twinkled && s.x < player.x + 24 && s.x > player.x - 80) {
       s._twinkled = true;
       spawnParticles(s.x + 6, s.y, '#fde68a', 2, 24);
     }
@@ -703,7 +703,7 @@ function update(dt) {
       const dx2 = player.x - shard.x;
       const dy2 = (player.y + player.height/2) - shard.y;
       const dist = Math.sqrt(dx2*dx2 + dy2*dy2);
-      if (dist < 35) {
+      if (dist < 42) {
         shard.collected = true;
         collectShard(shard);
         shards.splice(i, 1);
@@ -771,7 +771,7 @@ function collectShard(shard) {
   comboMultiplier = 1 + Math.floor(combo / 5) * 0.5;
   const points = Math.floor(10 * comboMultiplier);
   score += points;
-  scorePops.push({ x: shard.x, y: shard.y - 8, val: points, life: 0.85, color: '#fde68a' });
+  scorePops.push({ x: shard.x, y: shard.y - 8, val: points, life: 0.98, color: '#fde68a' });
   if (score > highScore) {
     const prevBest = highScore;
     highScore = score;
@@ -796,24 +796,24 @@ function collectShard(shard) {
         vy: Math.sin(ang) * (50 + Math.random()*20) - 20,
         life: 0.9,
         decay: 0.9,
-        size: 2.2 + Math.random(),
+        size: 3.2 + Math.random() * 1.4,
         color: i % 2 ? '#fde68a' : '#f0abfc',
         gravity: 40
       });
     }
-    spawnParticles(player.x, player.y - 18, '#fde68a', 6, 60);
+    spawnParticles(player.x, player.y - 18, '#fde68a', 9, 70);
   }
 
-  spawnParticles(shard.x, shard.y, shard.color, 12, 120);
-  // Extra prism / crescent sparkles on collect (bright readable high-energy)
-  for (let i = 0; i < 2; i++) {
+  spawnParticles(shard.x, shard.y, shard.color, 16, 140);
+  // Extra prism / crescent sparkles on collect (bright readable high-energy, scaled for legibility)
+  for (let i = 0; i < 3; i++) {
     particles.push({
       x: shard.x, y: shard.y,
-      vx: (Math.random() - 0.5) * 110,
-      vy: -40 - Math.random() * 30,
-      life: 0.7,
-      decay: 1.3,
-      size: 2 + Math.random(),
+      vx: (Math.random() - 0.5) * 120,
+      vy: -44 - Math.random() * 32,
+      life: 0.78,
+      decay: 1.25,
+      size: 2.8 + Math.random() * 1.6,
       color: '#fde68a',
       gravity: 90
     });
@@ -838,15 +838,15 @@ function activateSuper() {
   player.invincible = true;
   player.invincibleTimer = 5.5;
   player.transformFlash = 1;
-  spawnParticles(player.x, player.y + player.height/2, '#f0abfc', 40, 250);
-  spawnParticles(player.x, player.y + player.height/2, '#e9d5ff', 30, 200);
+  spawnParticles(player.x, player.y + player.height/2, '#f0abfc', 48, 280);
+  spawnParticles(player.x, player.y + player.height/2, '#e9d5ff', 36, 220);
   playPowerUp();
 }
 
 function hitPlayer() {
   screenShake = 1;
   playHit();
-  spawnParticles(player.x, player.y + player.height/2, '#ef4444', 15, 150);
+  spawnParticles(player.x, player.y + player.height/2, '#ef4444', 20, 170);
   combo = 0;
   comboTimer = 0;
   comboMultiplier = 1;
@@ -877,7 +877,7 @@ function showComboText(comboCount) {
 function deflectHazard(obs, kind) {
   const bonus = 8;
   score += bonus;
-  scorePops.push({ x: obs.x, y: (obs.y || player.y) - 10, val: bonus, life: 0.65, color: '#93c5fd' });
+  scorePops.push({ x: obs.x, y: (obs.y || player.y) - 10, val: bonus, life: 0.78, color: '#93c5fd' });
   if (score > highScore) {
     const prevBest = highScore;
     highScore = score;
@@ -902,24 +902,24 @@ function deflectHazard(obs, kind) {
         vy: Math.sin(ang) * 55 - 40,
         life: 0.9,
         decay: 1.6,
-        size: 2.8 + Math.random() * 1.5,
+        size: 3.6 + Math.random() * 1.8,
         color: (i % 2 === 0 ? '#fde68a' : '#f0abfc'),
         gravity: 0
       });
     }
     activateSuper(); // auto super on the deflect that completed the Moon Prism — high-energy transformation reward
   }
-  spawnParticles(obs.x, obs.y + (obs.h || 30)/2, kind === 'dash' ? '#93c5fd' : '#f0abfc', 7, 70);
-  // Extra sacred-geometry sparkles (small crescents/stars)
-  for (let i = 0; i < 3; i++) {
+  spawnParticles(obs.x, obs.y + (obs.h || 30)/2, kind === 'dash' ? '#93c5fd' : '#f0abfc', 11, 90);
+  // Extra sacred-geometry sparkles (small crescents/stars) — scaled up for hit/collect feedback legibility
+  for (let i = 0; i < 4; i++) {
     particles.push({
-      x: obs.x + (Math.random() - 0.5) * 8,
+      x: obs.x + (Math.random() - 0.5) * 10,
       y: obs.y + (obs.h || 30)/2,
-      vx: (Math.random() - 0.5) * 90,
-      vy: -28 - Math.random() * 35,
-      life: 0.85,
-      decay: 1.1 + Math.random() * 0.4,
-      size: 2.5 + Math.random() * 2,
+      vx: (Math.random() - 0.5) * 105,
+      vy: -33 - Math.random() * 38,
+      life: 0.92,
+      decay: 1.0 + Math.random() * 0.35,
+      size: 3.0 + Math.random() * 2.2,
       color: '#fde68a',
       gravity: 70
     });
@@ -1156,27 +1156,29 @@ function drawPlayer() {
   gctx.lineTo(-pw*0.25, -ph*0.1);
   gctx.fill();
 
-  // Tiara/crescent
+  // Tiara/crescent — scaled with player for legibility
   gctx.fillStyle = superActive ? '#fde68a' : '#e2e8f0';
   gctx.beginPath();
-  gctx.arc(0, -ph*0.38, 6, 0, Math.PI*2);
+  gctx.arc(0, -ph*0.38, Math.max(7, pw*0.13), 0, Math.PI*2);
   gctx.fill();
 
-  // Eyes
+  // Eyes — scaled with player
+  const ex = Math.max(6, pw*0.11);
+  const eyR = Math.max(3.5, pw*0.07);
   gctx.fillStyle = superActive ? '#fde68a' : '#ec4899';
   gctx.beginPath();
-  gctx.ellipse(-5, -ph*0.28, 3, 3.5, 0, 0, Math.PI*2);
+  gctx.ellipse(-ex, -ph*0.28, eyR, eyR*1.15, 0, 0, Math.PI*2);
   gctx.fill();
   gctx.beginPath();
-  gctx.ellipse(5, -ph*0.28, 3, 3.5, 0, 0, Math.PI*2);
+  gctx.ellipse(ex, -ph*0.28, eyR, eyR*1.15, 0, 0, Math.PI*2);
   gctx.fill();
   // Eye shine
   gctx.fillStyle = '#fff';
   gctx.beginPath();
-  gctx.arc(-4, -ph*0.29, 1.2, 0, Math.PI*2);
+  gctx.arc(-ex*0.85, -ph*0.29, Math.max(1.4, pw*0.025), 0, Math.PI*2);
   gctx.fill();
   gctx.beginPath();
-  gctx.arc(6, -ph*0.29, 1.2, 0, Math.PI*2);
+  gctx.arc(ex*1.1, -ph*0.29, Math.max(1.4, pw*0.025), 0, Math.PI*2);
   gctx.fill();
 
   // Legs / movement animation
@@ -1185,9 +1187,9 @@ function drawPlayer() {
   gctx.fillRect(-6, ph*0.35, 5, ph*0.18 + legPhase*3);
   gctx.fillRect(2, ph*0.35, 5, ph*0.18 - legPhase*3);
 
-  // Bracelet (Moon stick hint)
+  // Bracelet (Moon stick hint) — scaled
   gctx.fillStyle = '#e2e8f0';
-  gctx.fillRect(pw*0.3, -ph*0.05, 4, 8);
+  gctx.fillRect(pw*0.3, -ph*0.05, pw*0.09, pw*0.18);
 
   gctx.restore();
 }
@@ -1356,16 +1358,16 @@ function drawDeflectSlashes() {
     gctx.rotate(s.rot + (1 - s.life) * 0.4 * Math.sign(s.rot));
     gctx.globalAlpha = a;
     gctx.strokeStyle = '#fde68a';
-    gctx.lineWidth = 2.6;
+    gctx.lineWidth = 3.4;
     gctx.shadowColor = '#f0abfc';
-    gctx.shadowBlur = 11;
-    // Bright crescent geometry (sacred, high-energy deflect)
+    gctx.shadowBlur = 14;
+    // Bright crescent geometry (sacred, high-energy deflect) — larger for legibility
     gctx.beginPath();
-    gctx.arc(0, 0, 13, -1.1, 1.1);
+    gctx.arc(0, 0, 18, -1.15, 1.15);
     gctx.stroke();
-    gctx.lineWidth = 1.4;
+    gctx.lineWidth = 1.8;
     gctx.beginPath();
-    gctx.arc(0, 0, 8, -0.9, 0.9);
+    gctx.arc(0, 0, 11, -0.95, 0.95);
     gctx.stroke();
     gctx.restore();
   }
@@ -1379,9 +1381,9 @@ function drawScorePops() {
     const a = Math.max(0.15, p.life);
     gctx.globalAlpha = a;
     gctx.fillStyle = p.color;
-    gctx.font = `bold ${Math.min(13, W * 0.028)}px sans-serif`;
+    gctx.font = `bold ${Math.min(16, W * 0.034)}px sans-serif`;
     gctx.shadowColor = '#1e1135';
-    gctx.shadowBlur = 4;
+    gctx.shadowBlur = 5;
     const txt = p.label ? p.label : '+' + p.val;
     gctx.fillText(txt, p.x, p.y);
   }
@@ -1464,10 +1466,10 @@ function drawSuperEffects() {
     uctx.restore();
   }
 
-  // Orbiting prism shards (sacred geometry)
+  // Orbiting prism shards (sacred geometry) — larger, more legible super attack/collectibles
   for (let i = 0; i < 6; i++) {
     const angle = gameTime * 2 + (i / 6) * Math.PI * 2;
-    const radius = 55 + Math.sin(gameTime * 3 + i) * 15;
+    const radius = 62 + Math.sin(gameTime * 3 + i) * 18;
     const sx = player.x + Math.cos(angle) * radius;
     const sy = player.y + player.height/2 + Math.sin(angle) * radius * 0.6;
     uctx.save();
@@ -1475,12 +1477,12 @@ function drawSuperEffects() {
     uctx.rotate(gameTime * 2 + i);
     uctx.fillStyle = i % 2 === 0 ? '#f0abfc' : '#e9d5ff';
     uctx.shadowColor = '#f0abfc';
-    uctx.shadowBlur = 15;
+    uctx.shadowBlur = 18;
     uctx.beginPath();
-    uctx.moveTo(0, -8);
-    uctx.lineTo(7, 0);
-    uctx.lineTo(0, 8);
-    uctx.lineTo(-7, 0);
+    uctx.moveTo(0, -12);
+    uctx.lineTo(9, 0);
+    uctx.lineTo(0, 12);
+    uctx.lineTo(-9, 0);
     uctx.closePath();
     uctx.fill();
     uctx.restore();
@@ -1811,9 +1813,9 @@ player.x = getLaneX(0);
 player.y = getGroundY() - player.height - 2;
 player.targetLane = 0;
 // Seed immediate ambient demo elements so first screen starts "in action" with visible prism shards (collect goals) + shadow (deflect) under the glass card — addresses playtest friction (no passive tableau)
-shards.push({ x: W * 0.62, lane: -1, targetX: getLaneX(-1), y: getGroundY() - 48, size: 12, rotation: 1.2, glow: 0.4, color: '#f0abfc', ambient: true });
-shards.push({ x: W * 0.78, lane: 1, targetX: getLaneX(1), y: getGroundY() - 22, size: 11, rotation: 3.8, glow: 0.3, color: '#93c5fd', ambient: true });
-obstacles.push({ x: W * 0.88, lane: 0, targetX: getLaneX(0), y: getGroundY() - 34, w: 22, h: 28, type: 'shadow', eyes: 1, hit: false, ambient: true });
+shards.push({ x: W * 0.62, lane: -1, targetX: getLaneX(-1), y: getGroundY() - 48, size: 17, rotation: 1.2, glow: 0.4, color: '#f0abfc', ambient: true });
+shards.push({ x: W * 0.78, lane: 1, targetX: getLaneX(1), y: getGroundY() - 22, size: 16, rotation: 3.8, glow: 0.3, color: '#93c5fd', ambient: true });
+obstacles.push({ x: W * 0.88, lane: 0, targetX: getLaneX(0), y: getGroundY() - 34, w: 28, h: 34, type: 'shadow', eyes: 1, hit: false, ambient: true });
 // Subtle best score on start card (motivation, no generic copy)
 const bestEl = document.getElementById('startBest');
 if (bestEl && highScore > 0) bestEl.textContent = `★ Best: ${highScore.toLocaleString()}`;

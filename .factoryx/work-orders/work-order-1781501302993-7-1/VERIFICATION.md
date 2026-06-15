@@ -943,3 +943,55 @@ https://github.com/ystackai/studio-sailor-moon/pull/81
 - Payload ~53kB, self-contained, preview entrypoint `games/92-moon-prism-relay/index.html` (and .factoryx/preview-entrypoint) unchanged.
 - All artifacts (screenshots, logs) + this section left in place in work order dir for PR #81.
 - House style (theatrical crescents/ribbons as sacred tech, transformation as ritual power, moonlight/gold/pink, sincere emotional register) + game-designer-2d (playable first screen, legible silhouettes, clean console, responsive) + full WORKFLOW + Game Feel Checklist + quality bar re-hold exactly. Ready for CI + human review.
+
+## Grok Pre-Deadline Scale Polish Verification (avatar/shards/attacks/hit-collect legibility, address 12:18Z blocking feedback, ~12:18Z)
+
+**Environment (consistent with all prior Grok chromium runs)**
+- Chromium 149.0.7827.114 (native /usr/bin/chromium, rolled-out verifier image)
+- Viewport 820×620, --headless=new, --disable-gpu --no-sandbox, --allow-file-access-from-files, --virtual-time-budget, --run-all-compositor-stages-before-draw
+- Date: 2026-06-15 ~12:18Z (still before 14:28Z deadline; redeploy reset addressed in prior dedicated passes)
+- Payload at verif: 58,036 bytes
+
+**Verification Steps & Results**
+- Start overlay capture (no ?autostart): `screenshot-start-overlay-fresh-20260615-1218.png` (320k) — confirms live moonlit city lanes, scrolling parallax buildings, stars, large moon, + now **much larger idling player** (48×64 silhouette) + larger ambient shards (collect goals) + larger ambient shadow (deflect silhouette) visible *immediately* behind the compact glass card. Skyline mood fully preserved; pickups/character no longer tiny.
+- Autostart gameplay: `?autostart=1` + 7.5s virtual-time-budget exercised the *real* JS game loop (update+draw after simulated gesture). Result `screenshot-gameplay-polish-fresh-20260615-1218.png` (47k) shows **larger player** mid-action (dash/jump/lane), prominent prism shards (26px diamonds with shine), hazards, active ✦ score + ★ PB, pulsing gauge, wave, + clear **attacks/feedback**: big deflect crescent slashes, super orbiting shards (larger geometry), rising gold/blue +pts/★ BEST pops (larger font), boosted particle bursts on collect/hit/deflect/gauge/super.
+- Log capture: new `verification-run-20260615-1218.log`. Post-filter (remove dbus/object_proxy/UPower/bus.cc/cert noise, exact same exclusion as every prior Grok run): **0 uncaught JS exceptions, 0 game console.error, 0 page errors, 0 request/asset failures**. Only expected container env chatter (clean signature identical to all successful prior verifs).
+- Canvas + DPR: both canvases sized, crisp transforms. PNGs real 820×620 compositor outputs ("bytes written" + sizes confirm).
+- State exercised: larger player (width/height, proportional details), scaled shards in spawn/ambient/seed, larger collision zone, bigger slashes + orbits + pops + particles, all prior polish (ribbons, wave surge, auto-super on deflect/collect, living swishes, R restart, highscore live, first-screen interactive preview) retained and visible with improved legibility. First screen + full core verbs exercised post-gesture.
+
+**New Scale Polish Verified in Runtime (directly addresses 11:50Z/12:18Z)**
+- Player avatar now ~33% larger linear (48×64 vs 36×48), stands out boldly against the fixed moonlit skyline/buildings/moon without any city change.
+- Shards/pickups (normal + ambient on title) substantially larger and crisper; collect goals immediately obvious even on first screen.
+- Attacks (deflect slashes, super ribbons/orbiting crescents) and hit/collect feedback (rising pops, particle sparkles, gauge ritual bursts) have stronger, more immediate visual weight and readability while keeping high-energy theatrical house style (crescents/ribbons as living power).
+- All motion/easing/collision/physics/response timing unchanged; only visual scale + feedback strength increased. No new UI, no menu, no scope creep.
+
+**Game Feel Checklist (re-validated on this scale pass)**
+- ✅ Core verb in first 30s (swap/jump/dash/collect/deflect now with much larger, immediately legible player + shards + ambient preview on live first screen)
+- ✅ Input <100ms + visible/audible (lerp immediate, now + bigger pops/slashes/particle bursts/ribbons on every action)
+- ✅ Easing everywhere (lane 12× lerp, gravity, ribbons quadratic, pops rise, particle decay, prior curves all retained)
+- ✅ Hit/score/deflect/super/wave + record feedback (now larger/more prominent: gold crescents on collect, bright dual-arc slashes + sparkles on deflect, orbiting super shards, rising +pts/★ BEST labels with bigger font, gauge ritual radial crescents, wave surge lines + gift shards)
+- ✅ Audio only after gesture (ensureAudio on startBtn / first tap / autostart sim)
+- ✅ Touch ≥44px (58) + pointer + keyboard + swipe + R coexist
+- ✅ 60fps mid-laptop (dt cap 0.05, simple canvas paths)
+- ✅ <2MB (58kB single file, inline everything)
+- ✅ No external net (zero fetches after load; works file:// + offline)
+
+**Quality Bar**
+- First screen makes sense: live moon city runner scene (now with larger player + visible larger pickups/enemies in gentle demo) + one clear "✦ Start Transform ✦" + 3-line thematic legend + best score if any. No explanation needed.
+- Interaction coherent <1min: yes (taste-gate slice of traversal + collect + deflect + super in one space; scale makes the objective obvious in first 10s as required).
+- Verification actually ran (real chromium + virtual + autostart exercising post-gesture real gameplay + new larger elements); 0 game errors.
+- Live preview opens clean (games/92-...); no browser runtime errors.
+- PR #81 body will be refreshed with full prompt + this evidence for human review.
+- House style (theatrical sincerity, ribbons living fabric/tech, crescents as power geometry, moonlight/gold/pink, transformation ritual) reinforced by larger, more readable ritual elements against the preserved magical skyline.
+- Previous run "redeploy reset after verifier image rollout" addressed prior (fresh evidence runs post-rollout); this keeps currency after the scale polish.
+
+**Screenshots (this 12:18Z scale pass)**
+- `screenshot-start-overlay-fresh-20260615-1218.png` — 320k, live playable lanes + city + moon + **larger player + larger ambient shards/shadow** under card; skyline mood strong.
+- `screenshot-gameplay-polish-fresh-20260615-1218.png` — 47k, post-7.5s virtual: larger player/shards/attacks/feedback visible in render (score, gauge, wave, effects exercised).
+- Prior polished shots retained for comparison.
+
+**Notes**
+- Changes are continuation of Grok polish passes addressing successive operator/Codex playtest feedback (live scene → start in action → now scale/legibility) while strictly preserving moonlit city mood and taste-gate playable slice. Focused diff on sizes + feedback strength; no peripheral.
+- No scope creep: no new levels, saves, settings; kept single-file self-contained per WORKFLOW + taste-gate + goal.
+- Ready for CI gates + human review on https://github.com/ystackai/studio-sailor-moon/pull/81 . Using remaining time budget for polish/evidence if follow-up needed before 14:28Z.
+- Full prompt + FactoryX context in PR body + work order dir. All artifacts (new -1218 pngs + log + updated mds) left in place.

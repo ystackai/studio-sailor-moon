@@ -331,3 +331,30 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - PR: #81 (canonical; refresh body with full original prompt + this context)
 - Preview entrypoint: `games/92-moon-prism-relay/index.html`
 - Redeploy reset addressed; post-cleanup evidence refresh using remaining budget. No blockers.
+
+## Grok Pre-Deadline Scale Polish — Larger avatar/shards/attacks/hit-collect feedback (address 12:18Z blocking playtest, city mood preserved, ~12:18Z, fresh chromium evidence)
+
+**Branch state**: HEAD bda4cf8 (post 11:16Z evidence); fetch for guard; gh per spec (no blocking visible). Using polish_until_deadline budget for core "scale up the character, shards, attacks, and hit/collect feedback while preserving the moonlit city mood" (11:50Z/12:18Z Sailor Moon post-input playtest).
+
+**Change (high-signal, no city change)**: Player 36×48→48×64 (grows upward against fixed skyline); shards 18→26 (normal), ~12→16-18 (ambient/demo pickups on first screen); ambient shadow 22×28→28×34; collision 35→42; deflect slashes larger 13/8→18/11 + bolder; super orbits larger (r55→62, -8→-12); scorePops font 13→16 + lives up; particle counts/sizes on collect/deflect/hit/gauge/super boosted for immediate legible pop. All scenery (buildings, moon, lanes, ground) 100% untouched — mood preserved. First screen + gameplay both benefit; no friction added.
+
+**Fresh real-browser verification (native chromium, rolled-out image, ?autostart exercised post-gesture + start load)**:
+- Post-edit: `screenshot-start-overlay-fresh-20260615-1218.png` (320k — live playable moonlit city + now-much-larger player + larger ambient shards/shadow under glass card on first frame) + `screenshot-gameplay-polish-fresh-20260615-1218.png` (47k — 7.5s virtual: big player, prominent shards, clear deflect slashes, super orbits, rising pops/feedback exercised).
+- Log: verification-run-20260615-1218.log — **0 uncaught / game console.error / pageerror / asset/net failures** (filtered; only dbus noise, clean identical signature).
+- Autostart + start: gesture, full loop, larger elements visible/functional in compositor output. Payload 58k still tiny.
+
+**Verification Checklist (updated)**:
+- [x] Live gameplay scene + **much larger legible player + shards + attacks + hit/collect feedback** (pops, slashes, particles, orbits) while skyline/city mood exactly preserved.
+- [x] All prior items (0 errors, gesture audio, 58px touch+keys+swipe+R, responsive, self-contained, ribbons, pops + ★ BEST, auto-super, wave surge, highscore, R restart, first-screen action with ambients, high-contrast thematic copy) hold.
+
+**Screenshots (12:18Z post-scale polish)**
+- `screenshot-start-overlay-fresh-20260615-1218.png` (320k) — first screen with larger player + pickups visible immediately under card; moonlit city mood strong.
+- `screenshot-gameplay-polish-fresh-20260615-1218.png` (47k) — 7.5s virtual exercising full core + scaled-up feedback.
+- Prior shots retained for comparison.
+
+**FactoryX Work Order Context**
+- Work Order: work-order-1781501302993-7-1
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- PR: #81 (canonical; refresh body with full original prompt + this context)
+- Preview entrypoint: `games/92-moon-prism-relay/index.html`
+- Redeploy reset addressed prior; this 12:18Z core scale polish + fresh evidence using remaining budget. No blockers.
