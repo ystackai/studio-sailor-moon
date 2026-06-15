@@ -24,16 +24,16 @@ canvas#uiCanvas {
 #startScreen {
   position:fixed; top:0; left:0; width:100%; height:100%;
   z-index:10; display:flex; align-items:center; justify-content:center;
-  background: radial-gradient(circle at 50% 40%, rgba(11,11,42,0.15) 0%, rgba(11,11,42,0.55) 55%, rgba(11,11,42,0.75) 80%);
+  background: radial-gradient(circle at 50% 40%, rgba(11,11,42,0.07) 0%, rgba(11,11,42,0.32) 52%, rgba(11,11,42,0.48) 82%);
   pointer-events:none;
 }
 #startScreen .card {
   text-align:center;
-  background: rgba(15, 14, 45, 0.82);
-  border: 1px solid rgba(236,72,153,0.35);
+  background: rgba(15, 14, 45, 0.66);
+  border: 1px solid rgba(236,72,153,0.26);
   border-radius: 22px;
-  padding: 28px 32px 24px;
-  box-shadow: 0 0 0 1px rgba(168,85,247,0.2), 0 30px 80px rgba(0,0,0,0.6);
+  padding: 26px 30px 22px;
+  box-shadow: 0 0 0 1px rgba(168,85,247,0.18), 0 26px 70px rgba(0,0,0,0.5);
   max-width: 92%;
   width: 420px;
   pointer-events:auto;
@@ -256,6 +256,8 @@ let wavePop = null;        // brief centered wave-advance flourish (theatrical e
 let spawnTimer = 0;
 let shardSpawnTimer = 0;
 let obstacleSpawnTimer = 0;
+let demoAmbienceTimer = 0; // drives slow visible pickups + shadow echoes on first screen (addresses playtest: start in action)
+let demoPreviewUntil = 0;  // window for pre-start lane preview swishes (keys work on title for interactive playable slice, eases back)
 
 // Player
 let player = {
@@ -339,6 +341,8 @@ function resetGame() {
   spawnTimer = 0;
   shardSpawnTimer = 0;
   obstacleSpawnTimer = 0;
+  demoAmbienceTimer = 0;
+  demoPreviewUntil = 0;
   player.lane = 0;
   player.targetLane = 0;
   player.x = W * 0.2;
@@ -433,6 +437,76 @@ function spawnParticles(x, y, color, count, spread) {
       color: color,
       gravity: 200
     });
+  }
+}
+
+// Ambient demo activity (first-screen only): slow visible prism shards (movement goals + collectibles) + one faint shadow echo (deflect hazard silhouette) to make the title scene feel alive and "in action" per playtest feedback. No scoring, no collisions, no UI. Faint "echo" rendering + occasional passing twinkle for prism/relay feedback.
+function updateDemoAmbience(dt, speedMul) {
+  demoAmbienceTimer += dt;
+  const demoSpeed = 165 * speedMul; // gentle preview scroll, keeps focus on skyline + character
+
+  // Advance any ambient-tagged elements (populated below or seeded)
+  for (let i = shards.length - 1; i >= 0; i--) {
+    const s = shards[i];
+    if (!s.ambient) continue;
+    s.x -= demoSpeed * dt;
+    s.rotation += dt * 2.2;
+    s.glow = (Math.sin(s.rotation * 2) + 1) * 0.5;
+    if (s.x < -50) { shards.splice(i, 1); continue; }
+  }
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    const o = obstacles[i];
+    if (!o.ambient) continue;
+    o.x -= demoSpeed * 0.65 * dt;
+    if (o.x < -90) { obstacles.splice(i, 1); continue; }
+  }
+
+  // Spawn 1-2 ambient prism shard echoes (visible pickups, immediate movement goals)
+  const ambientShardCount = shards.filter(s => s.ambient).length;
+  if (demoAmbienceTimer > 1.6 && ambientShardCount < 2) {
+    demoAmbienceTimer = Math.random() * 0.4;
+    const lane = LANES[Math.floor(Math.random() * 3)];
+    shards.push({
+      x: W + 55,
+      lane: lane,
+      targetX: getLaneX(lane),
+      y: getGroundY() - 26 - Math.random() * 52,
+      size: 13,
+      rotation: Math.random() * 5,
+      glow: 0.35,
+      collected: false,
+      color: '#f0abfc',
+      hue: 300,
+      ambient: true
+    });
+  }
+
+  // One slow ambient shadow echo at a time (visible hazard to convey "deflect" verb without threat)
+  const ambientShadowCount = obstacles.filter(o => o.ambient).length;
+  if (demoAmbienceTimer > 2.8 && ambientShadowCount < 1) {
+    demoAmbienceTimer = 0.9;
+    if (Math.random() < 0.55) {
+      const lane = LANES[Math.floor(Math.random() * 3)];
+      obstacles.push({
+        x: W + 75,
+        lane: lane,
+        targetX: getLaneX(lane),
+        y: getGroundY() - 34,
+        w: 24, h: 30,
+        type: 'shadow',
+        eyes: 1,
+        hit: false,
+        ambient: true
+      });
+    }
+  }
+
+  // Subtle prism feedback: twinkle particles when an ambient shard "passes" the player zone (clear relay/collect motion)
+  for (const s of shards) {
+    if (s.ambient && !s._twinkled && s.x < player.x + 18 && s.x > player.x - 70) {
+      s._twinkled = true;
+      spawnParticles(s.x + 6, s.y, '#fde68a', 2, 24);
+    }
   }
 }
 
@@ -583,9 +657,10 @@ function update(dt) {
   }
 
   if (isDemo) {
-    // keep player centered for preview
-    if (Math.abs(player.targetLane) > 0.1) player.targetLane = 0;
-    return; // no hazards, no spawns, no score in demo
+    updateDemoAmbience(dt, speedMul);
+    // allow pre-start lane preview (interactive first screen); otherwise keep centered for clean stable preview/screenshots
+    if (gameTime > demoPreviewUntil && Math.abs(player.targetLane) > 0.06) player.targetLane = 0;
+    return; // no full hazards/spawns/score/UI in demo — ambient echoes provide the "in action" verbs
   }
 
   // Update obstacles (playing only)
@@ -875,8 +950,9 @@ function changeLane(dir) {
   const before = player.targetLane;
   if (dir < 0 && player.targetLane > -1) player.targetLane--;
   else if (dir > 0 && player.targetLane < 1) player.targetLane++;
-  if (player.targetLane !== before && state === 'playing') {
+  if (player.targetLane !== before && (state === 'playing' || state === 'start')) {
     spawnLaneSwish(player.x, player.y + player.height * 0.4, dir);
+    if (state === 'start') demoPreviewUntil = gameTime + 1.35; // window for interactive lane preview on first screen
   }
 }
 
@@ -1122,9 +1198,13 @@ function drawShards() {
     gctx.translate(s.x, s.y);
     gctx.rotate(s.rotation);
 
-    // Glow
+    if (s.ambient) {
+      gctx.globalAlpha = 0.58;
+      gctx.shadowBlur = (12 + s.glow * 10) * 0.6;
+    } else {
+      gctx.shadowBlur = 12 + s.glow * 10;
+    }
     gctx.shadowColor = s.color;
-    gctx.shadowBlur = 12 + s.glow * 10;
 
     // Diamond shape
     gctx.fillStyle = s.color;
@@ -1146,6 +1226,7 @@ function drawShards() {
     gctx.closePath();
     gctx.fill();
 
+    gctx.globalAlpha = 1;
     gctx.restore();
   }
 }
@@ -1155,10 +1236,13 @@ function drawObstacles() {
     gctx.save();
     gctx.translate(obs.x, obs.y + obs.h/2);
 
+    const isAmbient = !!obs.ambient;
+    if (isAmbient) gctx.globalAlpha = 0.46;
+
     if (obs.type === 'shadow') {
       // Shadow blob creature
       gctx.shadowColor = '#4c1d95';
-      gctx.shadowBlur = 15;
+      gctx.shadowBlur = isAmbient ? 8 : 15;
       gctx.fillStyle = '#1e1040';
       gctx.beginPath();
       gctx.ellipse(0, 0, obs.w/2, obs.h/2, 0, 0, Math.PI*2);
@@ -1174,22 +1258,23 @@ function drawObstacles() {
         gctx.lineTo(sx + 3, sy);
         gctx.fill();
       }
-      // Eyes
+      // Eyes (fainter for ambient echo)
       gctx.shadowBlur = 0;
+      const eyeA = isAmbient ? 0.55 : 1;
       for (let e = 0; e < obs.eyes; e++) {
         const ex = -8 + e * 8;
-        gctx.fillStyle = '#ef4444';
+        gctx.fillStyle = `rgba(239,68,68,${eyeA})`;
         gctx.beginPath();
         gctx.arc(ex, -4, 3, 0, Math.PI*2);
         gctx.fill();
-        gctx.fillStyle = '#fbbf24';
+        gctx.fillStyle = `rgba(251,191,36,${eyeA})`;
         gctx.beginPath();
         gctx.arc(ex, -4, 1.5, 0, Math.PI*2);
         gctx.fill();
       }
     } else if (obs.type === 'shadow_ball') {
       gctx.shadowColor = '#4c1d95';
-      gctx.shadowBlur = 20;
+      gctx.shadowBlur = isAmbient ? 10 : 20;
       gctx.fillStyle = '#1e1040';
       gctx.beginPath();
       gctx.arc(0, 0, obs.w/2, 0, Math.PI*2);
@@ -1207,7 +1292,7 @@ function drawObstacles() {
       gctx.fill();
     } else if (obs.type === 'shadow_spike') {
       gctx.shadowColor = '#4c1d95';
-      gctx.shadowBlur = 12;
+      gctx.shadowBlur = isAmbient ? 6 : 12;
       gctx.fillStyle = '#1e1040';
       for (let i = 0; i < 3; i++) {
         const sx = (i - 1) * 10;
@@ -1224,6 +1309,7 @@ function drawObstacles() {
       gctx.fill();
     }
 
+    gctx.globalAlpha = 1;
     gctx.restore();
   }
 }
@@ -1532,6 +1618,10 @@ document.addEventListener('keydown', (e) => {
   if (state === 'start') {
     if (e.key === 'Enter' || e.key === ' ' || e.key.toLowerCase() === 'x') {
       startGame();
+    } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+      changeLane(-1);
+    } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+      changeLane(1);
     }
     return;
   }
@@ -1720,6 +1810,10 @@ initScenery();
 player.x = getLaneX(0);
 player.y = getGroundY() - player.height - 2;
 player.targetLane = 0;
+// Seed immediate ambient demo elements so first screen starts "in action" with visible prism shards (collect goals) + shadow (deflect) under the glass card — addresses playtest friction (no passive tableau)
+shards.push({ x: W * 0.62, lane: -1, targetX: getLaneX(-1), y: getGroundY() - 48, size: 12, rotation: 1.2, glow: 0.4, color: '#f0abfc', ambient: true });
+shards.push({ x: W * 0.78, lane: 1, targetX: getLaneX(1), y: getGroundY() - 22, size: 11, rotation: 3.8, glow: 0.3, color: '#93c5fd', ambient: true });
+obstacles.push({ x: W * 0.88, lane: 0, targetX: getLaneX(0), y: getGroundY() - 34, w: 22, h: 28, type: 'shadow', eyes: 1, hit: false, ambient: true });
 // Subtle best score on start card (motivation, no generic copy)
 const bestEl = document.getElementById('startBest');
 if (bestEl && highScore > 0) bestEl.textContent = `★ Best: ${highScore.toLocaleString()}`;

@@ -251,3 +251,33 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - `screenshot-start-overlay-fresh-20260615-105201.png` (298k) — live playable first screen.
 - `screenshot-gameplay-polish-fresh-20260615-105201.png` (46.1k) — 7.5s virtual autostart gameplay exercised in rolled-out env.
 - Prior shots retained.
+
+## Grok Pre-Deadline Polish — First screen starts in action (ambient demo + preview keys + transparent overlay; Codex 10:54 playtest address + 11:22Z chromium evidence)
+
+**Branch state**: HEAD ab9c893 (post 10:52Z evidence); fetch for guard; gh per spec (no blocking visible). Using polish_until_deadline budget for core "first screen must be playable" + "start in action" per latest feedback.
+
+**Action (addressing playtest directly)**: Added ambient demo shards (visible prism pickups/goals scrolling lanes at demo speed) + 1 ambient shadow echo (deflect silhouette) in start state only — seeded at init for immediate presence on first paint; faint echo styling + pass-by sparkles for clear prism/relay feedback. Pre-start lane preview: ←→/A D keys (and changeLane) now spawn living ribbon swishes + temporarily move the idle player (eases back to center after 1.35s for stable shots). Lighter start overlay veil + card (more of live moonlit action + new ambients visible through glass; less menu friction). No playing-path or systems change; single-file self-contained.
+
+**Results (real chromium, exercised new first-screen + loop)**:
+- Post-edit run (same harness as priors): `screenshot-start-overlay-fresh-20260615-1122.png` (315k — live playable moonlit lanes + city + moon + idling player + 2 faint ambient shards + 1 ambient shadow immediately visible under the glass card on load; no passive tableau or heavy instructions) + `screenshot-gameplay-polish-fresh-20260615-1122.png` (47.8k) + `verification-run-20260615-1122*.log`.
+- Filtered: **0 game JS errors / uncaught / console.error / pageerror / asset/net failures** (clean, dbus-only after strip — identical healthy signature).
+- Autostart 7.5s + start overlay exercised real post-gesture loop + new ambient/preview paths on first screen.
+- Payload still ~53kB. Preview entrypoint unchanged.
+
+**Verification Checklist (updated)**:
+- [x] Live gameplay scene + now **immediate movement goals + visible pickups/enemies** (ambient shards + shadow) on first screen under card — starts "in action".
+- [x] Pre-start interactive preview (keys produce ribbon swish + lane motion on title) reduces menu friction while keeping explicit Start for full game + audio.
+- All prior items (0 errors, gesture audio, 58px touch+keys+swipe+R, responsive, self-contained, ribbons, pops, auto-super, wave surge, highscore, R restart, etc.) hold.
+
+**Screenshots (11:22Z post-feedback-address)**
+- `screenshot-start-overlay-fresh-20260615-1122.png` (315k) — first screen with ambient demo shards + shadow echo + more see-through card revealing live action.
+- `screenshot-gameplay-polish-fresh-20260615-1122.png` (47.8k) — 7.5s virtual exercising full loop + all polish.
+- Prior shots retained for history.
+
+**FactoryX Work Order Context**
+- Work Order: work-order-1781501302993-7-1
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- PR: #81 (canonical; refresh body with full prompt + this context)
+- Preview entrypoint: `games/92-moon-prism-relay/index.html`
+- Redeploy reset addressed prior; this keeps evidence current after feedback-driven first-screen polish using remaining budget. No blockers.
+

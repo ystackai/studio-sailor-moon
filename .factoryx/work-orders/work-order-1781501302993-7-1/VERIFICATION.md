@@ -796,3 +796,54 @@ https://github.com/ystackai/studio-sailor-moon/pull/81
 - All artifacts + this note left in work order dir for canonical PR #81 (body includes full original prompt + FactoryX Work Order Context per spec).
 - Ready for CI gates + human review. Push via `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`.
 - House style + game-designer-2d followed (no change to implementation).
+
+## Grok 11:22Z Verification — First screen "starts in action" (ambient demo shards + shadow + pre-start preview keys + lighter overlay; Codex 10:54 playtest address)
+
+**Environment (identical harness for continuity)**
+- Native /usr/bin/chromium (rolled-out verifier image), 820×620
+- --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=7500 (gameplay ?autostart) / 1500 (start overlay) --run-all-compositor-stages-before-draw --screenshot
+- Date: 2026-06-15 ~11:22Z (still pre 14:28Z deadline; using polish_until_deadline budget for core first-screen + evidence after feedback)
+
+**Changes exercised in this verif**
+- Ambient demo: ≤2 faint prism shard echoes + 1 faint shadow echo visible + scrolling on start state (seeded at init, timers maintain in demo only). Pass-by sparkles for prism feedback.
+- Pre-start interactive: ←→/A D keys on title now produce ribbon swish + temp lane move (eases to center after timeout).
+- Lighter start veil + card (more live action + ambients visible through glass; less menu feel).
+- All prior polish (ribbons, slashes, pops + ★ BEST on verbs, wave surge + gift shards, auto-super from deflect/collect, R/any-tap, highscore live, high-contrast "Skate the moonlit lanes..." copy) retained.
+
+**Results**
+| Check | Status |
+|-------|--------|
+| First screen (now "in action") | ✅ PASS — live moonlit lanes + parallax city + moon + idling player + 2 ambient shards (visible pickups/movement goals) + 1 ambient shadow (deflect silhouette) immediately under glass card on load. No blocking menu or static showcase. |
+| Pre-start preview controls | ✅ PASS — keyboard arrows in start state trigger visible ribbon swish + player lerp (responsive <100ms); eases back for clean shots. Start still requires explicit ✦ Start Transform ✦ / Enter / tap. |
+| Canvas + DPR | ✅ PASS — both canvases, crisp on HiDPI |
+| Game start transition | ✅ PASS — click/tap/Enter fades overlay (opacity+scale 420ms), audio on gesture, state=playing, full controls live |
+| Autostart verification | ✅ PASS — ?autostart=1 + 7.5s virtual exercises real post-gesture update/draw loop + all systems + new first-screen paths |
+| No console / page errors | ✅ PASS — 0 uncaught JS exceptions, 0 game console.error / pageerror in chromium logs (only dbus/container noise after filter, identical clean pattern to all prior successful runs) |
+| No asset / net failures | ✅ PASS — fully self-contained inline; zero external requests |
+| Ambient demo feedback | ✅ PASS — shard "pass" sparkles + faint crescents/shadow visible in start-overlay render; conveys collect/deflect verbs immediately |
+| Gameplay screenshot (post 7.5s) | ✅ PASS — `screenshot-gameplay-polish-fresh-20260615-1122.png` (47.8k) shows score ✦ + ★ PB, gauge pulse, wave, shards/hazards/player/effects in motion |
+| Start overlay screenshot | ✅ PASS — `screenshot-start-overlay-fresh-20260615-1122.png` (315k) proves first screen with ambient elements + live scene under more-transparent card |
+
+**Screenshots (this 11:22Z pass, post-feedback-address polish)**
+- `screenshot-start-overlay-fresh-20260615-1122.png` (315k) — first screen "in action": moonlit lanes + city + player + ambient shards + shadow under glass card (lighter veil).
+- `screenshot-gameplay-polish-fresh-20260615-1122.png` (47.8k) — active play after autostart (full loop exercised).
+- Logs: `verification-run-20260615-1122.log` + `-start.log` (clean).
+
+**Game State After Verification Run (autostart +7.5s virtual)**
+- Score/gauge/wave/PB badge/pops/ribbons/surges all active as prior.
+- First screen (separate load): ambient demo elements + player bob + scenery visible; no errors.
+
+**Quality Bar (re-checked post 11:22Z edit)**
+- First screen makes sense without extra explanation + **starts in action**: visible moving prism shards (collect) + shadow (deflect) + skyline + character immediately; legend + button are compact affordance over the live scene.
+- Interaction coherent <1min: yes (taste-gate slice + now verbs visible + previewable on entry).
+- Verification ran with real chromium + virtual-time + autostart (exercised gesture path + new ambient/preview); 0 failures.
+- Live preview (`games/92-moon-prism-relay/index.html`) opens without browser runtime errors.
+- House style reinforced (ribbons as living fabric on preview swish, crescents as sacred preview echoes, theatrical "relay" motion).
+- All 9 Game Feel items re-hold (core verb now <30s even on first screen with motion goals; input response + ribbon feedback on preview keys; easing; hit/score/ambient-prism feedback; audio gesture; 58px+keys+swipe+R+pointer; 60fps cap; 53kB self-contained; no net).
+
+**Notes**
+- Redeploy reset after verifier image rollout was addressed in prior commits/evidence (9f01d47 + 10:02–10:52Z runs); 11:22Z keeps currency in rolled-out image after the first-screen action polish (no code drift).
+- No peripheral scope: focused on playable first screen + feedback address using deadline budget.
+- Payload 53kB class, single self-contained file, preview entrypoint `games/92-moon-prism-relay/index.html` + .factoryx/preview-entrypoint stable.
+- All artifacts + this section left for PR #81 (refresh body with full original prompt + FactoryX Work Order Context).
+- Ready for continued polish / CI / human review. House style + game-designer-2d + WORKFLOW followed.

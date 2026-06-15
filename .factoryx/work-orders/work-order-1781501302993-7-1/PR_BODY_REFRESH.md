@@ -81,3 +81,30 @@ Ambitious, bright, high-energy magical-girl 3-lane arcade runner: dash/jump/skat
 - Preview entrypoint: games/92-moon-prism-relay/index.html (also .factoryx/preview-entrypoint)
 - See full memory: WORKLOG.md, PREVIEW.md, VERIFICATION.md, FEEDBACK.md, TECHNICAL_SYSTEM_DESIGN.md + all screenshots + verification-run-*.log in the work-order dir.
 - Changes follow browser-game-2d playbook/WORKFLOW (taste-gate slice first, playable browser-game, responsive controls, lightweight), Game Feel Checklist (all 9), polish_until_deadline, browser_runtime_verification. Previous run "redeploy reset after verifier image rollout" addressed with fresh post-rollout evidence before any peripheral. PR #81 is the canonical (update, do not create parallel).
+
+## Latest Polish (Grok 11:22Z) — First screen "starts in action" addressing Codex 10:54 playtest feedback + fresh chromium evidence (pre 14:28Z)
+
+**Change (high-signal, focused on goal "first screen must be playable" + "Avoid generic UI copy or static character showcases")**:
+- Ambient demo prism shards (≤2, slow-scrolling gold/blue crescents on lanes) + 1 ambient shadow echo now visible on start state — immediate "movement goals, visible pickups/enemies, clear prism/relay feedback" without any menu or full systems. Seeded at init for first-frame presence; faint echo draw + pass twinkle particles.
+- Pre-start lane preview: keyboard ←→/A D on the title screen now trigger living ribbon swishes + temporary player lane lerp (eases back to center after inactivity for stable verif). Makes the first screen itself interactive and "in action" — player can feel the traversal verb before committing with Start/Enter.
+- Lighter overlay veil + card glass (0.07/0.32/0.48 radial, card 0.66) so the bright moonlit city + player + new ambient elements read through more; reduces "instructions page" friction while retaining clear themed controls legend + big Start button.
+- All prior (ribbons, crescent slashes, pops + ★ BEST, wave surge + gift shards, auto-super on full deflect/collect, R+any-tap restart, highscore live, high-contrast non-generic copy, 58px touch+swipe+keys, gesture audio, self-contained) untouched.
+- Syntax clean (node --check); +~1.8kB still <<2MB single file.
+
+**Fresh real-browser verification (native chromium, rolled-out image, ?autostart exercised post-gesture loop + start load)**:
+- 7.5s virtual + 1.5s start: `screenshot-start-overlay-fresh-20260615-1122.png` (315k — live lanes + city + moon + idling player + ambient shards + shadow immediately visible under glass card; no passive tableau) + `screenshot-gameplay-polish-fresh-20260615-1122.png` (47.8k) + verification-run-20260615-1122*.log.
+- **0 uncaught / game console.error / pageerror / asset/net failures** in filtered logs (clean dbus-only signature, identical to all prior healthy runs).
+- "bytes written" confirms real compositor; autostart path + new demo ambient/preview paths exercised.
+- Checklists: all 9 Game Feel + Quality bar + taste-gate (now stronger: core verbs visible + interactive on first screen <30s, no explanation) + house style re-hold exactly. Payload ~53kB. Redeploy reset addressed prior (evidence currency maintained).
+
+**PR #81 update**: include this + full original <user_query> (with Payload JSON, "redeploy reset" note, WORKFLOW, Game Feel, "Execute this...", head guard, polish_until_deadline, browser_runtime_verification, etc.) in the FactoryX Work Order Context section.
+
+**FactoryX Work Order Context (update PR body with this + full prompt)**
+- Work Order: work-order-1781501302993-7-1
+- factory_id: factory-sailor-moon
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- PR: #81 (canonical for this WO; update body, do not create parallel)
+- Preview entrypoint: games/92-moon-prism-relay/index.html (also written to .factoryx/preview-entrypoint)
+- See: full WORKLOG.md (new 11:22Z section), VERIFICATION.md, PREVIEW.md, FEEDBACK.md (10:54 playtest), screenshots (new -1122 start/gameplay + priors), verification-run-*.log in .factoryx/work-orders/work-order-1781501302993-7-1/
+- Follows: WORKFLOW (browser-game-2d, taste-gate playable slice first — now even livelier on load), game-designer-2d skill, Sailor Moon house style, Game Feel Checklist (all 9), "polish_until_deadline", "browser_runtime_verification":true, redeploy reset addressed with fresh evidence before peripheral. All changes on the Work Order branch; artifacts left in place.
+
