@@ -130,3 +130,15 @@
 - All code changes left in place on the Work Order branch. Screenshots, logs, and memory files provide browser verification evidence.
 - No blockers encountered. Polish performed within deadline budget (current ~09:38Z, deadline 14:28Z).
 
+
+## Grok Polish Pass — Final (highscore correctness + controls + fresh evidence, ~09:40–09:45Z)
+- Branch up-to-date with origin (c1fc31d); gh auth note (use configured git/gh normally per spec, no token inspect); re-fetched.
+- Realized latent bug vs prior "high score persistence" claim in VERIFICATION: no localStorage.setItem ever, reset did highScore=max(high,0) before score update. 
+- Fixed: on entering gameover (moonGauge<=0), persist if beaten; removed clobber from reset. 'R' key now restarts gameover (in addition to space/enter) for responsive clear controls.
+- Small focused diff (+5/-2). No other systems touched.
+- Re-ran chromium native headless verif script (autostart + virtual time to exercise real loop post-gesture, 0 game errors in logs, fresh larger screenshots captured to work order dir).
+- Updated VERIFICATION.md (new section + checklist re-confirm + bugfix note), this WORKLOG, PREVIEW if needed, PR_BODY_REFRESH.
+- Committed, will push via canonical `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`.
+- All taste-gate / game-feel / quality bar / self-contained / browser_runtime_verification satisfied. No blockers before deadline (14:28Z). First screen remains the live playable slice.
+- Artifacts left in place; PR #81 to be body-refreshed by ops with full context + this prompt for reviewers.
+

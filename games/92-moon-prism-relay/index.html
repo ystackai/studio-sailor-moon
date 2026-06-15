@@ -312,7 +312,6 @@ function resetGame() {
   combo = 0;
   comboTimer = 0;
   comboMultiplier = 1;
-  highScore = Math.max(highScore, score);
   moonGauge = 0;
   wave = 1;
   waveTimer = 0;
@@ -698,6 +697,10 @@ function hitPlayer() {
   player.transformFlash = 0.5;
 
   if (moonGauge <= 0) {
+    if (score > highScore) {
+      highScore = score;
+      try { localStorage.setItem('mprHighScore', String(highScore)); } catch (e) {}
+    }
     state = 'gameover';
   }
 }
@@ -1252,7 +1255,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (state === 'gameover') {
-    if (e.key === 'Enter' || e.key === ' ') {
+    if (e.key === 'Enter' || e.key === ' ' || e.key.toLowerCase() === 'r') {
       ensureAudio();
       resetGame();
       state = 'playing';

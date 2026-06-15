@@ -74,3 +74,17 @@ https://github.com/ystackai/studio-sailor-moon/pull/81
 - All explanatory text now high-contrast light palette (#f8fafc / #e0d4ff / #c8b5ff) with shadows; no dark-on-purple.
 - Copy tightened to thematic, non-generic: "Skate the moonlit lanes. Chain the shards. Become the light."
 - Verification now uses real chromium (not only Playwright) exercising autostart post-gesture path.
+
+## Grok Continuation Polish + Verification (09:42Z, highscore persistence + R restart + browser evidence refresh)
+
+- Inspected branch (up-to-date), PR #81, prior memory, game-designer-2d skill, house style (ribbons as living, theatrical sincerity, crescents/geometry as power).
+- **Bugfix (highScore persistence)**: Prior VERIFICATION claimed "localStorage roundtrips" but no `setItem` existed and reset clobbered with score=0 before any update. Now: on gauge<=0 gameover, if score > highScore then persist to localStorage and update var. Removed dead max line from reset. Restart from gameover preserves the new best.
+- Added 'R' key (in addition to Enter/Space) to restart from gameover screen — improves clear controls / discoverability without changing core.
+- Payload: 42,934 bytes (still <<2MB; +133 bytes for fixes).
+- Re-ran native chromium verification ( --headless=new, --virtual-time-budget=6500, ?autostart=1, 820x620, --run-all-compositor-stages-before-draw ): 
+  - ✓ 0 uncaught / JS errors / page errors / asset failures (only env dbus noise filtered).
+  - Fresh evidence: `screenshot-start-overlay-fresh.png` (293k — live moonlit lanes + idling player visible immediately under glass card), `screenshot-gameplay-verified-fresh.png` (48k — post-6.5s virtual: active score ✦, wave, gauge, moving shards/hazards, player actions exercised).
+- All Game Feel + Quality bar items re-hold (core verb <30s on first screen, <100ms + particles/tones, easing, audio gesture only, touch 58px + key + pointer + swipe + R, 60fps cap, self-contained).
+- No blockers. Using remaining deadline budget for correctness + evidence polish (highscore was a latent correctness gap vs prior claims). Ready for CI / human review on PR #81.
+- Screenshots + full run log in this dir; canonical preview still `games/92-moon-prism-relay/index.html`.
+

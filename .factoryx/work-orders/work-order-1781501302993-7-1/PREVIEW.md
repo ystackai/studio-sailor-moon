@@ -43,3 +43,10 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - Work Order: work-order-1781501302993-7-1
 - Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
 - Preview entrypoint: games/92-moon-prism-relay/index.html (also written to .factoryx/preview-entrypoint)
+## Latest Polish Evidence (Grok, post highscore + R key)
+- Verification re-run at 09:42Z with improved chromium flags + autostart exercised the loop for ~6.5s virtual time: live score/gauge/wave/hazards/shards/player under controls; 0 runtime errors.
+- New shots: screenshot-start-overlay-fresh.png (293k), screenshot-gameplay-verified-fresh.png (48k) — added to work order dir alongside prior.
+- High score now actually persists (fix); restart with R key supported.
+- Payload 42.9k self-contained. Preview entrypoint unchanged.
+- PR body refresh prepared with full Work Order context + prompt.
+

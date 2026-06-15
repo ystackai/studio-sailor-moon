@@ -87,3 +87,62 @@ Workspace:
 
 (Complete initiating prompt text is preserved in the Work Order context dir and initiating system; the above captures the critical goal, payload, and execution constraints against which this diff + artifacts should be evaluated.)
 
+
+## Additional Polish in this continuation (to be folded into PR body)
+- High score now correctly persists to localStorage on beating previous best (was missing setItem + clobber in reset despite prior claims of "roundtrips").
+- 'R' key restarts from Game Over (clear controls, complements Enter/Space/tap).
+- Fresh chromium headless verification (autostart + virtual-time 6.5s exercising real gameplay loop, state, spawns, deflect/collect/super possible): 0 game JS errors, new screenshots in work order dir (293k start live scene, 48k gameplay), payload 42.9k.
+- All prior ribbon/deflect/collect/live-first-screen/high-contrast polish retained. Game feel checklist + quality bar hold. No blockers.
+
+## FactoryX Work Order Context (full for reviewers)
+- Work Order: work-order-1781501302993-7-1
+- factory_id: factory-sailor-moon
+- project_id: sailor-moon
+- role_id: coder-default
+- runtime_profile: grok-build
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- PR: #81 (this body includes full original prompt below per spec for evaluation of diff against goal)
+- Preview entrypoint: games/92-moon-prism-relay/index.html (also .factoryx/preview-entrypoint)
+- See full durable notes: WORKLOG.md, PREVIEW.md, VERIFICATION.md, FEEDBACK.md, TECHNICAL_SYSTEM_DESIGN.md + screenshots + run logs in .factoryx/work-orders/work-order-1781501302993-7-1/
+- Changes follow WORKFLOW.md (browser-game-2d), taste-gate (playable slice of one verb in one space first — here live lanes + player under overlay), Game Feel Checklist (all 9), and "polish_until_deadline" with browser_runtime_verification.
+
+## Original Payload / Goal (verbatim excerpt for PR context; full initiating <user_query> preserved in work order dir and system)
+FactoryX Work Order
+id: work-order-1781501302993-7-1
+factory_id: factory-sailor-moon
+project_id: sailor-moon
+role_id: coder-default
+runtime_profile: grok-build
+title: Moon Prism Relay
+
+Description:
+Build an ambitious, polished magical-girl arcade game called Moon Prism Relay. Start from the studio repository and its existing assets/style; first screen must be playable. The core should be bright, readable, and high-energy: dash, jump, or skate through moonlit city lanes, collect prism shards, swap lanes, deflect shadow hazards, and trigger a satisfying transformation/super move. Implement immediately, then polish until the deadline: clear controls, scoring/combo feedback, escalating waves, restart, responsive layout, browser verification evidence, screenshots, and a GitHub PR with preview. Avoid generic UI copy or static character showcases.
+
+Previous run issue to address before peripheral polish:
+Converted Sailor overnight lane from stalled Qwen to Grok.
+
+Payload JSON:
+{
+  "browser_runtime_verification": true,
+  "completion_mode": "polish_until_deadline",
+  "deadline_utc": "2026-06-15T14:28:32Z",
+  "expected_artifacts": [
+    "github_pr"
+  ],
+  "experiment": "seven-studio-overnight-isolated-20260615",
+  "goal": "Build an ambitious, polished magical-girl arcade game called Moon Prism Relay. Start from the studio repository and its existing assets/style; first screen must be playable. The core should be bright, readable, and high-energy: dash, jump, or skate through moonlit city lanes, collect prism shards, swap lanes, deflect shadow hazards, and trigger a satisfying transformation/super move. Implement immediately, then polish until the deadline: clear controls, scoring/combo feedback, escalating waves, restart, responsive layout, browser verification evidence, screenshots, and a GitHub PR with preview. Avoid generic UI copy or static character showcases.",
+  "kind": "code",
+  "launched_by": "admin",
+  "planning_required": false,
+  "planning_template_id": "browser-game-2d",
+  "playbook_id": "browser-game-2d",
+  "preview_entrypoint": "games/92-moon-prism-relay/index.html",
+  "review_required": true,
+  "source": "admin_ui",
+  "target_repo": "ystackai/studio-sailor-moon",
+  "variant": "direct-build-after-checkout-scrub",
+  "work_order_archetype": "creative_game"
+}
+
+(Full rules, WORKFLOW.md taste-gate slice, GitHub branch model requiring canonical factoryx/.../work-order-... branch + PR with FactoryX Work Order Context + full prompt, memory file usage, preview/VERIFICATION requirements, Game Feel Checklist, Quality bar, execute instructions, head guard at c1fc31d..., push command, and "leave code changes in place and report any PR URL" are in the originating <user_query> and .factoryx/work-orders/work-order-1781501302993-7-1/ . Treat as the plan of record for diff review.)
+
