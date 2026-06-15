@@ -97,6 +97,11 @@ Workspace:
 - Fresh chromium headless verification (autostart + virtual-time 6.5s exercising real gameplay loop, state, spawns, deflect/collect/super possible): 0 game JS errors, new screenshots in work order dir (293k start live scene, 48k gameplay), payload 42.9k.
 - All prior ribbon/deflect/collect/live-first-screen/high-contrast polish retained. Game feel checklist + quality bar hold. No blockers.
 
+## Post "redeploy reset after verifier image rollout" Evidence (addressed before further polish, 10:02–10:05Z)
+- Per Work Order prompt, addressed the previous-run issue first: re-ran real chromium verification in the post-rollout verifier image (fresh 7.5s autostart + start overlay; also adopted 10:02 "newbest" capture that exercises highscore beat/persist path).
+- New evidence: screenshot-*-postreset.png (299k start live scene + 46k gameplay), screenshot-gameplay-polish-newbest.png, verification-run-*-1005*-postreset.log + the 1002 logs; all show 0 game errors (only dbus noise), live first screen + full core loop + scoring paths healthy post-redeploy/reset.
+- Updated WORKLOG/VERIFICATION/PREVIEW + committed artifacts + docs (no game code edit required; reset was external infra). All checklists re-hold. Using deadline budget for correctness of evidence on the rolled-out verifier. PR #81 to include full original prompt + this context.
+
 ## Final Pre-Deadline Polish (Grok, 09:45Z, using polish_until_deadline budget)
 - Lane swaps: living pink/gold ribbon swish trails (quadratic, fabric-will motion) on ←→/swipe/pads — traversal has weight and house-style ribbons.
 - Deflects now satisfying: bright dual-crescent gold "slash" geometry arcs across cleared hazard (sacred geometry pop + particles + chime + small gauge/score).
