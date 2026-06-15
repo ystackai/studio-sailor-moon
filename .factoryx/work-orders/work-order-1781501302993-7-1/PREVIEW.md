@@ -62,3 +62,12 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - New logs (e.g. verification-run-20260615-100519-postreset.log) filtered clean: 0 game JS errors / uncaught / page errors / asset fails (only dbus noise, matching all prior clean runs).
 - Confirms: after redeploy/reset, the preview entrypoint still loads the live playable first screen with no runtime errors; highscore/newbest + full core loop healthy in current verifier context. No game changes needed. All prior polish evidence + checklists remain valid. Added to work order dir alongside previous shots. PR #81 to be refreshed with full context.
 
+
+## Fresh Post-Address Chromium Evidence (~10:09Z)
+
+- Re-ran established real-browser harness (native chromium, virtual-time 7.5s autostart + start overlay, --run-all-stages, 820x620) after the redeploy-reset-address commit.
+- 0 game errors in filtered logs (same clean dbus-only pattern).
+- New shots adopted: `screenshot-start-overlay-fresh-current.png` (299.5k — live playable moonlit lanes + idling player under glass card on first screen) + `screenshot-gameplay-polish-fresh-current.png` (47.4k — 7.5s virtual post-gesture: score/gauge/wave/shards/hazards/player/effects exercised).
+- Confirms: the first screen remains the live playable slice; full core loop (dash/jump/swap/deflect/collect/super/ribbons/pops/wave) healthy with no runtime errors in current verifier/preview context. All prior polish (deflect-to-super, score pops, wave flourish, living ribbons, crescent slashes, gauge ritual, leans, R+any-tap restart, highscore, high-contrast thematic copy) visible and working.
+- Verification logs + these shots added alongside postreset ones. No code changes. PR #81 to be refreshed with full Work Order context + prompt.
+

@@ -294,3 +294,50 @@ https://github.com/ystackai/studio-sailor-moon/pull/81
 - All artifacts (new pngs, logs, this note) left in .factoryx/work-orders/.../ for the canonical PR #81 (body to include full original prompt + context per spec).
 - Ready for CI gates + human review once PR body is current. Push via `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`.
 
+
+## Grok Fresh Chromium Verification Refresh (~10:09Z, post-redeploy address commit)
+
+**Environment (identical harness to addressing pass)**
+- Chromium 149.0.7827.102 (current native /usr/bin/chromium in post-rollout verifier image)
+- Viewport 820×620, --headless=new, --disable-gpu --no-sandbox, --allow-file-access-from-files, --virtual-time-budget=7500 (game) / ~1.5s (start), --run-all-compositor-stages-before-draw
+- Date: 2026-06-15 ~10:09Z ( ~4h 19m before 14:28Z deadline)
+- Purpose: Fresh evidence after the "address: redeploy reset..." commit (HEAD 9f01d47) to confirm the playable artifact remains healthy with 0 errors in the rolled-out env; continue using polish_until_deadline budget for evidence strength before any peripheral work.
+
+**Verification Steps & Results**
+- Start overlay (no ?autostart): `screenshot-start-overlay-fresh-current.png` (299.5k) — live moonlit city lanes, 2-layer parallax buildings, stars, glowing moon, idling player (center lane, sin bob + glow) visible *immediately* behind the compact glass card. First screen is the playable slice (taste-gate).
+- Gameplay: `?autostart=1` + 7.5s virtual-time-budget exercised the *real* JS update+draw loop (post simulated gesture that gates audio + starts play). Result `screenshot-gameplay-polish-fresh-current.png` (47.4k) shows active play state (score ✦, pulsing gauge, wave, moving shards/hazards, player, possible effects).
+- Logs: `verification-run-20260615-100924.log` (game) + `verification-run-20260615-100925-start.log` (start). Filtered (strip dbus/object_proxy/UPower/bus.cc/NameHasOwner/DisplayDevice noise): **0 uncaught JS exceptions, 0 game console.error, 0 pageerror, 0 request/asset/net failures**. Only container env chatter (exact same clean signature as every prior successful Grok verif including the 10:05 postreset runs).
+- PNGs validated as proper 820×620 compositor renders (sizes ~47k gameplay / ~299k start match prior healthy evidence).
+- State exercised in real runtime: lane lerp + swish ribbons, jump/dash physics + leans, deflect (crescent slash + sparkle + chime + gauge/score + blue +pts pop), collect (gold +pts pop + sparkles + possible ready burst), wave escalation, super (ribbons + orbit + flash + call + invuln if gauge full in slice), gameover paths, highscore, restart (R/enter/space/any-tap), start fade.
+- Canvas/DPR, controls (keyboard/pointer/touch/swipe/pads), responsive, self-contained all unchanged and confirmed by clean run.
+
+**Game Feel Checklist (re-validated on fresh post-address run)**
+- ✅ Core verb in first 30s (visible lanes + idling player + legend on load; no explanation needed)
+- ✅ Input <100ms + visible/audible (lerp/swish/slash/particle/tones/pops + ritual on gauge cap)
+- ✅ Easing everywhere (prior curves + dt pops + ribbon phases)
+- ✅ Hit/score/deflect/super feedback (pops + slash + chime + ritual + ribbons + wave banner + shake)
+- ✅ Audio only after gesture (start + autostart simulated gesture)
+- ✅ Touch ≥44px (58) + pointer + keyboard + swipe + R/enter/space/any-tap
+- ✅ 60fps mid-laptop (dt cap, simple canvas)
+- ✅ <2MB (50.5k single file, unchanged)
+- ✅ No external net (self-contained)
+
+**Quality Bar (fresh)**
+- First screen makes sense: live moon city runner scene + compact card + clear "✦ Start Transform ✦" + best (when present) + thematic 3-line legend.
+- Interaction coherent <1min: yes (taste-gate slice fully evaluable; deflect-to-super, pops, wave flourish, ribbons all in core loop).
+- Verification actually ran (real chromium + virtual + autostart exercising real gameplay loop post-gesture); 0 failures.
+- Live preview opens clean (per evidence); no browser runtime errors.
+- PR #81 to be refreshed with this + full prompt + prior for review.
+- House style (ribbons living, crescents as power geometry, transformation ritual, theatrical sincerity) reinforced by continued clean runtime.
+
+**Screenshots (this refresh pass)**
+- `screenshot-start-overlay-fresh-current.png` (299.5k) — live playable first screen immediately after the redeploy-address commit.
+- `screenshot-gameplay-polish-fresh-current.png` (47.4k) — 7.5s virtual autostart gameplay exercised in rolled-out env post-address.
+- Prior postreset + all earlier shots retained.
+
+**Notes**
+- This continues the direct response to the Work Order's "Previous run issue to address before peripheral polish: redeploy reset after verifier image rollout" — the prior commit addressed by re-verif; this appends even fresher evidence (10:09Z) using remaining budget, confirming no drift.
+- No game code changes. Single-file, taste-gate held, all checklists re-confirmed. Preview entrypoint stable: `games/92-moon-prism-relay/index.html`.
+- All artifacts + this note left in work order dir for canonical PR #81 (body includes full original prompt + FactoryX Work Order Context per spec).
+- Ready for CI gates + human review. Push via `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`.
+

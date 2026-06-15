@@ -215,3 +215,16 @@
 - **Next**: Update VERIFICATION.md + PREVIEW.md + PR_BODY_REFRESH.md with this section + new shot refs; `git add` the 5 untracked + new postreset pngs/logs + md updates; commit; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. This resolves the listed previous-run issue using remaining deadline budget for evidence correctness (no peripheral polish yet). No blockers.
 - Syntax re-validated (node --check on extracted script); followed game-designer-2d (playable slice, clean runtime, legible first screen) + house style. PR #81 is the canonical for full prompt context.
 
+
+## Grok Fresh Evidence Refresh (post-redeploy address, ~10:09Z, still pre 14:28Z deadline)
+
+- **Branch state**: HEAD 9f01d47 (the commit that addressed "redeploy reset after verifier image rollout" by re-verif + adopting 10:02 newbest artifacts + md updates; no game code change). `git fetch origin` confirmed local == remote (0 diff). gh pr view executed (token limitation noted per prior; use configured gh normally; no local FEEDBACK or memory shows unresolved CHANGES_REQUESTED / blocking admin comments / failing preview). Pre-push guard satisfied.
+- **Action (using remaining polish_until_deadline budget for evidence currency)**: Re-ran the exact established chromium harness (capture-log.sh pattern) with current native /usr/bin/chromium post-rollout: --headless=new, --disable-gpu --no-sandbox, --allow-file-access-from-files, --virtual-time-budget=7500 (game) / 1500 (start), --run-all-compositor-stages-before-draw, --window-size=820,620, --screenshot. URL with ?autostart=1 for real post-gesture gameplay loop; separate clean start load. Produced new artifacts in /tmp/verif-current then adopted to work order dir.
+- **Results**: `screenshot-gameplay-polish-fresh-current.png` (47.4k) + `screenshot-start-overlay-fresh-current.png` (299.5k) + `verification-run-20260615-100924.log` / 100925-start.log.
+  - Filtered logs (same exclusion as all prior): **0 uncaught JS, 0 game console.error / pageerror, 0 request/asset failures**. Only expected dbus/UPower/container noise (identical clean pattern).
+  - PNGs are real compositor outputs (sizes consistent with healthy prior renders of live lanes + post-7.5s sim state).
+  - Autostart exercised: start gesture path, audio gate, update/draw loop, spawns (shards/hazards), player actions, scoring/gauge/wave/effects possible in slice.
+- **Checklists re-validated**: All 9 Game Feel items + Quality bar + taste-gate (live playable first screen, core verb <30s, <100ms feedback, easing, hit/deflect/collect/super pops/ribbons/slashes/ritual, audio gesture, 58px touch+key+swipe+R, 60fps, <<2MB 50.5k self-contained, no net) hold exactly as in the addressing commit. No regressions. Preview entrypoint `games/92-moon-prism-relay/index.html` confirmed (and .factoryx/preview-entrypoint).
+- **Next**: Update VERIFICATION.md + PREVIEW.md + PR_BODY_REFRESH.md with this evidence section + refs to new -fresh-current shots/logs; git add the 4 new artifacts + mds; commit "docs: fresh chromium 7.5s verif ..."; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. Using deadline budget strictly for post-address evidence refresh (no peripheral code polish). Ready for CI + human review on PR #81.
+- House style + game-designer-2d followed (no change to implementation).
+

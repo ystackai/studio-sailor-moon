@@ -1,5 +1,35 @@
 # PR #81 Body — Recommended Update (include this + full prompt)
 
+## Moon Prism Relay (factoryx polish pass — pre-deadline, fresh post-redeploy evidence 10:09Z)
+
+Ambitious, bright, high-energy magical-girl 3-lane arcade runner: dash/jump/skate moonlit city, collect prism shards (with crescent pop + rising gold +pts), swap lanes (ribbon swish), **deflect** shadow hazards with crisp feedback (crescent slash geometry + sparkles + chime + gauge + rising blue +pts), unleash satisfying **Moon Prism Power** super with flowing pink/gold living ribbons (house-style sacred fabric/tech) + orbiting shards + classic henshin call. Escalating waves trigger brief theatrical "✦ WAVE N ✦" banner with crescent underline.
+
+- First screen: live playable scene (parallax city, stars, moon, idling player bobbing) under compact glass start card. Click/tap/Enter/Space/X to transform in with fade.
+- Controls: ←→/AD lanes, ↑/W/Space jump, ↓/S dash, X/Shift or center tap: super (when full). Touch 58px pads + swipe + keyboard. Responsive DPR.
+- Systems: escalating waves (30s→15s), survival+combo scoring (✦), Moon Gauge fills to 5s invuln super, particles, screen shake, procedural audio (gesture only), highscore localStorage, restart.
+- Polish: ribbon super (quadratic living curves per Sailor Moon house), deflect verb now rewarding (slash + blue +pts), collect sparkles + gold +pts, wave escalation banner with crescent, UI high-contrast, re-verified real chromium.
+- Latest: deflect that fills gauge auto-triggers full ritual + "Moon Prism Power" super. Pre-deadline: rising score pops + wave flourish. All in 50.5k self-contained.
+- **Fresh post-address evidence (10:09Z)**: real chromium 7.5s autostart verif after the redeploy-reset-address commit (HEAD 9f01d47, no game code change): 0 game errors (filtered), new screenshots `screenshot-gameplay-polish-fresh-current.png` (47.4k) + start-overlay-fresh-current (299.5k) exercising live first screen + full core loop. Logs clean. All checklists hold. PR #81 ready for refresh with full prompt.
+
+**Preview:** `games/92-moon-prism-relay/index.html` (self-contained ~50.5KB, no net, works offline post-load)
+
+**Verification:** Real chromium headless + virtual-time-budget + ?autostart exercised (0 game errors, clean console/page, live score/gauge/wave/ribbons/pops/flourish/super in slice). See .factoryx/work-orders/work-order-1781501302993-7-1/VERIFICATION.md + screenshots (start-overlay-*-current.png, gameplay-*-fresh-current.png, polished). Fresh run at ~10:09Z post 10:05 address commit.
+
+**Game Feel (all checked):**
+- Core verb in <30s, <100ms response + feedback (+ rising gold/blue +pts on collect/deflect), easing everywhere, hit/score/deflect/super/wave particles+tones+pops+flourish+ribbons+slashes, audio gesture only, ≥44px (58) touch+key, 60fps, <<2MB (50.5k), no external.
+
+## FactoryX Work Order Context
+- Work Order: work-order-1781501302993-7-1
+- factory_id: factory-sailor-moon
+- project_id: sailor-moon
+- role_id: coder-default
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- PR: #81 (update this body with full original prompt below for reviewers)
+- Preview entrypoint: games/92-moon-prism-relay/index.html
+- See full WORKLOG.md, PREVIEW.md, VERIFICATION.md, TECHNICAL_SYSTEM_DESIGN.md, FEEDBACK.md and screenshots in .factoryx/work-orders/work-order-1781501302993-7-1/
+- All changes per goal + WORKFLOW.md (browser-game-2d) + taste-gate (playable slice first) + Game Feel Checklist.
+
+
 ## Moon Prism Relay (factoryx polish pass — pre-deadline feedback + evidence)
 
 Ambitious, bright, high-energy magical-girl 3-lane arcade runner: dash/jump/skate moonlit city, collect prism shards (with crescent pop + rising gold +pts), swap lanes (ribbon swish), **deflect** shadow hazards with crisp feedback (crescent slash geometry + sparkles + chime + gauge + rising blue +pts), unleash satisfying **Moon Prism Power** super with flowing pink/gold living ribbons (house-style sacred fabric/tech) + orbiting shards + classic henshin call. Escalating waves trigger brief theatrical "✦ WAVE N ✦" banner with crescent underline.
