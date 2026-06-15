@@ -153,3 +153,22 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - **Checklists re-validated (no drift)**: All 9 Game Feel + Quality bar + taste-gate (live playable first screen on load with no explanation needed; core verb <30s; <100ms + visible/audible feedback; easing; hit/deflect/collect/super feedback via pops/ribbons/slashes/ritual/wave + surge; audio gesture only; 58px touch+key+swipe+R+pointer; 60fps cap; <<2MB 53.1k self-contained; no external net) hold exactly. Preview entrypoint `games/92-moon-prism-relay/index.html` + .factoryx/preview-entrypoint stable. 53.1kB payload.
 - **Next**: Update VERIFICATION.md + this PREVIEW + PR_BODY_REFRESH + WORKLOG with this section + new shot refs; git add new artifacts + mds; commit "docs: fresh chromium 7.5s verif evidence at 11:05Z ..."; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. Using deadline budget for continued evidence strength post the explicit redeploy reset address (no peripheral code polish). Ready for CI + human review on PR #81.
 - House style + game-designer-2d + WORKFLOW (browser-game-2d) followed (no implementation change). Redeploy reset addressed prior; this keeps evidence current on rolled-out image.
+
+## Grok Fresh Chromium Evidence Refresh (~10:34Z, post-redeploy address + wave polish currency, pre 14:28Z deadline)
+
+**Branch state**: HEAD d9800e0 (docs fix on 11:05Z bullet); `git fetch origin` confirmed local == remote (0 diff, pre-push guard). Using polish_until_deadline budget for evidence currency after the redeploy-reset address (multiple prior runs) and post last code polish. No blocking reviews visible (gh limited in env; use configured gh + factory helpers normally per spec; FEEDBACK has no new unresolved).
+
+**Action**: Re-ran exact established real chromium harness (native /usr/bin/chromium via capture-log.sh, 820x620, full flags, 7.5s ?autostart + 1.5s start) in rolled-out verifier image. Produced/adopted `screenshot-*-fresh-20260615-1034.png` (298k start / 47.5k gameplay) + `verification-run-20260615-1034*.log`.
+
+**Results**:
+  - Filtered logs (dbus/UPower/... noise strip, same as all prior): **0 uncaught JS exceptions, 0 game console.error / pageerror / request/asset/net failures**. Clean signature.
+  - PNGs: proper 820×620 compositor renders (sizes consistent with healthy prior).
+  - Autostart exercised: gesture path, audio gate, full update+draw loop, spawns, player actions, scoring/gauge/wave/effects (PB, pops, swishes, slashes, ribbons, surges) in real runtime slice. WaveFlash (lanes/gift shards) paths from prior polish covered.
+- **Checklists re-validated (no drift)**: All 9 Game Feel + Quality bar + taste-gate (live playable first screen on load with no explanation needed; core verb <30s; <100ms + visible/audible feedback; easing; hit/deflect/collect/super feedback via pops/ribbons/slashes/ritual/wave + surge; audio gesture only; 58px touch+key+swipe+R+pointer; 60fps cap; <<2MB 53.1k self-contained; no external net) hold exactly. Preview entrypoint `games/92-moon-prism-relay/index.html` + .factoryx/preview-entrypoint stable. 53.1kB payload.
+- **Next**: Update VERIFICATION.md + this PREVIEW + PR_BODY_REFRESH + WORKLOG with this section + new shot refs; git add new artifacts + mds; commit "docs: fresh chromium 7.5s verif evidence at 10:34Z ..."; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. Using deadline budget for continued evidence strength post the explicit redeploy reset address (no peripheral code polish). Ready for CI + human review on PR #81.
+- House style + game-designer-2d + WORKFLOW (browser-game-2d) followed (no implementation change). Redeploy reset addressed prior; this keeps evidence current on rolled-out image.
+
+**Screenshots (10:34Z refresh)**
+- `screenshot-start-overlay-fresh-20260615-1034.png` (298k) — live playable first screen.
+- `screenshot-gameplay-polish-fresh-20260615-1034.png` (47.5k) — 7.5s virtual autostart gameplay exercised in rolled-out env.
+- Prior shots retained.
