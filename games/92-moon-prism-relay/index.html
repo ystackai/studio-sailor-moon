@@ -23,57 +23,70 @@ canvas#uiCanvas {
 }
 #startScreen {
   position:fixed; top:0; left:0; width:100%; height:100%;
-  z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  background:linear-gradient(180deg, #0b0b2a 0%, #1a0a3a 50%, #2d1b69 100%);
+  z-index:10; display:flex; align-items:center; justify-content:center;
+  background: radial-gradient(circle at 50% 40%, rgba(11,11,42,0.15) 0%, rgba(11,11,42,0.55) 55%, rgba(11,11,42,0.75) 80%);
+  pointer-events:none;
+}
+#startScreen .card {
+  text-align:center;
+  background: rgba(15, 14, 45, 0.82);
+  border: 1px solid rgba(236,72,153,0.35);
+  border-radius: 22px;
+  padding: 28px 32px 24px;
+  box-shadow: 0 0 0 1px rgba(168,85,247,0.2), 0 30px 80px rgba(0,0,0,0.6);
+  max-width: 92%;
+  width: 420px;
+  pointer-events:auto;
 }
 #startScreen h1 {
-  font-size:clamp(28px, 6vw, 56px); color:#f0abfc;
-  text-shadow:0 0 20px #c084fc, 0 0 40px #a855f7;
-  letter-spacing:3px; margin-bottom:8px;
+  font-size:clamp(26px, 5.8vw, 48px); color:#f8fafc;
+  text-shadow: 0 0 18px #c084fc, 0 0 36px #a855f7;
+  letter-spacing:2.5px; margin-bottom:6px;
 }
-#startScreen .subtitle {
-  font-size:clamp(12px, 2.5vw, 18px); color:#c4b5fd;
-  margin-bottom:32px; letter-spacing:1px;
+#startScreen .tag {
+  font-size:clamp(12px, 2.2vw, 15px); color:#e0d4ff;
+  margin-bottom:18px; letter-spacing:0.6px; line-height:1.35;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
 }
-#startScreen .controls {
-  font-size:clamp(10px, 2vw, 14px); color:rgba(200,180,255,0.7);
-  text-align:center; line-height:1.8; margin-bottom:24px;
+#startScreen .legend {
+  font-size:clamp(10px, 1.9vw, 12.5px); color:#c8b5ff;
+  margin: 12px 0 16px; letter-spacing:0.4px; line-height:1.55;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.5);
 }
-#startScreen .ctrl-instructions .ctrlKey {
-  display:inline-block; padding:2px 8px; background:rgba(168,85,247,0.25);
-  border:1px solid rgba(168,85,247,0.5); border-radius:6px;
-  color:#f0abfc; font-weight:bold; font-size:0.95em;
-  text-shadow:0 0 8px rgba(168,85,247,0.5);
+#startScreen .legend .k {
+  display:inline-block; padding:1px 6px; margin:0 1px;
+  background:rgba(168,85,247,0.22); border:1px solid rgba(236,72,153,0.4);
+  border-radius:5px; color:#f0abfc; font-weight:600; font-size:0.92em;
 }
 #startBtn {
-  padding:14px 40px; font-size:clamp(16px, 3vw, 22px);
+  padding:13px 36px; font-size:clamp(15px, 2.8vw, 19px);
   background:linear-gradient(135deg, #ec4899, #a855f7);
-  color:#fff; border:none; border-radius:30px; cursor:pointer;
-  box-shadow:0 0 20px rgba(236,72,153,0.5), 0 0 40px rgba(168,85,247,0.3);
-  transition:transform 0.2s, box-shadow 0.2s;
-  pointer-events:auto; letter-spacing:1px;
+  color:#fff; border:none; border-radius:28px; cursor:pointer;
+  box-shadow:0 0 18px rgba(236,72,153,0.45), 0 0 36px rgba(168,85,247,0.28);
+  transition:transform 0.18s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.18s;
+  pointer-events:auto; letter-spacing:0.8px; font-weight:600;
 }
-#startBtn:hover { transform:scale(1.05); box-shadow:0 0 30px rgba(236,72,153,0.7); }
-#startBtn:active { transform:scale(0.97); }
+#startBtn:hover { transform:translateY(-1px) scale(1.02); box-shadow:0 0 26px rgba(236,72,153,0.6); }
+#startBtn:active { transform:scale(0.985); }
 #touchControls {
   position:fixed; bottom:0; left:0; width:100%; z-index:5;
   display:none; justify-content:space-between; padding:10px 8px;
   pointer-events:none;
 }
 .touchBtn {
-  width:60px; height:60px; border-radius:50%;
-  background:rgba(168,85,247,0.35); border:2px solid rgba(236,72,153,0.5);
+  width:58px; height:58px; border-radius:50%;
+  background:rgba(168,85,247,0.32); border:2px solid rgba(236,72,153,0.55);
   display:flex; align-items:center; justify-content:center;
-  color:#f0abfc; font-size:22px; pointer-events:auto;
+  color:#f0abfc; font-size:21px; pointer-events:auto;
   -webkit-tap-highlight-color:transparent;
 }
-.touchBtn:active { background:rgba(236,72,153,0.5); }
-.touchBtnGroup { display:flex; gap:8px; }
+.touchBtn:active { background:rgba(236,72,153,0.55); }
+.touchBtnGroup { display:flex; gap:7px; }
 #comboDisplay {
   position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-  z-index:8; font-size:clamp(36px,8vw,72px); font-weight:bold;
-  color:#f0abfc; text-shadow:0 0 30px #c084fc;
-  opacity:0; pointer-events:none; transition:opacity 0.3s;
+  z-index:8; font-size:clamp(34px,8vw,68px); font-weight:bold;
+  color:#f0abfc; text-shadow:0 0 28px #c084fc;
+  opacity:0; pointer-events:none; transition:opacity 0.28s, transform 0.28s;
 }
 </style>
 </head>
@@ -82,17 +95,16 @@ canvas#uiCanvas {
 <canvas id="uiCanvas"></canvas>
 
 <div id="startScreen">
-  <h1>🌙 Moon Prism Relay 🌙</h1>
-  <div class="subtitle">Moonlight Racing — Prism Shard Runner — Moon Prism Power!</div>
-    <div class="controls" style="margin-bottom:8px; color:rgba(240,171,252,0.5); font-size:clamp(9px,1.8vw,12px);">⚡ Collect shards · Dodge shadows · Chain combos · Unleash power!</div>
-   <div class="ctrl-instructions">
-     <span class="ctrlKey">← →</span> or <span class="ctrlKey">A D</span> — switch lanes<br>
-     <span class="ctrlKey">↑</span> or <span class="ctrlKey">W</span> — jump over shadow blobs<br>
-     <span class="ctrlKey">↓</span> or <span class="ctrlKey">S</span> — dash through shadow orbs<br>
-     <span class="ctrlKey">X</span> — Moon Prism Power (when gauge is full!)<br>
-     Collect prism shards to fill your Moon Gauge ✦
+  <div class="card">
+    <h1>🌙 Moon Prism Relay 🌙</h1>
+    <div class="tag">Skate the moonlit lanes. Chain the shards. Become the light.</div>
+    <button id="startBtn">✦ Start Transform ✦</button>
+    <div class="legend">
+      <span class="k">← →</span> or <span class="k">A D</span> switch lanes<br>
+      <span class="k">↑</span> / <span class="k">W</span> / space — jump shadows &nbsp; <span class="k">↓</span> / <span class="k">S</span> — dash orbs<br>
+      <span class="k">X</span> — Moon Prism Power when gauge full
     </div>
-  <button id="startBtn">✦ Start Transform ✦</button>
+  </div>
 </div>
 
 <div id="touchControls">
@@ -411,67 +423,76 @@ function spawnParticles(x, y, color, count, spread) {
 let lastTime = 0;
 
 function update(dt) {
-  if (state !== 'playing') return;
+  if (state !== 'playing' && state !== 'start') return;
 
-  gameTime += dt;
-  waveTimer += dt;
+  const isDemo = state === 'start';
+  const speedMul = isDemo ? 0.35 : 1;
+
+  if (!isDemo) {
+    gameTime += dt;
+    waveTimer += dt;
+
+    // Wave escalation
+    if (waveTimer >= waveDuration) {
+      waveTimer = 0;
+      wave++;
+      waveDuration = Math.max(15, 30 - wave * 2);
+      difficulty = 1 + (wave - 1) * 0.3;
+      spawnParticles(player.x, player.y - 30, '#f0abfc', 20, 150);
+      playPowerUp();
+    }
+
+    // Score from survival
+    score += Math.floor(dt * 10 * difficulty);
+
+    // Combo timer
+    if (comboTimer > 0) {
+      comboTimer -= dt;
+      if (comboTimer <= 0) {
+        combo = 0;
+        comboMultiplier = 1;
+      }
+    }
+
+    // Screen shake decay
+    if (screenShake > 0) {
+      screenShake -= dt * 5;
+      screenShakeX = (Math.random() - 0.5) * screenShake * 8;
+      screenShakeY = (Math.random() - 0.5) * screenShake * 8;
+      if (screenShake < 0) { screenShake = 0; screenShakeX = 0; screenShakeY = 0; }
+    }
+
+    // Super mode
+    if (superActive) {
+      superTimer -= dt;
+      superFlash = Math.max(0, superFlash - dt * 3);
+      if (superTimer <= 0) {
+        superActive = false;
+        moonGauge = 0;
+      }
+    }
+
+    // Player invincibility
+    if (player.invincible) {
+      player.invincibleTimer -= dt;
+      player.transformFlash = Math.max(0, player.transformFlash - dt * 4);
+      if (player.invincibleTimer <= 0) player.invincible = false;
+    }
+  } else {
+    // Demo / start idle time
+    gameTime += dt * 0.6;
+  }
+
   player.glowPulse += dt * 3;
 
-  // Wave escalation
-  if (waveTimer >= waveDuration) {
-    waveTimer = 0;
-    wave++;
-    waveDuration = Math.max(15, 30 - wave * 2);
-    difficulty = 1 + (wave - 1) * 0.3;
-    spawnParticles(player.x, player.y - 30, '#f0abfc', 20, 150);
-    playPowerUp();
-  }
-
-  // Score from survival
-  score += Math.floor(dt * 10 * difficulty);
-
-  // Combo timer
-  if (comboTimer > 0) {
-    comboTimer -= dt;
-    if (comboTimer <= 0) {
-      combo = 0;
-      comboMultiplier = 1;
-    }
-  }
-
-  // Screen shake decay
-  if (screenShake > 0) {
-    screenShake -= dt * 5;
-    screenShakeX = (Math.random() - 0.5) * screenShake * 8;
-    screenShakeY = (Math.random() - 0.5) * screenShake * 8;
-    if (screenShake < 0) { screenShake = 0; screenShakeX = 0; screenShakeY = 0; }
-  }
-
-  // Super mode
-  if (superActive) {
-    superTimer -= dt;
-    superFlash = Math.max(0, superFlash - dt * 3);
-    if (superTimer <= 0) {
-      superActive = false;
-      moonGauge = 0;
-    }
-  }
-
-  // Player invincibility
-  if (player.invincible) {
-    player.invincibleTimer -= dt;
-    player.transformFlash = Math.max(0, player.transformFlash - dt * 4);
-    if (player.invincibleTimer <= 0) player.invincible = false;
-  }
-
-  // Player lane swap
+  // Player lane swap (smooth even in demo)
   const targetX = getLaneX(player.targetLane);
   const dx = targetX - player.x;
   player.x += dx * LANE_SWAP_SPEED * dt * 10;
   player.rotation = dx * 0.003;
 
-  // Player jump/dash physics
-  if (player.jumping) {
+  // Player jump/dash physics (demo has gentle bob only)
+  if (player.jumping && !isDemo) {
     player.vy += GRAVITY * dt;
     player.y += player.vy * dt;
     const groundY = getGroundY() - player.height;
@@ -481,16 +502,21 @@ function update(dt) {
       player.jumping = false;
       player.grounded = true;
     }
+  } else if (isDemo) {
+    // idle bob on start screen
+    const groundY = getGroundY() - player.height;
+    player.y = groundY - 4 + Math.sin(gameTime * 1.7) * 3.5;
+    player.vy = 0;
   }
 
   // Player dash
-  if (player.dashing) {
+  if (player.dashing && !isDemo) {
     player.dashTimer -= dt;
     if (player.dashTimer <= 0) player.dashing = false;
   }
 
-  // Spawn trail
-  if (player.dashing || gameTime < 5) {
+  // Spawn trail (demo light)
+  if ((player.dashing || gameTime < 5) && !isDemo) {
     trailParticles.push({
       x: player.x - 15,
       y: player.y + player.height / 2,
@@ -501,20 +527,22 @@ function update(dt) {
 
   // Update trail particles
   for (let i = trailParticles.length - 1; i >= 0; i--) {
-    trailParticles[i].x -= (player.dashing ? PLAYER_SPEED_BASE * DASH_BOOST * difficulty : PLAYER_SPEED_BASE * 0.6) * dt;
+    const tSpeed = (player.dashing ? PLAYER_SPEED_BASE * DASH_BOOST * difficulty : PLAYER_SPEED_BASE * 0.6) * (isDemo ? 0.3 : 1);
+    trailParticles[i].x -= tSpeed * dt;
     trailParticles[i].life -= dt * 2.5;
     if (trailParticles[i].life <= 0) trailParticles.splice(i, 1);
   }
 
-  // Update stars
+  // Update stars (always, slower in demo)
   for (const star of stars) {
-    star.x -= star.speed * (player.dashing ? 3 : 1) * 60 * dt;
+    const s = (player.dashing ? 3 : 1) * speedMul;
+    star.x -= star.speed * 60 * dt * s;
     star.twinkle += dt * 2;
     if (star.x < -5) star.x = W + 5;
   }
 
-  // Update buildings (parallax)
-  const scrollSpeed = (player.dashing ? PLAYER_SPEED_BASE * DASH_BOOST : PLAYER_SPEED_BASE) * 0.6 * difficulty;
+  // Update buildings (parallax, always)
+  const scrollSpeed = (player.dashing ? PLAYER_SPEED_BASE * DASH_BOOST : PLAYER_SPEED_BASE) * 0.6 * difficulty * speedMul;
   for (const b of buildings) {
     b.x -= b.parallax * scrollSpeed * dt;
     if (b.x + b.w < -20) b.x = W + 20 + Math.random() * 100;
@@ -524,7 +552,13 @@ function update(dt) {
     if (b.x + b.w < -20) b.x = W + 20 + Math.random() * 80;
   }
 
-  // Update obstacles
+  if (isDemo) {
+    // keep player centered for preview
+    if (Math.abs(player.targetLane) > 0.1) player.targetLane = 0;
+    return; // no hazards, no spawns, no score in demo
+  }
+
+  // Update obstacles (playing only)
   const moveSpeed = scrollSpeed * (player.dashing ? DASH_BOOST : 1);
   for (let i = obstacles.length - 1; i >= 0; i--) {
     const obs = obstacles[i];
@@ -537,7 +571,6 @@ function update(dt) {
       const ox = obs.x - obs.w/2, oy = obs.y;
       if (px < ox + obs.w && px + player.width > ox &&
           py < oy + obs.h && py + player.height > oy) {
-        // Check if jumping over shadow or dashing through
         if (obs.type === 'shadow' && player.jumping && player.y < oy - 10) {
           // jumped over!
         } else if (obs.type === 'shadow_ball' && player.dashing) {
@@ -643,7 +676,6 @@ function hitPlayer() {
   player.transformFlash = 0.5;
 
   if (moonGauge <= 0) {
-    // Health lost - game over
     state = 'gameover';
   }
 }
@@ -704,7 +736,6 @@ function draw() {
   for (const b of buildings) {
     gctx.fillStyle = b.color;
     gctx.fillRect(b.x, getGroundY() - b.h * 0.6, b.w, b.h * 0.6);
-    // windows
     const winCols = 3, winRows = Math.floor(b.h * 0.6 / 18);
     for (let wy = 0; wy < winRows; wy++) {
       for (let wx = 0; wx < winCols; wx++) {
@@ -760,7 +791,7 @@ function draw() {
   gctx.lineTo(W, groundY);
   gctx.stroke();
 
-  if (state === 'playing' || state === 'gameover') {
+  if (state === 'playing' || state === 'gameover' || state === 'start') {
     drawPlayer();
     drawShards();
     drawObstacles();
@@ -1071,13 +1102,13 @@ function drawUI() {
     uctx.beginPath();
     uctx.roundRect ? uctx.roundRect(gaugeX, gaugeY, gaugeW * fill, gaugeH, 7) : uctx.fillRect(gaugeX, gaugeY, gaugeW * fill, gaugeH);
     uctx.fill();
-        // Pulse glow: intensify as gauge approaches full
-        const gaugeRatio = moonGauge / MOON_MAX;
-        const pulse = Math.sin(gameTime * 6) * 0.5 + 0.5;
-        uctx.shadowBlur = 4 + gaugeRatio * pulse * 14;
-        uctx.shadowColor = gaugeRatio > 0.9 ? '#fde68a' : '#ec4899';
-    uctx.shadowBlur = 0;
+    // Pulse glow: intensify as gauge approaches full
+    const gaugeRatio = moonGauge / MOON_MAX;
+    const pulse = Math.sin(gameTime * 6) * 0.5 + 0.5;
+    uctx.shadowBlur = 4 + gaugeRatio * pulse * 14;
+    uctx.shadowColor = gaugeRatio > 0.9 ? '#fde68a' : '#ec4899';
   }
+  uctx.shadowBlur = 0;
   uctx.fillStyle = '#e2e8f0';
   uctx.font = `${Math.min(11, W*0.02)}px sans-serif`;
   uctx.textAlign = 'right';
@@ -1089,19 +1120,19 @@ function drawUI() {
   uctx.font = `${Math.min(14, W*0.025)}px sans-serif`;
   uctx.fillText(`Wave ${wave}`, W/2, 28);
 
-     // Score display - bottom left
-    uctx.textAlign = 'left';
-    uctx.fillStyle = '#e2e8f0';
-    uctx.font = `bold ${Math.min(16, W*0.028)}px sans-serif`;
-    uctx.shadowColor = '#a855f7';
-    uctx.shadowBlur = 4;
-    uctx.fillText(`✦ ${score.toLocaleString()}`, 16, H - 16);
-    if (combo > 2) {
-      uctx.fillStyle = combo >= 10 ? '#fde68a' : combo >= 5 ? '#f0abfc' : '#c4b5fd';
-      uctx.font = `bold ${Math.min(13, W*0.022)}px sans-serif`;
-      uctx.fillText(`${combo}x COMBO`, 16 + 120, H - 16);
-     }
-    uctx.shadowBlur = 0;
+  // Score display - bottom left (high contrast)
+  uctx.textAlign = 'left';
+  uctx.fillStyle = '#f1e7ff';
+  uctx.font = `bold ${Math.min(16, W*0.028)}px sans-serif`;
+  uctx.shadowColor = '#6b21a8';
+  uctx.shadowBlur = 3;
+  uctx.fillText(`✦ ${score.toLocaleString()}`, 16, H - 16);
+  if (combo > 2) {
+    uctx.fillStyle = combo >= 10 ? '#fde68a' : combo >= 5 ? '#f0abfc' : '#c4b5fd';
+    uctx.font = `bold ${Math.min(13, W*0.022)}px sans-serif`;
+    uctx.fillText(`${combo}x COMBO`, 16 + 120, H - 16);
+  }
+  uctx.shadowBlur = 0;
 
   if (moonGauge >= MOON_MAX && !superActive) {
     const pulseAlpha = 0.7 + Math.sin(gameTime * 8) * 0.3;
@@ -1112,12 +1143,12 @@ function drawUI() {
     uctx.shadowBlur = 15;
     uctx.fillText('✦ MOON PRISM POWER — TAP NOW! ✦', W/2, 55);
     uctx.shadowBlur = 0;
-    }
   }
+}
 
 // ========== GAME OVER SCREEN ==========
 function drawGameOver() {
-  uctx.fillStyle = 'rgba(11,11,42,0.7)';
+  uctx.fillStyle = 'rgba(11,11,42,0.78)';
   uctx.fillRect(0, 0, W, H);
 
   uctx.textAlign = 'center';
@@ -1125,39 +1156,43 @@ function drawGameOver() {
   uctx.font = `bold ${Math.min(36, W*0.08)}px sans-serif`;
   uctx.shadowColor = '#a855f7';
   uctx.shadowBlur = 20;
-  uctx.fillText('✦ Game Over ✦', W/2, H*0.35);
+  uctx.fillText('✦ Relay Ended ✦', W/2, H*0.34);
   uctx.shadowBlur = 0;
 
   uctx.fillStyle = '#e2e8f0';
   uctx.font = `${Math.min(22, W*0.05)}px sans-serif`;
-  uctx.fillText(`Final Score: ${score}`, W/2, H*0.45);
-    uctx.fillStyle = '#fde68a';
-    uctx.font = `${Math.min(13, W*0.022)}px sans-serif`;
-    uctx.fillText(`★ Best: ${highScore.toLocaleString()}`, W/2, H*0.51);
+  uctx.fillText(`Final Score: ${score}`, W/2, H*0.44);
+  uctx.fillStyle = '#fde68a';
+  uctx.font = `${Math.min(13, W*0.022)}px sans-serif`;
+  uctx.fillText(`★ Best: ${highScore.toLocaleString()}`, W/2, H*0.495);
 
   uctx.fillStyle = '#c4b5fd';
-  uctx.font = `${Math.min(16, W*0.035)}px sans-serif`;
-  uctx.fillText(`Waves Survived: ${wave}`, W/2, H*0.52);
+  uctx.font = `${Math.min(15, W*0.032)}px sans-serif`;
+  uctx.fillText(`Waves Survived: ${wave}`, W/2, H*0.535);
 
   const btnW = Math.min(200, W * 0.45);
   const btnH = 44;
   const btnX = W/2 - btnW/2;
-  const btnY = H*0.6;
-  uctx.fillStyle = 'linear-gradient(135deg, #ec4899, #a855f7)';
+  const btnY = H*0.62;
   uctx.fillStyle = '#ec4899';
   uctx.beginPath();
   uctx.roundRect ? uctx.roundRect(btnX, btnY, btnW, btnH, 22) : uctx.fillRect(btnX, btnY, btnW, btnH);
   uctx.fill();
   uctx.fillStyle = '#fff';
   uctx.font = `bold ${Math.min(18, W*0.04)}px sans-serif`;
-  uctx.fillText('✦ Try Again ✦', W/2, btnY + btnH/2 + 6);
+  uctx.fillText('✦ Run Again ✦', W/2, btnY + btnH/2 + 6);
 }
 
 // ========== INPUT ==========
 const keys = {};
 
 document.addEventListener('keydown', (e) => {
-  if (state === 'start') return;
+  if (state === 'start') {
+    if (e.key === 'Enter' || e.key === ' ' || e.key.toLowerCase() === 'x') {
+      startGame();
+    }
+    return;
+  }
   if (state === 'gameover') {
     if (e.key === 'Enter' || e.key === ' ') {
       ensureAudio();
@@ -1192,17 +1227,40 @@ document.addEventListener('keydown', (e) => {
   e.preventDefault();
 });
 
+function startGame() {
+  ensureAudio();
+  resetGame();
+  state = 'playing';
+  const startScreen = document.getElementById('startScreen');
+  startScreen.style.transition = 'opacity 0.45s ease-out, transform 0.45s ease-out';
+  startScreen.style.opacity = '0';
+  startScreen.style.transform = 'scale(0.985)';
+  setTimeout(() => {
+    startScreen.style.display = 'none';
+    startScreen.style.opacity = '1';
+    startScreen.style.transform = 'none';
+    const touchControls = document.getElementById('touchControls');
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      touchControls.style.display = 'flex';
+    }
+  }, 420);
+}
+
 // Touch controls
 let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
 
 document.addEventListener('touchstart', (e) => {
-  if (state === 'start') return;
+  if (state === 'start') {
+    // tap anywhere on start to begin
+    startGame();
+    e.preventDefault();
+    return;
+  }
   if (state === 'gameover') {
-    // Check if tapping the restart button area
     const t = e.touches[0];
     const btnW = Math.min(200, W * 0.45);
     const btnX = W/2 - btnW/2;
-    const btnY = H*0.6;
+    const btnY = H*0.62;
     if (t.clientX >= btnX && t.clientX <= btnX + btnW && t.clientY >= btnY && t.clientY <= btnY + 44) {
       ensureAudio();
       resetGame();
@@ -1276,23 +1334,10 @@ document.getElementById('btnDown')?.addEventListener('pointerdown', () => {
 
 // Start button
 document.getElementById('startBtn').addEventListener('click', () => {
-  ensureAudio();
-  resetGame();
-  state = 'playing';
-  const startScreen = document.getElementById('startScreen');
-  startScreen.style.transition = 'opacity 0.5s, transform 0.5s';
-  startScreen.style.opacity = '0';
-  startScreen.style.transform = 'scale(1.05)';
-  setTimeout(() => {
-    startScreen.style.display = 'none';
-    const touchControls = document.getElementById('touchControls');
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-      touchControls.style.display = 'flex';
-    }
-  }, 500);
+  startGame();
 });
 
-// Click on game area for super activation on mobile
+// Click on game area for super activation on mobile / also restart
 uiCanvas?.addEventListener('pointerdown', (e) => {
   if (state === 'gameover') {
     ensureAudio();
@@ -1305,6 +1350,18 @@ uiCanvas?.addEventListener('pointerdown', (e) => {
     activateSuper();
   }
 });
+
+// Autostart for browser verification (real runtime exercise after interaction)
+const params = new URLSearchParams(location.search);
+if (params.get('autostart') === '1') {
+  setTimeout(() => {
+    ensureAudio();
+    resetGame();
+    state = 'playing';
+    const ss = document.getElementById('startScreen');
+    if (ss) ss.style.display = 'none';
+  }, 900);
+}
 
 // ========== GAME LOOP ==========
 function gameLoop(timestamp) {
@@ -1323,6 +1380,10 @@ function gameLoop(timestamp) {
 
 // ========== INIT ==========
 initScenery();
+// Place player for attractive start preview (centered lane, visible)
+player.x = getLaneX(0);
+player.y = getGroundY() - player.height - 2;
+player.targetLane = 0;
 requestAnimationFrame(gameLoop);
 
 })();
