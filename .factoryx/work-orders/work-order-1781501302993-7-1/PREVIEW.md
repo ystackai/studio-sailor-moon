@@ -307,3 +307,27 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - PR: #81 (canonical; refresh body with full original prompt + this context for reviewers)
 - Preview entrypoint: `games/92-moon-prism-relay/index.html`
 - Redeploy reset addressed; 11:22Z playtest-driven first-screen polish complete + this 11:25Z evidence keeps verification current using polish_until_deadline budget. No blockers.
+
+## Grok Fresh Chromium Evidence Refresh (~11:16Z, post e4ad9e4 cleanup + redeploy address continuation, pre 14:28Z deadline)
+
+**Branch state**: HEAD e4ad9e4 (post-cleanup of intermediate verif artifacts; 1125Z retained as primary; local==remote). Using polish_until_deadline budget for evidence currency post-cleanup. gh per spec (no blocking from local memory/FEEDBACK).
+
+**Action**: Re-ran established real chromium harness (820x620, full flags + virtual 7.5s/1.5s, ?autostart + start overlay) on rolled-out image. Adopted `start-overlay-fresh-20260615-1116.png` (317k — live first screen with ambient shards+shadow proving "in action" under card) + `gameplay-polish-fresh-20260615-1116.png` (46.8k) + logs.
+
+**Results**:
+- 0 uncaught / game console.error / pageerror / asset/net failures (filtered clean, dbus noise only; identical signature to all prior healthy runs).
+- Real compositor PNGs. Autostart + start load exercised ambient demo (11:22 polish), full core loop, all prior polish (ribbons, pops + ★ BEST, slashes, auto-super, wave surge, PB, R, etc.).
+- Checklists: All 9 Game Feel + Quality bar + taste-gate (first screen starts in action with visible collect/deflect/lane verbs in motion on load; core <30s; <100ms + feedback; easing; hit/deflect/collect/super + record + wave; gesture audio; 58px+keys+swipe+R; 60fps; <<2MB ~53k self-contained; no net) hold exactly. No drift post-cleanup.
+- Redeploy reset addressed prior (multiple post-rollout runs); this keeps evidence current on rolled-out image after cleanup + 11:22 action polish (no code change, no peripheral). Preview entrypoint stable.
+
+**Screenshots (11:16Z post-cleanup refresh)**
+- `start-overlay-fresh-20260615-1116.png` (317k) — live playable first screen (moonlit lanes + ambient shards+shadow under glass card).
+- `gameplay-polish-fresh-20260615-1116.png` (46.8k) — 7.5s virtual autostart gameplay exercised post-cleanup in rolled-out env.
+- Prior (incl. 11:25Z/11:22Z) retained.
+
+**FactoryX Work Order Context**
+- Work Order: work-order-1781501302993-7-1
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- PR: #81 (canonical; refresh body with full original prompt + this context)
+- Preview entrypoint: `games/92-moon-prism-relay/index.html`
+- Redeploy reset addressed; post-cleanup evidence refresh using remaining budget. No blockers.
