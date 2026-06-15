@@ -1040,3 +1040,13 @@ https://github.com/ystackai/studio-sailor-moon/pull/81
 - Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
 - Preview: games/92-moon-prism-relay/index.html
 - This verification directly addresses the 15:32:54Z operator blocking contact-sheet feedback with code changes + fresh real-browser evidence. All changes left in place. Ready for review gates on PR #81.
+## Asset-backed verification refresh (~17:50Z, real chromium, post 17:25/17:45 blocking asset feedback + contract v2)
+- **Pre-edit baseline**: -1542 shots/logs from contact-sheet pass (live first screen + playable loop, 0 game errors).
+- **Post-edit run** (native /usr/bin/chromium, 820x620, --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=7500 (autostart game) /1500 (start overlay) --run-all-compositor-stages-before-draw, file://.../index.html?autostart=1 and plain):
+  - `screenshot-start-overlay-asset-1750.png` (205k) + `screenshot-gameplay-polish-asset-1750.png` (205k) adopted.
+  - Filtered logs (same dbus/UPower strip as every prior healthy Grok verif): **0 uncaught JS, 0 game console.error, 0 pageerror, 0 request/asset/net failures**. (No new errors from data: inlines or drawImage paths.)
+  - Autostart exercised: gesture (ensureAudio + theme stem start), full loop, spawns, player (now sprite from PNG sheet, frame cycle on dash/time), collect (faceted shard PNG + WAV), deflect/hazards (PNG + WAV), super (power WAV stinger + theme), wave, pops, ribbons, first-screen ambients (larger hero sprite + gold prisms + red-eye shadow under lighter card).
+  - Assets present on disk + inlined; compositor renders confirm legible hero vs skyline, distinct prism (collect) vs shadow (avoid), no visual regression.
+- **Checklists re-validated (no drift)**: All 9 Game Feel + Quality bar + taste-gate + house + browser verif (first screen action objective obvious with authored assets; core verb <30s/<10s; <100ms + WAV feedback; easing; hit/reward pops + sprites + stems; gesture audio + music stem; 58px+keys+swipe+R+pointer; 60fps; <<2MB 605k self-contained; no external net; 0 errors in real runtime). Asset contract v2 satisfied (files + manifest + integration + verif evidence, blocker stated).
+- **Assets**: 4 PNG + 4 WAV under games/92-moon-prism-relay/assets/ + ASSET_MANIFEST.md in WO context with full provenance/verif notes.
+- **Next**: Update FEEDBACK/WORKLOG/PREVIEW/PR_BODY + adopt shots; commit + push origin HEAD:factoryx/... ; leave for PR #81. No blockers. Redeploy reset addressed in history; this pass keeps evidence current on rolled-out image after asset changes.

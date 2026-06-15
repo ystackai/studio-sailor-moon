@@ -390,3 +390,36 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - PR: #81 (canonical; body includes full prompt + context)
 - Preview entrypoint: `games/92-moon-prism-relay/index.html` (direct)
 - Redeploy reset addressed prior; this pass addresses 15:32 blocking contact-sheet with code + fresh chromium evidence using deadline budget. No blockers.
+## Asset contract v2 pass (~17:50Z, post contact-sheet, using polish_until_deadline budget)
+**Branch state**: post-15:35 contact-sheet + 17:50 asset integration (local==remote post fetch, pre-push guard ok). gh per spec (configured helpers; no blocking visible in memory/FEEDBACK before this pass; asset feedback treated as blocking input per explicit payload + "read FEEDBACK before...").
+
+**Changes (addresses 17:25Z asset-pipeline blocking + 17:45Z contract v2)**:
+- No foundry/asset pipeline exposed (inspected .factoryx/skills, FACTORY_CONTEXT, drops/*/assets (shaders/txt only), runtime tools — no PIL/magick/asset-gen). Blocker stated clearly in new ASSET_MANIFEST.md; did not silently sub placeholders.
+- Produced reviewable file-backed assets under `games/92-moon-prism-relay/assets/` (PNG/WebP equiv + WAV):
+  - `sailor-moon-hero.png` (168x72 3-frame sprite sheet: odango blonde runner, fuku, tiara — house style).
+  - `prism-shard.png` (32x32 faceted gold-pink with shine — collect identity).
+  - `shadow-hazard.png` (32x38 dark + red eyes + threat rim — avoid clarity).
+  - `moonlit-skyline.png` (256x80 parallax city+moon strip — world layer).
+  - `collect-prism.wav`, `deflect-ribbon.wav`, `moon-prism-power.wav` (short ritual chimes/stinger), `relay-theme-stem.wav` (8s loopable music motif for transformation/relay moments).
+- ASSET_MANIFEST.md created in Work Order context (`.factoryx/work-orders/work-order-1781501302993-7-1/ASSET_MANIFEST.md`) with full inspection log, generation method (deliberate local pngjs+wave authored pixels/synth), integration, browser verif, and blocker note.
+- Integrated into single self-contained index.html (data: base64 inlines, no runtime net dep or async): drawPlayer/drawShards/drawObstacles now primarily drawImage from the PNGs (hero legible vs skyline, faceted shards, red-eye hazards); playCollect/playDeflect/playPowerUp use new Audio(WAV dataurl) for central moments (not osc-only); theme stem loops low-vol post-gesture for music-led super. House effects/ribbons/pops/scale/first-screen ambients/gold-vs-red clarify all retained on top.
+- Fresh real-chromium evidence (820x620, full flags, 7.5s ?autostart + 1.5s start overlay, rolled-out image): `screenshot-gameplay-polish-asset-1750.png` (205k — sprite hero, prism shards, hazards exercised in loop) + `screenshot-start-overlay-asset-1750.png` (205k — first screen with live larger hero + moving gold prisms + shadow under card, direct action). 0 game errors (filtered clean signature, dbus-only as every prior healthy run).
+- All prior (live first screen action, scale, stronger feedback, no menu friction, skyline/mood, ribbons, pops, waves, auto-super, PB, R, 58px controls, gesture audio, self-contained ~605kB) preserved + now backed by files for hero/enemies/pickups/music.
+
+**Verification Checklist (updated)**:
+- [x] File-backed assets produced + manifest (not prose-only or in-code only).
+- [x] Hero, shards, hazards, music moments now render/play from reviewable PNG/WAV (central not vector/osc blobs).
+- [x] Live playable first screen + action objective obvious <10s with authored legible assets clarifying collect (faceted gold) vs avoid (red-eye threat).
+- [x] 0 runtime errors in real browser; exercised core + new asset paths; fresh compositor shots adopted.
+- [x] All Game Feel/quality bar/house/taste-gate/browser verif items re-hold.
+
+**FactoryX Work Order Context**
+- Work Order: work-order-1781501302993-7-1
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- PR: #81 (canonical; refresh body with full original prompt + asset pass context)
+- Preview entrypoint: `games/92-moon-prism-relay/index.html`
+- Redeploy reset addressed prior; asset contract v2 satisfied with files + manifest + evidence using deadline budget. No blockers.
+
+Screenshots (asset pass):
+- `screenshot-start-overlay-asset-1750.png` — first screen, hero sprite + prism shards + hazard visible in motion under card.
+- `screenshot-gameplay-polish-asset-1750.png` — 7.5s autostart, assets exercised (player from sprite sheet, collect/avoid from PNGs, super/WAV audio paths hit).
