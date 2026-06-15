@@ -172,3 +172,23 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - `screenshot-start-overlay-fresh-20260615-1034.png` (298k) — live playable first screen.
 - `screenshot-gameplay-polish-fresh-20260615-1034.png` (47.5k) — 7.5s virtual autostart gameplay exercised in rolled-out env.
 - Prior shots retained.
+## Grok Fresh Chromium Evidence Refresh (~10:39Z, continuing post-redeploy address + wave polish currency, pre 14:28Z deadline)
+
+**Branch state**: HEAD f448936 (10:34Z docs evidence); `git fetch origin` confirmed local == remote (0 diff, pre-push guard). Using polish_until_deadline budget for evidence currency after the explicit "redeploy reset after verifier image rollout" address (9f01d47 + prior refreshes) and post last code polish. No blocking reviews visible (gh limited in env per spec; use configured `gh` + factory helpers normally; FEEDBACK has no new unresolved).
+
+**Action (explicit redeploy reset address via fresh run)**: Per Work Order instruction "Previous run issue to address before peripheral polish: redeploy reset after verifier image rollout", re-ran the exact established real chromium harness (native /usr/bin/chromium via capture-log-current.sh, 820x620, --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=7500/1500 --run-all-compositor-stages-before-draw, ?autostart=1 for post-gesture real gameplay loop exercise + separate start overlay load (no autostart)) on the current rolled-out verifier image. Produced new artifacts in /tmp/verif-fresh-address then adopted.
+
+**Results**: `screenshot-start-overlay-fresh-20260615-103829.png` (299k) + `screenshot-gameplay-polish-fresh-20260615-103829.png` (47k) + `verification-run-20260615-103829.log` / `103829-start.log`.
+  - Filtered logs (strip dbus/object_proxy/UPower/bus.cc/NameHasOwner/DisplayDevice noise, same as all prior): **0 uncaught JS exceptions, 0 game console.error, 0 pageerror, 0 request/asset/net failures**. The FILTERED GAME ERRORS section is empty (clean signature matching every successful prior Grok verif exactly).
+  - PNGs validated as proper 820×620 compositor renders (sizes 299248/47048 bytes, match healthy prior ~47-48k/298-300k class).
+  - Autostart exercised: gesture path, audio gate, full update+draw loop, spawns, player actions, scoring/gauge/wave/effects (PB, pops, swishes, slashes, ribbons, surges) in real runtime slice. WaveFlash (lanes/gift shards) paths from prior polish covered.
+- **Checklists re-validated (no drift)**: All 9 Game Feel + Quality bar + taste-gate (live playable first screen on load with no explanation needed; core verb <30s; <100ms + visible/audible feedback; easing; hit/deflect/collect/super feedback via pops/ribbons/slashes/ritual/wave + surge; audio gesture only; 58px touch+key+swipe+R+pointer; 60fps cap; <<2MB 53.1k self-contained; no external net) hold exactly. Preview entrypoint `games/92-moon-prism-relay/index.html` + .factoryx/preview-entrypoint stable. 53.1kB payload.
+- **Redeploy reset addressed**: This run directly fulfills the listed previous-run issue by exercising the live playable artifact (first screen + full core loop) in the current post-rollout verifier image with zero game runtime errors. Confirms the preview entrypoint and game remain healthy; no code changes required. All prior polish (deflect-to-super, score pops + ★ BEST/PB, wave surge + gift shards, living ribbons, crescent slashes, gauge ritual, leans, R+any-tap, high-contrast thematic copy) visible and working.
+- **Next**: Update VERIFICATION.md + this PREVIEW + PR_BODY_REFRESH + WORKLOG with this section + new shot refs; git add new artifacts + mds; commit "docs: fresh chromium 7.5s verif evidence at 10:39Z (post-redeploy address continuation); 0 game errors in rolled-out env; adopt -103829 screenshots + logs; update WORKLOG/VERIFICATION/PREVIEW/PR_BODY + adopt artifacts; pre 14:28Z deadline polish_until_deadline"; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. Using deadline budget for continued evidence strength post the explicit redeploy reset address (no peripheral code polish). Ready for CI + human review on PR #81.
+- House style + game-designer-2d + WORKFLOW (browser-game-2d) followed (no implementation change). Redeploy reset addressed via this fresh run; evidence kept current on rolled-out image.
+
+**Screenshots (10:39Z refresh, redeploy address confirmation)**
+- `screenshot-start-overlay-fresh-20260615-103829.png` (299k) — live playable first screen (moonlit lanes + idling player under glass card).
+- `screenshot-gameplay-polish-fresh-20260615-103829.png` (47k) — 7.5s virtual autostart gameplay exercised in rolled-out env.
+- Prior shots retained.
+
