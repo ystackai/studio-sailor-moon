@@ -785,7 +785,21 @@ function deflectHazard(obs, kind) {
   moonGauge = Math.min(MOON_MAX, moonGauge + 5);
   if (prevG < MOON_MAX && moonGauge >= MOON_MAX) {
     playPowerUp();
-    spawnParticles(player.x, player.y - 12, '#fde68a', 5, 55);
+    // Ritual ready burst (celestial crescents) — deflect that caps gauge also triggers super for satisfying payoff
+    for (let i = 0; i < 9; i++) {
+      const ang = (i / 9) * Math.PI * 2;
+      particles.push({
+        x: player.x, y: player.y - 10,
+        vx: Math.cos(ang) * 95,
+        vy: Math.sin(ang) * 55 - 40,
+        life: 0.9,
+        decay: 1.6,
+        size: 2.8 + Math.random() * 1.5,
+        color: (i % 2 === 0 ? '#fde68a' : '#f0abfc'),
+        gravity: 0
+      });
+    }
+    activateSuper(); // auto super on the deflect that completed the Moon Prism — high-energy transformation reward
   }
   spawnParticles(obs.x, obs.y + (obs.h || 30)/2, kind === 'dash' ? '#93c5fd' : '#f0abfc', 7, 70);
   // Extra sacred-geometry sparkles (small crescents/stars)

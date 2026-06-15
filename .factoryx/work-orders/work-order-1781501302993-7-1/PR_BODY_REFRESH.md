@@ -9,6 +9,7 @@ Ambitious, bright, high-energy magical-girl 3-lane arcade runner: dash/jump/skat
 - Systems: escalating waves (30s→15s), survival+combo scoring (✦), Moon Gauge fills to 5s invuln super, particles, screen shake, procedural audio (gesture only), highscore localStorage, restart.
 - Polish this pass: ribbon super (quadratic living curves per Sailor Moon house), deflect verb now rewarding (slash + blue +pts), collect sparkles + gold +pts, wave escalation banner with crescent, UI high-contrast, re-verified real chromium.
 - Latest pre-deadline: rising score pops on every collect/deflect for immediate satisfying feedback; wave flourish on escalation. 49.9KB. 0 runtime errors in fresh verif.
+- Final Grok pass (still pre 14:28Z): deflect that fills Moon Prism Gauge now auto-triggers full ritual burst + "Moon Prism Power" super (consistent high-energy climax for the deflect verb, matching collect path). Real chromium 7.5s autostart verif (0 game errors) + fresh screenshots (gameplay-polish-deflect-super.png exercising new path, start-overlay-polish-final.png). Payload 50.5k. All game-feel/quality bar items hold; no blockers.
 
 **Preview:** `games/92-moon-prism-relay/index.html` (self-contained 42.8KB, no net, works offline post-load)
 

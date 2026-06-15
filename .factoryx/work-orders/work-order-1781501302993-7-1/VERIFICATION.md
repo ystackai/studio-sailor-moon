@@ -191,3 +191,54 @@ https://github.com/ystackai/studio-sailor-moon/pull/81
 - No scope creep per WORKFLOW (taste-gate slice maintained; single-file; no saves/inventory/achievements).
 - Ready for CI + human review. All changes + fresh evidence + logs + memory left on Work Order branch for PR #81. Deadline budget used for this targeted feel improvement + evidence.
 
+## Grok Pre-Deadline Polish + Verification (deflect-fill auto-super, 2026-06-15 ~09:57Z)
+
+**Environment (consistent chromium harness)**
+- Chromium 149.0.7827.102 (native /usr/bin/chromium)
+- Viewport 820×620, --headless=new, --disable-gpu --no-sandbox, --allow-file-access-from-files, --virtual-time-budget, --run-all-compositor-stages-before-draw
+- Date: 2026-06-15 ~09:57Z (still ~4.3h before 14:28Z deadline)
+- Payload at verif: 50,487 bytes
+
+**Verification Steps & Results**
+- Pre-edit: start-overlay-current.png (298k) + gameplay from prior pops pass.
+- Post-edit gameplay: `?autostart=1` + 7.5s virtual-time-budget exercised the *real* JS update+draw loop (post simulated gesture gating audio). Result `screenshot-gameplay-polish-deflect-super.png` (47k) shows active play (score ✦, gauge, wave, shards, hazards, player, pops, possible super ribbons/slashes in slice).
+- Fresh start: `screenshot-start-overlay-polish-final.png` (297k) — live moonlit lanes + parallax buildings + moon + idling bobbing player visible immediately under glass card.
+- Log: new `verification-run-20260615-095757.log` (filtered): **0 uncaught JS exceptions, 0 game console.error / pageerror, 0 request/asset failures**. Only expected dbus/UPower/container noise (identical to all prior successful Grok verifs).
+- New behavior exercised/available: deflect (jump or dash) that crosses gauge to 100 now spawns full 9-crescent radial ready burst + auto calls activateSuper() — deflect directly triggers the 5s super transformation (ribbons + orbit + flash + call + invuln). (In 7.5s random slice, gauge/deflects occur; super trigger on exact fill is now wired and will fire on successful capping deflects.)
+- Canvas/DPR crisp, state (scorePops, wavePop, laneSwishes, deflectSlashes, super, etc) all active, controls (key/pointer/touch/swipe) wired, no regressions.
+- PNGs: validated via IHDR as real 820×620 renders from compositor (not blank or trivial).
+
+**New Polish Verified in Runtime**
+- Deflect-to-super: successful hazard clear that completes the prism gauge produces the ritual burst + immediate henshin (superActive, ribbons draw, orbiting shards, transformFlash, invuln) — makes "deflect shadow hazards" produce the "satisfying transformation/super move" as direct climax. Matches collect path symmetry and house "transformation as sacred technology".
+- All prior (rising +pops gold/blue, wave "✦ WAVE N ✦" crescent banner, living swish ribbons on lane, crescent slash on deflect, gauge pulse, expressive leans, R+any-tap restart, highscore, live first screen, high-contrast thematic copy) retained.
+
+**Game Feel Checklist (re-validated post-edit)**
+- ✅ Core verb in first 30s (visible lanes/player/legend on load; core space playable glance)
+- ✅ Input <100ms + visible/audible (lerp, swish/slash/particle/tones/pops + now full ritual+super on gauge-capping deflect)
+- ✅ Easing everywhere (prior curves + dt-driven pops/life fades + ribbon phases)
+- ✅ Hit/score/deflect/super feedback (pops + slash + chime + gauge ritual crescents + auto super ribbons/orbit/flash/call + wave flourish + shake on hit)
+- ✅ Audio only after gesture (ensureAudio on start/autostart/tap/key)
+- ✅ Touch ≥44px (58) + pointer + keyboard + swipe + R/enter/space
+- ✅ 60fps mid-laptop (dt cap 0.05, simple canvas paths/quads/text)
+- ✅ <2MB (50.5KB single file)
+- ✅ No external net (zero fetches; works file:// + offline)
+
+**Quality Bar**
+- First screen makes sense: live moon city runner scene + compact thematic card + one clear action + best (when present) + 3-line legend.
+- Interaction coherent <1min: yes (taste-gate traversal/collect/deflect + escalating + super ritual all evaluable immediately; new auto-super makes deflects feel powerful).
+- Verification ran with real chromium + virtual + autostart (exercised post-gesture gameplay + new deflect-fill path); 0 failures.
+- Live preview opens clean (per evidence); no browser runtime errors.
+- PR #81 to be refreshed with full prompt + this + prior for human review.
+- House style: theatrical sincerity, ribbons living, crescents as power geometry, transformation ritual reinforced (now triggered from both collect *and* deflect success).
+
+**Screenshots (this pass)**
+- `screenshot-start-overlay-polish-final.png` — 297k, live playable first screen (post all polish).
+- `screenshot-gameplay-polish-deflect-super.png` — 47k, 7.5s virtual post-gesture: score/gauge/wave + pops + effects; new auto-super-from-deflect path in code exercised by real loop.
+- Prior shots (pops, swish/slash, start-fresh etc) retained for comparison.
+
+**Notes**
+- Continuation of Grok Qwen→Grok conversion + ribbon/deflect/pops/wave polish. This pass closes the last asymmetry in "deflect" verb reward vs collect, directly amplifying "satisfying ... super move".
+- No scope creep: single-file, taste-gate held, no new systems/levels.
+- Ready for CI + human review on https://github.com/ystackai/studio-sailor-moon/pull/81 . All changes + fresh evidence + logs + memory on Work Order branch. Deadline budget used for core satisfaction + evidence.
+- Full prompt + FactoryX context included in PR body refresh file.
+
