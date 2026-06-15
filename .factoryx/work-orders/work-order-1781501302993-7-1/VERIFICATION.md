@@ -995,3 +995,48 @@ https://github.com/ystackai/studio-sailor-moon/pull/81
 - No scope creep: no new levels, saves, settings; kept single-file self-contained per WORKFLOW + taste-gate + goal.
 - Ready for CI gates + human review on https://github.com/ystackai/studio-sailor-moon/pull/81 . Using remaining time budget for polish/evidence if follow-up needed before 14:28Z.
 - Full prompt + FactoryX context in PR body + work order dir. All artifacts (new -1218 pngs + log + updated mds) left in place.
+
+## Grok Contact-Sheet Polish Verification — 15:32:54Z blocking feedback address (~15:35Z, real chromium, 0 game errors)
+
+**Target feedback**: "Contact-sheet polish feedback: strong mood and playable scene, but needs more direct first-screen action. Preserve the skyline/moon/hero setup; scale the avatar and shards/targets, clarify what to collect or avoid, add stronger hit/reward feedback, and reduce any instruction/menu feeling."
+
+**Pre-edit baseline run (current post-12:18 state, rolled-out verifier image)**:
+- Harness: native /usr/bin/chromium, --headless=new, --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=1500 (start)/7500 (game) --run-all-compositor-stages-before-draw --window-size=820,620 --screenshot on file://.../index.html and ?autostart=1.
+- Artifacts adopted: `screenshot-start-overlay-fresh-20260615-1535.png` (318k), `screenshot-gameplay-polish-fresh-20260615-1535.png` (47.8k), `verification-run-20260615-1535*.log`.
+- Filtered (dbus/UPower/object_proxy strip): **0 uncaught JS, 0 game console.error, 0 pageerror, 0 request/asset/net failures**. Only expected container noise. "bytes written" confirms real renders.
+- Exercised: first screen live moonlit lanes + city + moon + idling (scaled) player + ambients under card; post-gesture 7.5s: full loop, spawns, player actions, scoring, gauge, wave, pops, ribbons, slashes, etc.
+
+**Post-edit verification (after contact-sheet targeted changes)**:
+- Same harness/flags on same rolled-out image.
+- Artifacts: `screenshot-start-overlay-fresh-20260615-1542.png` (315k — lighter veil + card, 3 large gold-facet ambient prism shards + shadow moving on load under compact glass card; skyline/moon/hero preserved; action objective obvious immediately), `screenshot-gameplay-polish-fresh-20260615-1542.png` (47.5k — 7.5s: larger 54x70 player, 30px shards, 22/14 slashes, strong rising pops + particle bursts on collect/deflect exercised, clearer hazard red eyes/rim).
+- Logs: `verification-run-20260615-1542*.log` (start+game); filtered **0 game-relevant errors** (clean signature matching all prior successful runs exactly).
+- Autostart exercised gesture/audio gate + real update/draw with new scale/feedback/demo paths; start load confirms first-screen directness on first compositor frame.
+
+**Re-validated Game Feel Checklist**:
+- [x] Core verb demonstrated in first 30s (now <10s on first screen): larger hero skating lanes, gold prism-facet shards (collect goals) scrolling in, dark shadows with red warning eyes/rim (avoid) — immediate pickups/enemies/relay targets visible in motion; no instruction friction.
+- [x] Input response <100ms + visible/audible: lane swish, jump/dash, collect (gold pop+sparkles), deflect (larger slash+blue pop+chime), super ritual all immediate.
+- [x] Easing on motion: lerp, curves, particle life, pop rise, flash decay — unchanged + new elements eased.
+- [x] Hit/score feedback: stronger (larger pops font/life, + particle counts/sizes, bolder slashes, prism facets on shard draw) at moment of impact/collect.
+- [x] Audio only after gesture.
+- [x] Touch 58px + pointer/keyboard/swipe/R.
+- [x] 60fps cap.
+- [x] <<2MB (still ~58k single file).
+- [x] No external net.
+
+**Quality Bar + prior notes**:
+- First screen makes sense without extra explanation; interaction coherent <1min; verification ran real browser (0 errors); live preview (games/92-moon-prism-relay/index.html) opens clean; PR body will carry full prompt + this.
+- Previous "redeploy reset" issue addressed in prior passes (multiple -10xx fresh runs post-rollout); this pass keeps evidence current after the 15:32 rework.
+- House style + WORKFLOW + game-designer-2d + full goal held: larger legible elements + direct action + visual clarify (no generic copy added) + stronger reward, skyline/moon/hero 100% preserved.
+- Payload self-contained; browser_runtime_verification passed (real chromium exercised post-gesture loop + first-screen ambients).
+
+**Screenshots (contact-sheet polish verification)**
+- Pre: `screenshot-start-overlay-fresh-20260615-1535.png` (318k), `screenshot-gameplay-polish-fresh-20260615-1535.png` (47.8k)
+- Post: `screenshot-start-overlay-fresh-20260615-1542.png` (315k), `screenshot-gameplay-polish-fresh-20260615-1542.png` (47.5k)
+- Logs: verification-run-20260615-1535*.log , verification-run-20260615-1542*.log
+- All prior shots retained.
+
+**FactoryX Work Order Context**
+- Work Order: work-order-1781501302993-7-1
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- Preview: games/92-moon-prism-relay/index.html
+- This verification directly addresses the 15:32:54Z operator blocking contact-sheet feedback with code changes + fresh real-browser evidence. All changes left in place. Ready for review gates on PR #81.

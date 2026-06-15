@@ -358,3 +358,35 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - PR: #81 (canonical; refresh body with full original prompt + this context)
 - Preview entrypoint: `games/92-moon-prism-relay/index.html`
 - Redeploy reset addressed prior; this 12:18Z core scale polish + fresh evidence using remaining budget. No blockers.
+
+## Grok Contact-Sheet Targeted Polish (15:32:54Z feedback) — Direct first-screen action, scale+stronger feedback, clarify collect/avoid, lighter menu (preserve skyline/moon/hero; ~15:35Z evidence)
+
+**Branch state**: HEAD 4a76907 (post-scale); fetch guard ok; gh per spec; using polish_until_deadline to 17:32Z for contact-sheet blocking rework (post prior approve, explicit "targeted rework before accepting").
+
+**Change (addresses all points in one focused pass, no skyline/mood change)**: Further scale player 48×64→54×70 / shards 26→30 (amb 18→22) / shadows 28×34→32×38 / collision 42→48 / slashes 18/11→22/14; stronger reward (pops life/font↑, particles collect 16→22+5, deflect 11→15+6, gauge 9→12, bursts+); clarify: shards faceted prism+inner/edge (gold collect identity), hazards +larger red eyes + red threat rim (avoid clear); first-screen direct + less menu: lighter radial veil (0.03/0.18/0.28), card 0.42 bg + compact pad/width, legend→single compact line, demo max3/2 + faster spawns + higher alpha + re-seed 3 shards; all prior polish intact.
+
+**Fresh real-browser verification (native chromium, ?autostart + start, rolled-out)**:
+- Pre-edit baseline (current): `screenshot-start-overlay-fresh-20260615-1535.png` (318k) + `screenshot-gameplay-polish-fresh-20260615-1535.png` (47.8k) + logs.
+- Post-edit: `screenshot-start-overlay-fresh-20260615-1542.png` (315k — lighter glass, 3 large gold prism ambient shards + shadow in motion on load under card with compact legend — objective obvious <10s) + `screenshot-gameplay-polish-fresh-20260615-1542.png` (47.5k — larger legible elements + stronger pops/slashes exercised).
+- Logs *-1535* + *-1542* : **0 uncaught/game console.error/pageerror/asset/net** (filtered clean, dbus-only). Real compositor 820×620.
+
+**Verification Checklist (updated)**:
+- [x] Live playable moonlit city + hero preserved; **more direct first-screen action** (ambient collect goals + avoid hazards visible/moving immediately under lighter card).
+- [x] **Scaled avatar/shards/targets/attacks** + **stronger hit/reward feedback** (pops, particles, crescents) legible vs skyline.
+- [x] **Clarify collect (faceted gold prism) vs avoid (dark + red-eye + threat rim)** without added text/menu.
+- [x] Reduced instruction/menu feeling (compact legend, transparent veil, action shows through); condensed legend still communicates controls.
+- [x] All prior (0 errors, gesture audio, 58px+keys+swipe+R, ribbons, auto-super, wave, PB, high-contrast, self-contained) hold.
+
+**Screenshots (15:35Z contact-sheet polish + evidence)**
+- `screenshot-start-overlay-fresh-20260615-1535.png` (318k) — pre baseline.
+- `screenshot-gameplay-polish-fresh-20260615-1535.png` (47.8k) — pre baseline.
+- `screenshot-start-overlay-fresh-20260615-1542.png` (315k) — post: direct action, scaled, lighter menu, clearer verbs.
+- `screenshot-gameplay-polish-fresh-20260615-1542.png` (47.5k) — post: stronger feedback exercised.
+- Prior retained.
+
+**FactoryX Work Order Context**
+- Work Order: work-order-1781501302993-7-1
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- PR: #81 (canonical; body includes full prompt + context)
+- Preview entrypoint: `games/92-moon-prism-relay/index.html` (direct)
+- Redeploy reset addressed prior; this pass addresses 15:32 blocking contact-sheet with code + fresh chromium evidence using deadline budget. No blockers.

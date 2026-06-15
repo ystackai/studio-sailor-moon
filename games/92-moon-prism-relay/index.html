@@ -24,18 +24,18 @@ canvas#uiCanvas {
 #startScreen {
   position:fixed; top:0; left:0; width:100%; height:100%;
   z-index:10; display:flex; align-items:center; justify-content:center;
-  background: radial-gradient(circle at 50% 40%, rgba(11,11,42,0.07) 0%, rgba(11,11,42,0.32) 52%, rgba(11,11,42,0.48) 82%);
+  background: radial-gradient(circle at 50% 40%, rgba(11,11,42,0.03) 0%, rgba(11,11,42,0.18) 52%, rgba(11,11,42,0.28) 82%);
   pointer-events:none;
 }
 #startScreen .card {
   text-align:center;
-  background: rgba(15, 14, 45, 0.66);
-  border: 1px solid rgba(236,72,153,0.26);
-  border-radius: 22px;
-  padding: 26px 30px 22px;
-  box-shadow: 0 0 0 1px rgba(168,85,247,0.18), 0 26px 70px rgba(0,0,0,0.5);
+  background: rgba(15, 14, 45, 0.42);
+  border: 0.8px solid rgba(236,72,153,0.20);
+  border-radius: 16px;
+  padding: 16px 20px 14px;
+  box-shadow: 0 0 0 1px rgba(168,85,247,0.12), 0 18px 48px rgba(0,0,0,0.45);
   max-width: 92%;
-  width: 420px;
+  width: 360px;
   pointer-events:auto;
 }
 #startScreen h1 {
@@ -49,8 +49,8 @@ canvas#uiCanvas {
   text-shadow: 0 1px 2px rgba(0,0,0,0.6);
 }
 #startScreen .legend {
-  font-size:clamp(10px, 1.9vw, 12.5px); color:#c8b5ff;
-  margin: 12px 0 16px; letter-spacing:0.4px; line-height:1.55;
+  font-size:clamp(9.5px, 1.7vw, 11.5px); color:#c8b5ff;
+  margin: 8px 0 12px; letter-spacing:0.35px; line-height:1.35;
   text-shadow: 0 1px 1px rgba(0,0,0,0.5);
 }
 #startScreen .legend .k {
@@ -59,9 +59,9 @@ canvas#uiCanvas {
   border-radius:5px; color:#f0abfc; font-weight:600; font-size:0.92em;
 }
 #startBtn {
-  padding:13px 36px; font-size:clamp(15px, 2.8vw, 19px);
+  padding:11px 28px; font-size:clamp(14px, 2.6vw, 17px);
   background:linear-gradient(135deg, #ec4899, #a855f7);
-  color:#fff; border:none; border-radius:28px; cursor:pointer;
+  color:#fff; border:none; border-radius:26px; cursor:pointer;
   box-shadow:0 0 18px rgba(236,72,153,0.45), 0 0 36px rgba(168,85,247,0.28);
   transition:transform 0.18s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.18s;
   pointer-events:auto; letter-spacing:0.8px; font-weight:600;
@@ -100,9 +100,7 @@ canvas#uiCanvas {
     <div class="tag">Skate the moonlit lanes. Chain the shards. Become the light.</div>
     <button id="startBtn">✦ Start Transform ✦</button>
     <div class="legend">
-      <span class="k">← →</span> or <span class="k">A D</span> switch lanes<br>
-      <span class="k">↑</span> / <span class="k">W</span> / space — jump shadows &nbsp; <span class="k">↓</span> / <span class="k">S</span> — dash orbs<br>
-      <span class="k">X</span> — Moon Prism Power when gauge full
+      <span class="k">←→</span> switch lanes &nbsp; <span class="k">↑</span> jump shadows &nbsp; <span class="k">↓</span> dash orbs &nbsp; <span class="k">X</span> prism power
     </div>
     <div id="startBest" style="margin-top:4px;font-size:10px;letter-spacing:0.5px;color:#a5b4fc;opacity:0.85;"></div>
   </div>
@@ -269,8 +267,8 @@ let player = {
   dashing: false,
   dashTimer: 0,
   grounded: true,
-  width: 48,
-  height: 64,
+  width: 54,
+  height: 70,
   invincible: false,
   invincibleTimer: 0,
   rotation: 0,
@@ -380,7 +378,7 @@ function spawnShard() {
     lane: lane,
     targetX: getLaneX(lane),
     y: getGroundY() - 30 - Math.random() * 60,
-    size: 26,
+    size: 30,
     rotation: 0,
     glow: 0,
     collected: false,
@@ -461,17 +459,17 @@ function updateDemoAmbience(dt, speedMul) {
     if (o.x < -90) { obstacles.splice(i, 1); continue; }
   }
 
-  // Spawn 1-2 ambient prism shard echoes (visible pickups, immediate movement goals)
+  // Spawn 1-3 ambient prism shard echoes (visible pickups, immediate movement goals) — more direct first-screen action per contact-sheet
   const ambientShardCount = shards.filter(s => s.ambient).length;
-  if (demoAmbienceTimer > 1.6 && ambientShardCount < 2) {
-    demoAmbienceTimer = Math.random() * 0.4;
+  if (demoAmbienceTimer > 1.05 && ambientShardCount < 3) {
+    demoAmbienceTimer = Math.random() * 0.32;
     const lane = LANES[Math.floor(Math.random() * 3)];
     shards.push({
       x: W + 55,
       lane: lane,
       targetX: getLaneX(lane),
-      y: getGroundY() - 26 - Math.random() * 52,
-      size: 18,
+      y: getGroundY() - 30 - Math.random() * 58,
+      size: 22,
       rotation: Math.random() * 5,
       glow: 0.35,
       collected: false,
@@ -481,18 +479,18 @@ function updateDemoAmbience(dt, speedMul) {
     });
   }
 
-  // One slow ambient shadow echo at a time (visible hazard to convey "deflect" verb without threat)
+  // 1-2 slow ambient shadow echoes (visible hazard to convey "deflect/avoid" verb) — more direct
   const ambientShadowCount = obstacles.filter(o => o.ambient).length;
-  if (demoAmbienceTimer > 2.8 && ambientShadowCount < 1) {
-    demoAmbienceTimer = 0.9;
-    if (Math.random() < 0.55) {
+  if (demoAmbienceTimer > 1.85 && ambientShadowCount < 2) {
+    demoAmbienceTimer = 0.65;
+    if (Math.random() < 0.72) {
       const lane = LANES[Math.floor(Math.random() * 3)];
       obstacles.push({
         x: W + 75,
         lane: lane,
         targetX: getLaneX(lane),
-        y: getGroundY() - 34,
-        w: 28, h: 34,
+        y: getGroundY() - 38,
+        w: 32, h: 38,
         type: 'shadow',
         eyes: 1,
         hit: false,
@@ -505,7 +503,7 @@ function updateDemoAmbience(dt, speedMul) {
   for (const s of shards) {
     if (s.ambient && !s._twinkled && s.x < player.x + 24 && s.x > player.x - 80) {
       s._twinkled = true;
-      spawnParticles(s.x + 6, s.y, '#fde68a', 2, 24);
+      spawnParticles(s.x + 6, s.y, '#fde68a', 3, 26);
     }
   }
 }
@@ -703,7 +701,7 @@ function update(dt) {
       const dx2 = player.x - shard.x;
       const dy2 = (player.y + player.height/2) - shard.y;
       const dist = Math.sqrt(dx2*dx2 + dy2*dy2);
-      if (dist < 42) {
+      if (dist < 48) {
         shard.collected = true;
         collectShard(shard);
         shards.splice(i, 1);
@@ -771,14 +769,14 @@ function collectShard(shard) {
   comboMultiplier = 1 + Math.floor(combo / 5) * 0.5;
   const points = Math.floor(10 * comboMultiplier);
   score += points;
-  scorePops.push({ x: shard.x, y: shard.y - 8, val: points, life: 0.98, color: '#fde68a' });
+  scorePops.push({ x: shard.x, y: shard.y - 8, val: points, life: 1.18, color: '#fde68a' });
   if (score > highScore) {
     const prevBest = highScore;
     highScore = score;
     try { localStorage.setItem('mprHighScore', String(highScore)); } catch (e) {}
     if (score - prevBest > 4) {
-      scorePops.push({ x: shard.x + 8, y: shard.y - 20, label: '★ BEST', life: 1.0, color: '#fef08c' });
-      spawnParticles(shard.x, shard.y - 12, '#fde68a', 10, 65);
+      scorePops.push({ x: shard.x + 8, y: shard.y - 20, label: '★ BEST', life: 1.22, color: '#fef08c' });
+      spawnParticles(shard.x, shard.y - 12, '#fde68a', 12, 72);
       playTone(1320, 0.12, 'sine', 0.16);
       playTone(1760, 0.18, 'sine', 0.1, 0.06);
     }
@@ -801,19 +799,19 @@ function collectShard(shard) {
         gravity: 40
       });
     }
-    spawnParticles(player.x, player.y - 18, '#fde68a', 9, 70);
+    spawnParticles(player.x, player.y - 18, '#fde68a', 12, 78);
   }
 
-  spawnParticles(shard.x, shard.y, shard.color, 16, 140);
-  // Extra prism / crescent sparkles on collect (bright readable high-energy, scaled for legibility)
-  for (let i = 0; i < 3; i++) {
+  spawnParticles(shard.x, shard.y, shard.color, 22, 155);
+  // Extra prism / crescent sparkles on collect (stronger hit/reward feedback — bright readable high-energy)
+  for (let i = 0; i < 5; i++) {
     particles.push({
       x: shard.x, y: shard.y,
-      vx: (Math.random() - 0.5) * 120,
-      vy: -44 - Math.random() * 32,
-      life: 0.78,
+      vx: (Math.random() - 0.5) * 128,
+      vy: -46 - Math.random() * 34,
+      life: 0.82,
       decay: 1.25,
-      size: 2.8 + Math.random() * 1.6,
+      size: 3.2 + Math.random() * 1.9,
       color: '#fde68a',
       gravity: 90
     });
@@ -877,14 +875,14 @@ function showComboText(comboCount) {
 function deflectHazard(obs, kind) {
   const bonus = 8;
   score += bonus;
-  scorePops.push({ x: obs.x, y: (obs.y || player.y) - 10, val: bonus, life: 0.78, color: '#93c5fd' });
+  scorePops.push({ x: obs.x, y: (obs.y || player.y) - 10, val: bonus, life: 0.96, color: '#93c5fd' });
   if (score > highScore) {
     const prevBest = highScore;
     highScore = score;
     try { localStorage.setItem('mprHighScore', String(highScore)); } catch (e) {}
     if (score - prevBest > 4) {
-      scorePops.push({ x: obs.x + 6, y: (obs.y || player.y) - 18, label: '★ BEST', life: 0.95, color: '#fef08c' });
-      spawnParticles(obs.x, (obs.y || player.y) - 10, '#fde68a', 9, 60);
+      scorePops.push({ x: obs.x + 6, y: (obs.y || player.y) - 18, label: '★ BEST', life: 1.15, color: '#fef08c' });
+      spawnParticles(obs.x, (obs.y || player.y) - 10, '#fde68a', 11, 68);
       playTone(1320, 0.12, 'sine', 0.16);
       playTone(1760, 0.18, 'sine', 0.1, 0.06);
     }
@@ -909,15 +907,15 @@ function deflectHazard(obs, kind) {
     }
     activateSuper(); // auto super on the deflect that completed the Moon Prism — high-energy transformation reward
   }
-  spawnParticles(obs.x, obs.y + (obs.h || 30)/2, kind === 'dash' ? '#93c5fd' : '#f0abfc', 11, 90);
-  // Extra sacred-geometry sparkles (small crescents/stars) — scaled up for hit/collect feedback legibility
-  for (let i = 0; i < 4; i++) {
+  spawnParticles(obs.x, obs.y + (obs.h || 30)/2, kind === 'dash' ? '#93c5fd' : '#f0abfc', 15, 100);
+  // Extra sacred-geometry sparkles (stronger hit/reward feedback)
+  for (let i = 0; i < 6; i++) {
     particles.push({
       x: obs.x + (Math.random() - 0.5) * 10,
       y: obs.y + (obs.h || 30)/2,
-      vx: (Math.random() - 0.5) * 105,
-      vy: -33 - Math.random() * 38,
-      life: 0.92,
+      vx: (Math.random() - 0.5) * 112,
+      vy: -36 - Math.random() * 40,
+      life: 0.96,
       decay: 1.0 + Math.random() * 0.35,
       size: 3.0 + Math.random() * 2.2,
       color: '#fde68a',
@@ -1201,14 +1199,14 @@ function drawShards() {
     gctx.rotate(s.rotation);
 
     if (s.ambient) {
-      gctx.globalAlpha = 0.58;
-      gctx.shadowBlur = (12 + s.glow * 10) * 0.6;
+      gctx.globalAlpha = 0.68;
+      gctx.shadowBlur = (12 + s.glow * 10) * 0.7;
     } else {
       gctx.shadowBlur = 12 + s.glow * 10;
     }
     gctx.shadowColor = s.color;
 
-    // Diamond shape
+    // Diamond prism (faceted gold for clear "collect" identity vs dark hazards)
     gctx.fillStyle = s.color;
     gctx.beginPath();
     gctx.moveTo(0, -s.size);
@@ -1218,15 +1216,22 @@ function drawShards() {
     gctx.closePath();
     gctx.fill();
 
-    // Inner shine
-    gctx.fillStyle = 'rgba(255,255,255,0.6)';
+    // Facet shine + prism inner (more legible "good pickup" vs avoid)
+    gctx.fillStyle = 'rgba(255,255,255,0.72)';
     gctx.beginPath();
-    gctx.moveTo(0, -s.size*0.5);
-    gctx.lineTo(s.size*0.3, 0);
-    gctx.lineTo(0, s.size*0.3);
-    gctx.lineTo(-s.size*0.3, 0);
+    gctx.moveTo(0, -s.size*0.55);
+    gctx.lineTo(s.size*0.32, 0);
+    gctx.lineTo(0, s.size*0.32);
+    gctx.lineTo(-s.size*0.32, 0);
     gctx.closePath();
     gctx.fill();
+    // Extra prism edge highlight
+    gctx.strokeStyle = 'rgba(224,242,255,0.65)';
+    gctx.lineWidth = Math.max(1, s.size * 0.08);
+    gctx.beginPath();
+    gctx.moveTo(-s.size*0.25, -s.size*0.35);
+    gctx.lineTo(s.size*0.18, s.size*0.22);
+    gctx.stroke();
 
     gctx.globalAlpha = 1;
     gctx.restore();
@@ -1239,7 +1244,7 @@ function drawObstacles() {
     gctx.translate(obs.x, obs.y + obs.h/2);
 
     const isAmbient = !!obs.ambient;
-    if (isAmbient) gctx.globalAlpha = 0.46;
+    if (isAmbient) gctx.globalAlpha = 0.55;
 
     if (obs.type === 'shadow') {
       // Shadow blob creature
@@ -1260,19 +1265,28 @@ function drawObstacles() {
         gctx.lineTo(sx + 3, sy);
         gctx.fill();
       }
-      // Eyes (fainter for ambient echo)
+      // Eyes (strong red warning for avoid; fainter for ambient echo on first screen)
       gctx.shadowBlur = 0;
-      const eyeA = isAmbient ? 0.55 : 1;
+      const eyeA = isAmbient ? 0.58 : 1;
+      const eyeR = isAmbient ? 2.8 : 3.6;
       for (let e = 0; e < obs.eyes; e++) {
         const ex = -8 + e * 8;
         gctx.fillStyle = `rgba(239,68,68,${eyeA})`;
         gctx.beginPath();
-        gctx.arc(ex, -4, 3, 0, Math.PI*2);
+        gctx.arc(ex, -4, eyeR, 0, Math.PI*2);
         gctx.fill();
         gctx.fillStyle = `rgba(251,191,36,${eyeA})`;
         gctx.beginPath();
-        gctx.arc(ex, -4, 1.5, 0, Math.PI*2);
+        gctx.arc(ex, -4, eyeR*0.48, 0, Math.PI*2);
         gctx.fill();
+      }
+      // Threat rim for non-ambient (clarifies "avoid this" at a glance)
+      if (!isAmbient) {
+        gctx.strokeStyle = 'rgba(248,113,113,0.75)';
+        gctx.lineWidth = 2.2;
+        gctx.beginPath();
+        gctx.ellipse(0, 0, obs.w/2 + 4, obs.h/2 + 3, 0, 0, Math.PI*2);
+        gctx.stroke();
       }
     } else if (obs.type === 'shadow_ball') {
       gctx.shadowColor = '#4c1d95';
@@ -1287,10 +1301,10 @@ function drawObstacles() {
       gctx.beginPath();
       gctx.ellipse(0, 0, obs.w/1.2, obs.h/3, gameTime, 0, Math.PI*2);
       gctx.stroke();
-      // Eye
-      gctx.fillStyle = '#ef4444';
+      // Eye (stronger red for avoid clarity)
+      gctx.fillStyle = isAmbient ? 'rgba(239,68,68,0.65)' : '#ef4444';
       gctx.beginPath();
-      gctx.arc(0, 0, 4, 0, Math.PI*2);
+      gctx.arc(0, 0, isAmbient ? 3.2 : 4.6, 0, Math.PI*2);
       gctx.fill();
     } else if (obs.type === 'shadow_spike') {
       gctx.shadowColor = '#4c1d95';
@@ -1358,16 +1372,16 @@ function drawDeflectSlashes() {
     gctx.rotate(s.rot + (1 - s.life) * 0.4 * Math.sign(s.rot));
     gctx.globalAlpha = a;
     gctx.strokeStyle = '#fde68a';
-    gctx.lineWidth = 3.4;
+    gctx.lineWidth = 4.2;
     gctx.shadowColor = '#f0abfc';
-    gctx.shadowBlur = 14;
-    // Bright crescent geometry (sacred, high-energy deflect) — larger for legibility
+    gctx.shadowBlur = 16;
+    // Bright crescent geometry (sacred, high-energy deflect) — larger/stronger for legibility + reward pop
     gctx.beginPath();
-    gctx.arc(0, 0, 18, -1.15, 1.15);
+    gctx.arc(0, 0, 22, -1.15, 1.15);
     gctx.stroke();
-    gctx.lineWidth = 1.8;
+    gctx.lineWidth = 2.1;
     gctx.beginPath();
-    gctx.arc(0, 0, 11, -0.95, 0.95);
+    gctx.arc(0, 0, 14, -0.95, 0.95);
     gctx.stroke();
     gctx.restore();
   }
@@ -1381,9 +1395,9 @@ function drawScorePops() {
     const a = Math.max(0.15, p.life);
     gctx.globalAlpha = a;
     gctx.fillStyle = p.color;
-    gctx.font = `bold ${Math.min(16, W * 0.034)}px sans-serif`;
+    gctx.font = `bold ${Math.min(18, W * 0.038)}px sans-serif`;
     gctx.shadowColor = '#1e1135';
-    gctx.shadowBlur = 5;
+    gctx.shadowBlur = 6;
     const txt = p.label ? p.label : '+' + p.val;
     gctx.fillText(txt, p.x, p.y);
   }
@@ -1812,10 +1826,11 @@ initScenery();
 player.x = getLaneX(0);
 player.y = getGroundY() - player.height - 2;
 player.targetLane = 0;
-// Seed immediate ambient demo elements so first screen starts "in action" with visible prism shards (collect goals) + shadow (deflect) under the glass card — addresses playtest friction (no passive tableau)
-shards.push({ x: W * 0.62, lane: -1, targetX: getLaneX(-1), y: getGroundY() - 48, size: 17, rotation: 1.2, glow: 0.4, color: '#f0abfc', ambient: true });
-shards.push({ x: W * 0.78, lane: 1, targetX: getLaneX(1), y: getGroundY() - 22, size: 16, rotation: 3.8, glow: 0.3, color: '#93c5fd', ambient: true });
-obstacles.push({ x: W * 0.88, lane: 0, targetX: getLaneX(0), y: getGroundY() - 34, w: 28, h: 34, type: 'shadow', eyes: 1, hit: false, ambient: true });
+// Seed immediate ambient demo elements so first screen starts "in action" with visible prism shards (collect goals) + shadow (deflect) under the glass card — addresses playtest (more direct action, no passive)
+shards.push({ x: W * 0.58, lane: -1, targetX: getLaneX(-1), y: getGroundY() - 52, size: 20, rotation: 1.2, glow: 0.42, color: '#fde68a', ambient: true });
+shards.push({ x: W * 0.73, lane: 1, targetX: getLaneX(1), y: getGroundY() - 26, size: 19, rotation: 3.8, glow: 0.32, color: '#f0abfc', ambient: true });
+shards.push({ x: W * 0.89, lane: 0, targetX: getLaneX(0), y: getGroundY() - 44, size: 18, rotation: 0.6, glow: 0.38, color: '#fde68a', ambient: true });
+obstacles.push({ x: W * 0.91, lane: 0, targetX: getLaneX(0), y: getGroundY() - 38, w: 30, h: 36, type: 'shadow', eyes: 1, hit: false, ambient: true });
 // Subtle best score on start card (motivation, no generic copy)
 const bestEl = document.getElementById('startBest');
 if (bestEl && highScore > 0) bestEl.textContent = `★ Best: ${highScore.toLocaleString()}`;
