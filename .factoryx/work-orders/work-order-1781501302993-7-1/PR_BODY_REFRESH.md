@@ -195,3 +195,11 @@ Payload JSON:
 
 (Full rules, WORKFLOW.md taste-gate slice, GitHub branch model requiring canonical factoryx/.../work-order-... branch + PR with FactoryX Work Order Context + full prompt, memory file usage, preview/VERIFICATION requirements, Game Feel Checklist, Quality bar, execute instructions, head guard at c1fc31d..., push command, and "leave code changes in place and report any PR URL" are in the originating <user_query> and .factoryx/work-orders/work-order-1781501302993-7-1/ . Treat as the plan of record for diff review.)
 
+## Latest Evidence Addition (Grok, ~10:13Z, post-redeploy address continuation)
+- Re-ran real chromium (native, post-rollout image) 7.5s virtual autostart + start overlay after the 10:09Z address commit (HEAD 8b3ba73).
+- 0 game JS errors / uncaught / page errors / asset fails (filtered logs clean, only dbus env noise).
+- Fresh artifacts adopted: `screenshot-start-overlay-fresh-20260615-1012.png` (297.6k — live playable moonlit lanes + idling player under glass card on first screen) + `screenshot-gameplay-polish-fresh-20260615-1012.png` (47.7k — 7.5s virtual post-gesture exercising score/gauge/wave/shards/hazards/player/effects in real loop) + verification-run-20260615-1012*.log .
+- All prior polish + checklists + taste-gate (live first screen) + Game Feel + Quality bar re-confirmed with no drift. Payload 50.5k unchanged. No game code changes — this is evidence currency pass using remaining polish_until_deadline budget.
+- gh pr view per spec (container token limited; use gh normally); PR #81 body to be updated by ops with: `gh pr edit 81 --repo ystackai/studio-sailor-moon --body-file .factoryx/work-orders/work-order-1781501302993-7-1/PR_BODY_REFRESH.md` (full <user_query> prompt text included for reviewers).
+- Ready for CI gates + human review. Canonical branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1 ; preview: games/92-moon-prism-relay/index.html ; Work Order: work-order-1781501302993-7-1
+
