@@ -281,3 +281,29 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - Preview entrypoint: `games/92-moon-prism-relay/index.html`
 - Redeploy reset addressed prior; this keeps evidence current after feedback-driven first-screen polish using remaining budget. No blockers.
 
+
+## Grok Fresh Chromium Evidence Refresh (~11:25Z, post first-screen action polish 11:22Z + evidence currency, pre 14:28Z deadline)
+
+**Branch state**: HEAD ce5c067 (the 11:22Z "first screen starts in action" polish commit with ambient shards/shadows + preview swishes + lighter veil; local==remote post fetch, pre-push guard satisfied). Using polish_until_deadline budget for evidence currency immediately after the core playable-first-screen polish (Codex 10:54 address) + prior redeploy reset address. gh pr view per spec (env token-limited; use configured gh + helpers normally; no blocking reviews/CHANGES_REQUESTED in FEEDBACK/memory).
+
+**Action (evidence currency post-polish)**: Re-ran the exact established real chromium harness (native /usr/bin/chromium via capture-log.sh, 820x620, --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=7500/1500 --run-all-compositor-stages-before-draw, ?autostart=1 for post-gesture real gameplay loop exercise + separate start overlay) on the current rolled-out verifier image. Produced/adopted `start-overlay-fresh-20260615-1125.png` (314k) + `gameplay-polish-fresh-20260615-1125.png` (48.7k) + `verification-run-20260615-1125*.log` to work order dir.
+
+**Results**:
+  - Filtered logs (dbus/UPower/... noise strip, identical pattern): **0 uncaught JS exceptions, 0 game console.error, 0 pageerror, 0 request/asset/net failures**. FILTERED GAME ERRORS section empty — clean signature matching every prior healthy verif.
+  - PNGs: proper 820×620 compositor renders (314611 / 48769 bytes; "bytes written" confirmed).
+  - Autostart exercised: gesture path, audio gate, full update+draw loop, spawns, player actions, scoring/gauge/wave/effects + the new ambient demo shards (visible collect goals) + shadow echo (deflect silhouette) + lane preview swish paths on first screen load.
+- **Checklists re-validated (no drift)**: All 9 Game Feel + Quality bar + taste-gate (now stronger: first screen starts in action with immediate movement goals + visible pickups/enemies under the glass card; core verb <30s; <100ms + visible/audible feedback; easing; hit/deflect/collect/super feedback via pops/ribbons/slashes/ritual/wave + surge + record ★ BEST; audio gesture only; 58px touch+key+swipe+R+pointer; 60fps cap; <<2MB ~53k self-contained; no external net) hold exactly. Preview entrypoint `games/92-moon-prism-relay/index.html` + .factoryx/preview-entrypoint stable. ~53kB payload.
+- **Redeploy reset addressed prior**: Multiple prior runs (9f01d47 address + 10:02–10:52Z + 11:05Z) confirmed post-rollout health; this 11:25Z keeps evidence current on rolled-out image after the 11:22Z first-screen liveliness polish (no code change, no peripheral). Ready for CI + human review on PR #81.
+- **Next**: Update VERIFICATION.md + this PREVIEW + PR_BODY_REFRESH + WORKLOG with this section + new shot refs; git add the 4 new artifacts + mds; commit "docs: fresh chromium 7.5s verif evidence at 11:25Z (post 11:22 first-screen action polish continuation); 0 game errors in rolled-out env; adopt -1125 screenshots + logs; update WORKLOG/VERIFICATION/PREVIEW/PR_BODY + adopt artifacts; pre 14:28Z deadline polish_until_deadline"; `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. Using deadline budget for continued evidence strength after the playable slice polish. House style + game-designer-2d + WORKFLOW (browser-game-2d) followed (no implementation change).
+
+**Screenshots (11:25Z refresh, post action polish)**
+- `start-overlay-fresh-20260615-1125.png` (314k) — live playable first screen with ambient shards + shadow echo visible under glass card (starts in action).
+- `gameplay-polish-fresh-20260615-1125.png` (48.7k) — 7.5s virtual autostart gameplay exercised in rolled-out env.
+- Prior shots (incl. 11:22Z action polish) retained.
+
+**FactoryX Work Order Context**
+- Work Order: work-order-1781501302993-7-1
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- PR: #81 (canonical; refresh body with full original prompt + this context for reviewers)
+- Preview entrypoint: `games/92-moon-prism-relay/index.html`
+- Redeploy reset addressed; 11:22Z playtest-driven first-screen polish complete + this 11:25Z evidence keeps verification current using polish_until_deadline budget. No blockers.

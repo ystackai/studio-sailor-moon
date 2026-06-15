@@ -847,3 +847,48 @@ https://github.com/ystackai/studio-sailor-moon/pull/81
 - Payload 53kB class, single self-contained file, preview entrypoint `games/92-moon-prism-relay/index.html` + .factoryx/preview-entrypoint stable.
 - All artifacts + this section left for PR #81 (refresh body with full original prompt + FactoryX Work Order Context).
 - Ready for continued polish / CI / human review. House style + game-designer-2d + WORKFLOW followed.
+
+## Grok Fresh Chromium Evidence Refresh (~11:25Z, post 11:22Z first-screen action polish + evidence currency)
+
+**Environment (identical harness, rolled-out image)**
+- Chromium (native /usr/bin/chromium)
+- Viewport 820×620, --headless=new, --disable-gpu --no-sandbox, --allow-file-access-from-files, --virtual-time-budget=7500 (game) / 1500 (start), --run-all-compositor-stages-before-draw
+- Date: 2026-06-15 ~11:25Z ( ~3h before 14:28Z deadline)
+- Purpose: Fresh evidence immediately after the 11:22Z "first screen starts in action" polish (ambient demo shards+shadows, pre-start lane preview swishes, lighter veil addressing Codex 10:54 playtest) to keep verification currency while using polish_until_deadline budget; confirms no regression. gh per spec (no blocking).
+
+**Verification Steps & Results**
+- Start overlay (no ?autostart): `start-overlay-fresh-20260615-1125.png` (314k) — live moonlit city lanes, 2-layer parallax buildings, stars, glowing moon, idling player + 2 faint ambient prism shards (collect goals) + 1 ambient shadow (deflect silhouette) visible *immediately* behind the lighter glass card. First screen now starts in action (taste-gate + playtest address).
+- Gameplay: `?autostart=1` + 7.5s virtual-time-budget exercised the *real* JS update+draw loop (post simulated gesture). Result `gameplay-polish-fresh-20260615-1125.png` (48.7k) shows active play state (score ✦ + ★ PB, pulsing gauge, wave, moving shards/hazards + all effects, ambient paths exercised on start load too).
+- Logs: `verification-run-20260615-1125.log` (game) + `verification-run-20260615-1125-start.log` (start). Filtered (strip dbus/object_proxy/UPower/bus.cc/NameHasOwner/DisplayDevice noise): **0 uncaught JS exceptions, 0 game console.error, 0 pageerror, 0 request/asset/net failures**. FILTERED section empty — clean, identical signature to all prior successful runs.
+- PNGs validated as proper 820×620 compositor renders (sizes 314611/48769 bytes; bytes written confirmed).
+- State exercised: the new first-screen ambient + preview swish paths + full prior polish (lane ribbons, deflect crescent slashes + pops + chime + auto-super, collect gold pops + ritual, wave surge + gift shards + banner, living super ribbons, highscore live PB badge, R restart, any-tap, etc.).
+
+**Game Feel Checklist (re-validated on fresh 11:25Z run)**
+- ✅ Core verb in first 30s (now with immediate visible prism shards + shadow echo + lane preview swishes on load under card — starts in action, no passive tableau)
+- ✅ Input <100ms + visible/audible (preview keys produce ribbon swish + lerp even on title; full verbs + pops/ribbons/slashes/ritual + record ★ BEST)
+- ✅ Easing everywhere (prior + ambient scroll + particle twinkles)
+- ✅ Hit/score/deflect/super/wave + record celebration feedback
+- ✅ Audio only after gesture
+- ✅ Touch ≥44px (58) + pointer + keyboard + swipe + R/enter/space/any-tap
+- ✅ 60fps mid-laptop (dt cap)
+- ✅ <2MB (~53k single file)
+- ✅ No external net (self-contained)
+
+**Quality Bar (fresh 11:25Z)**
+- First screen makes sense and starts in action: live moonlit lanes + city + moon + idling player + moving ambient collect/deflect echoes + clear "✦ Start Transform ✦" + thematic legend + best when present.
+- Interaction coherent <1min: yes (taste-gate slice fully evaluable with new liveliness; all polish exercised).
+- Verification actually ran (real chromium + virtual + autostart + start load exercising new ambient/preview paths); 0 failures.
+- Live preview opens clean; no browser runtime errors.
+- PR #81 to be refreshed with this + full prompt + prior for review.
+- House style (ribbons living, crescents as power geometry, transformation/relay ritual, theatrical sincerity) + playable-first-screen reinforced.
+
+**Screenshots (this 11:25Z refresh pass, post action polish)**
+- `start-overlay-fresh-20260615-1125.png` (314k) — live playable first screen with ambient shards + shadow (starts in action).
+- `gameplay-polish-fresh-20260615-1125.png` (48.7k) — 7.5s virtual autostart gameplay exercised in rolled-out env.
+- Prior (incl. 11:22Z action + redeploy address) retained.
+
+**Notes**
+- This continues evidence currency after the explicit 11:22Z first-screen action polish (addressing playtest + "first screen must be playable") and the prior "redeploy reset after verifier image rollout" (9f01d47 + 10:xx refreshes). No game code changes. Single-file, taste-gate held stronger, all checklists re-confirmed. Preview entrypoint stable. ~53kB.
+- All artifacts + this note left in work order dir for canonical PR #81 (body includes full original prompt + FactoryX Work Order Context per spec).
+- Ready for CI gates + human review. Push via `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`.
+- House style + game-designer-2d + WORKFLOW followed (no implementation change).

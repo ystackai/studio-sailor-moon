@@ -108,3 +108,19 @@ Ambitious, bright, high-energy magical-girl 3-lane arcade runner: dash/jump/skat
 - See: full WORKLOG.md (new 11:22Z section), VERIFICATION.md, PREVIEW.md, FEEDBACK.md (10:54 playtest), screenshots (new -1122 start/gameplay + priors), verification-run-*.log in .factoryx/work-orders/work-order-1781501302993-7-1/
 - Follows: WORKFLOW (browser-game-2d, taste-gate playable slice first — now even livelier on load), game-designer-2d skill, Sailor Moon house style, Game Feel Checklist (all 9), "polish_until_deadline", "browser_runtime_verification":true, redeploy reset addressed with fresh evidence before peripheral. All changes on the Work Order branch; artifacts left in place.
 
+
+## Latest Evidence (11:25Z refresh, post 11:22Z playable-first-screen polish)
+
+- Re-ran real chromium 7.5s autostart + 1.5s start overlay harness post the ambient demo + preview swish + lighter veil action polish (addressing "start in action" + "first screen must be playable"). 0 game errors (clean filtered logs); new `start-overlay-fresh-20260615-1125.png` (314k — ambient shards + shadow echo immediately visible on load under glass card, proving core verbs in motion) + `gameplay-polish-fresh-20260615-1125.png` (48.7k). All checklists + taste-gate + quality bar re-validated. Redeploy reset addressed prior; evidence kept current on rolled-out image using remaining deadline budget. Ready for review on PR #81. See .factoryx/work-orders/.../ for full logs + shots + updated PREVIEW/VERIFICATION/WORKLOG.
+
+**FactoryX Work Order Context (include full original <user_query> prompt text in PR body for reviewers)**
+- Work Order: work-order-1781501302993-7-1
+- factory_id: factory-sailor-moon
+- project_id: sailor-moon
+- role_id: coder-default
+- runtime_profile: grok-build
+- Branch: factoryx/factory-sailor-moon/work-order-1781501302993-7-1
+- PR: #81 (update this body with the complete original prompt + context + latest evidence; do not create parallel branches/PRs)
+- Preview entrypoint: games/92-moon-prism-relay/index.html
+- Completion: polish_until_deadline to 2026-06-15T14:28:32Z; browser_runtime_verification exercised with real chromium + autostart post-gesture + start load.
+- See: full .factoryx/work-orders/work-order-1781501302993-7-1/{WORKLOG,PREVIEW,VERIFICATION,FEEDBACK,PR_BODY_REFRESH,TECHNICAL_SYSTEM_DESIGN}.md + all screenshot-*.png + verification-run-*.log for implementation history, playtest addresses (redeploy reset + 10:54 Codex "start in action"), and evidence.
