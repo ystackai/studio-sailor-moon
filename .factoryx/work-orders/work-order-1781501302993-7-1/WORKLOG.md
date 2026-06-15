@@ -142,3 +142,7 @@
 - All taste-gate / game-feel / quality bar / self-contained / browser_runtime_verification satisfied. No blockers before deadline (14:28Z). First screen remains the live playable slice.
 - Artifacts left in place; PR #81 to be body-refreshed by ops with full context + this prompt for reviewers.
 
+- **Push**: `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1` succeeded (c1fc31d → c22c971). Pre-push hook accepted (not behind remote).
+- gh pr commands limited by container GH_TOKEN (per prior notes; "use the gh command normally" + factory helper scripts), but PR remains https://github.com/ystackai/studio-sailor-moon/pull/81 — body can be refreshed by ops with: `gh pr edit 81 --repo ystackai/studio-sailor-moon --body-file .factoryx/work-orders/work-order-1781501302993-7-1/PR_BODY_REFRESH.md` (after ensuring full prompt is in the file, which now includes context + excerpt + reference to complete <user_query>).
+- All code changes + memory + screenshots left in place on Work Order branch. Deadline budget used for targeted correctness (highscore) + evidence refresh. No further blockers.
+
