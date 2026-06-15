@@ -101,3 +101,23 @@
 - All prior polish retained + improved contrast/overlay.
 - Browser runtime verification executed with real chromium + autostart interaction path; evidence in work order dir.
 - Ready for human review / CI gates. Continue polish passes if time remains before 2026-06-15T14:28:32Z.
+
+## Grok Polish Pass 2 (09:35–09:40Z, continuing until deadline)
+- **09:35** — Inspected branch (up-to-date with remote 8414da4), ran `gh pr view 81` (auth note in container; PR #81 confirmed target), fetched origin to satisfy pre-push ancestor guard.
+- **09:35** — Re-ran native chromium headless + --virtual-time-budget=6500 + ?autostart=1 verification (matching prior method): 0 game JS errors in logs (only dbus noise), produced fresh `screenshot-gameplay-verified.png` (47k) + start overlay; payload still 40k-class.
+- **09:36** — Per game-designer-2d skill + Sailor Moon house style (ribbons as living sacred technology, transformation as ritual with theatrical sincerity, moonlight/gold palette, crescents as geometry): 
+  - Added `playDeflect` + `deflectHazard`: successful jump-over (ground shadows) or dash-through (flying orbs) now marks hazard hit, awards small score/gauge bonus, spawns gold crescent sparkles + colored particles, plays crisp high chime. Makes "deflect shadow hazards" visibly/audibly satisfying instead of silent pass-through.
+  - Enhanced `drawSuperEffects`: added 3 flowing ribbon curves (quadratic beziers, phase-animated, pink-to-gold, soft shadow) that trail/protect the player during 5s Moon Prism Power. Combined with existing orbiting shards + flash + "✦ MOON PRISM POWER! ✦" call (classic henshin phrasing kept for sincerity). Ribbons emphasize "power as ritual" and fabric-will from house style.
+  - Sparkle crescents also added to `collectShard` for prism-shard collection pop (brighter, more magical high-energy feedback).
+  - Cleaned `drawUI`: removed legacy top "Score:" / top combo (dupe of polished bottom HUD), fixed "GAGE" → "GAUGE", kept gauge pulse (gold >90%), wave, bottom ✦ score + combo, ready prompt. More breathing room, higher contrast play space.
+- **09:36** — Post-edit chromium re-verify (virtual 6.2s autostart): clean render, 42.8KB total, +83/-25 line focused diff (no bloat). New `screenshot-polished-gameplay-fresh.png`.
+- **09:37** — Updated PREVIEW.md, VERIFICATION.md (new results + screenshots + expanded game-feel notes on deflect/super/ribbons), this WORKLOG, and FEEDBACK if needed. All checklist items re-confirmed.
+- No blockers. Deadline 14:28Z — using remaining budget for evidence + feel polish before any PR-body-only. First screen remains the live playable slice (taste-gate held).
+
+## Current Status (updated)
+- Playable first screen (live lanes + city + idling player under glass card) with core verb immediately discoverable.
+- Deflect feedback + ribbon super transformation + collect sparkles added for high-energy satisfaction and house-style alignment (ribbons, ritual, moonlight).
+- Real chromium + playwright-path verification evidence (0 runtime errors); fresh screenshots in work order dir.
+- Payload 42.8k, self-contained, responsive, easing everywhere, audio gesture-gated, touch+key, 60fps.
+- Ready for continued polish / review / CI. Will push to canonical branch and refresh PR #81 with full prompt context + evidence.
+

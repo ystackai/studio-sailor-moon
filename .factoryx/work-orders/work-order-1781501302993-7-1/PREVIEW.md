@@ -18,7 +18,8 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
    - ↓ / S: Dash through flying shadow orbs
    - X / Shift: Moon Prism Power (gauge must be full)
 4. Mobile: swipe vertically/horizontally or use 58px on-screen pads.
-5. Collect shards → build combo + fill Moon Prism Gage → unleash 5s super (invincible orbiting shards).
+5. Collect shards (gold crescent pop) → build combo + fill Moon Prism Gauge → unleash 5s super (flowing ribbons + orbiting shards, classic "Moon Prism Power").
+6. Deflect: jump ground shadows or dash flying orbs for visible sparkles + chime + small gauge/score (core verb satisfaction).
 
 ## Verification Checklist
 - [x] Live gameplay scene (lanes + moon + city + player) visible on first screen
@@ -29,12 +30,14 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - [x] Touch targets 58px, keyboard + pointer coexist
 - [x] Responsive fluid layout
 - [x] 60fps capped loop, easing everywhere
-- [x] No external network; 40KB self-contained
-- [x] Escalating waves, scoring/combo, super move, restart all present and polished
+- [x] No external network; 42.8KB self-contained (post polish)
+- [x] Escalating waves, scoring/combo, super move (ribbons + "Moon Prism Power"), deflect feedback, restart all present and polished
+- [x] Deflect + ribbon super — jump/dash clears sparkle + chime; super draws flowing living ribbons (house style ritual) + orbiting shards
 
 ## Screenshots
 - `screenshot-start-overlay.png` — First screen with playable moonlit lanes visible under the start card (thematic high-contrast copy)
-- `screenshot-gameplay-verified.png` — Active play after autostart (score, gauge pulse, hazards, shards, wave) — captured via real browser runtime with virtual time
+- `screenshot-gameplay-verified.png` — Active play after autostart (score ✦, gauge pulse gold, wave, hazards/shards, player; ribbons visible if super triggered in slice) — real chromium virtual-time
+- `screenshot-polished-gameplay-fresh.png` — Post-ribbon/deflect/collect-sparkle polish verification render (42.8KB payload)
 
 ## FactoryX Work Order Context
 - Work Order: work-order-1781501302993-7-1

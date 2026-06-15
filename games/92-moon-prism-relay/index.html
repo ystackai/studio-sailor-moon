@@ -205,6 +205,13 @@ function playCombo(level) {
   playTone(base * 1.5, 0.15, 'sine', 0.08, 0.08);
 }
 
+function playDeflect(kind) {
+  // Bright, high-energy chime for successful deflect (ritual precision)
+  const base = kind === 'dash' ? 980 : 1240;
+  playTone(base, 0.12, 'sine', 0.13);
+  playTone(base * 1.25, 0.09, 'triangle', 0.07, 0.04);
+}
+
 // ========== GAME STATE ==========
 const LANES = [-1, 0, 1];
 const LANE_WIDTH_RATIO = 0.22;
@@ -565,16 +572,18 @@ function update(dt) {
     obs.x -= moveSpeed * dt;
     if (obs.x < -60) { obstacles.splice(i, 1); continue; }
 
-    // Collision check
+    // Collision check — deflect gives crisp feedback (jump over / dash through)
     if (!obs.hit && !player.invincible && !superActive) {
       const px = player.x - player.width/2, py = player.y;
       const ox = obs.x - obs.w/2, oy = obs.y;
       if (px < ox + obs.w && px + player.width > ox &&
           py < oy + obs.h && py + player.height > oy) {
         if (obs.type === 'shadow' && player.jumping && player.y < oy - 10) {
-          // jumped over!
+          obs.hit = true;
+          deflectHazard(obs, 'jump');
         } else if (obs.type === 'shadow_ball' && player.dashing) {
-          // dashing through
+          obs.hit = true;
+          deflectHazard(obs, 'dash');
         } else {
           obs.hit = true;
           hitPlayer();
@@ -638,6 +647,19 @@ function collectShard(shard) {
   moonGauge = Math.min(MOON_MAX, moonGauge + (3 + combo * 0.5));
 
   spawnParticles(shard.x, shard.y, shard.color, 12, 120);
+  // Extra prism / crescent sparkles on collect (bright readable high-energy)
+  for (let i = 0; i < 2; i++) {
+    particles.push({
+      x: shard.x, y: shard.y,
+      vx: (Math.random() - 0.5) * 110,
+      vy: -40 - Math.random() * 30,
+      life: 0.7,
+      decay: 1.3,
+      size: 2 + Math.random(),
+      color: '#fde68a',
+      gravity: 90
+    });
+  }
   playCollect();
   if (combo > 0 && combo % 5 === 0) {
     playCombo(Math.min(combo / 5, 10));
@@ -687,6 +709,29 @@ function showComboText(comboCount) {
   el.style.transition = 'opacity 0.3s, transform 0.3s';
   el.style.transform = 'translate(-50%,-50%) scale(1)';
   setTimeout(() => { el.style.opacity = 0; el.style.transform = 'translate(-50%,-50%) scale(1.3)'; }, 800);
+}
+
+// Deflect feedback — makes "deflect shadow hazards" feel crisp and rewarding (theatrical precision per house style)
+function deflectHazard(obs, kind) {
+  const bonus = 8;
+  score += bonus;
+  moonGauge = Math.min(MOON_MAX, moonGauge + 5);
+  spawnParticles(obs.x, obs.y + (obs.h || 30)/2, kind === 'dash' ? '#93c5fd' : '#f0abfc', 7, 70);
+  // Extra sacred-geometry sparkles (small crescents/stars)
+  for (let i = 0; i < 3; i++) {
+    particles.push({
+      x: obs.x + (Math.random() - 0.5) * 8,
+      y: obs.y + (obs.h || 30)/2,
+      vx: (Math.random() - 0.5) * 90,
+      vy: -28 - Math.random() * 35,
+      life: 0.85,
+      decay: 1.1 + Math.random() * 0.4,
+      size: 2.5 + Math.random() * 2,
+      color: '#fde68a',
+      gravity: 70
+    });
+  }
+  playDeflect(kind);
 }
 
 // ========== DRAW ==========
@@ -1028,12 +1073,39 @@ function drawParticles() {
 
 function drawSuperEffects() {
   if (!superActive) return;
-  // Flash overlay
+  // Flash overlay (transformation burst)
   if (superFlash > 0) {
     uctx.fillStyle = `rgba(250,204,21,${superFlash * 0.3})`;
     uctx.fillRect(0, 0, W, H);
   }
-  // Orbiting prism shards
+
+  // Flowing protective ribbons (house style: ribbons as living sacred tech — bind/protect during henshin)
+  const px = player.x, py = player.y + player.height * 0.35;
+  for (let r = 0; r < 3; r++) {
+    const phase = gameTime * (2.2 + r * 0.3) + r * 1.8;
+    const amp = 22 + r * 6;
+    const len = 48 + r * 8;
+    uctx.save();
+    uctx.strokeStyle = r === 0 ? '#f9a8d4' : (r === 1 ? '#e0aaff' : '#fde68a');
+    uctx.lineWidth = 2.5 + r * 0.6;
+    uctx.shadowColor = '#c026ff';
+    uctx.shadowBlur = 8;
+    uctx.beginPath();
+    uctx.moveTo(px - 14 - r * 3, py - 10);
+    // Living ribbon curve (quadratic for fabric memory + will)
+    const cx1 = px - 8 + Math.cos(phase) * amp * 0.6;
+    const cy1 = py - 18 - Math.sin(phase * 0.8) * (amp * 0.7);
+    const cx2 = px + 6 + Math.cos(phase + 1.2) * amp * 0.5;
+    const cy2 = py + 12 + Math.sin(phase * 1.1) * (amp * 0.5);
+    const ex = px + 18 + r * 2 + Math.cos(phase * 0.7) * 6;
+    const ey = py + len * 0.6 + Math.sin(phase) * 8;
+    uctx.quadraticCurveTo(cx1, cy1, cx2, cy2);
+    uctx.quadraticCurveTo(cx2 + 10, cy2 + 8, ex, ey);
+    uctx.stroke();
+    uctx.restore();
+  }
+
+  // Orbiting prism shards (sacred geometry)
   for (let i = 0; i < 6; i++) {
     const angle = gameTime * 2 + (i / 6) * Math.PI * 2;
     const radius = 55 + Math.sin(gameTime * 3 + i) * 15;
@@ -1054,7 +1126,8 @@ function drawSuperEffects() {
     uctx.fill();
     uctx.restore();
   }
-  // Text
+
+  // Text — classic henshin call (theatrical sincerity)
   uctx.save();
   uctx.font = `bold ${Math.min(W*0.06, 32)}px sans-serif`;
   uctx.textAlign = 'center';
@@ -1066,22 +1139,7 @@ function drawSuperEffects() {
 }
 
 function drawUI() {
-  // Score
-  uctx.fillStyle = '#e2e8f0';
-  uctx.font = `bold ${Math.min(W*0.04, 22)}px sans-serif`;
-  uctx.textAlign = 'left';
-  uctx.fillText(`Score: ${score}`, 16, 30);
-
-  // Combo
-  if (combo > 0) {
-    const comboSize = Math.min(W * 0.035, 20) + Math.min(combo, 10);
-    uctx.fillStyle = combo >= 10 ? '#fde68a' : combo >= 5 ? '#f0abfc' : '#c4b5fd';
-    uctx.font = `bold ${comboSize}px sans-serif`;
-    uctx.textAlign = 'left';
-    uctx.fillText(`${combo}x Combo`, 16, 55);
-  }
-
-  // Moon Gauge
+  // Moon Gauge (top-right, pulses gold near full per house moonlight/tech)
   const gaugeW = Math.min(W * 0.4, 200);
   const gaugeH = 14;
   const gaugeX = W - gaugeW - 16;
@@ -1112,15 +1170,15 @@ function drawUI() {
   uctx.fillStyle = '#e2e8f0';
   uctx.font = `${Math.min(11, W*0.02)}px sans-serif`;
   uctx.textAlign = 'right';
-  uctx.fillText('MOON PRISM GAGE', gaugeX + gaugeW, gaugeY + gaugeH + 14);
+  uctx.fillText('MOON PRISM GAUGE', gaugeX + gaugeW, gaugeY + gaugeH + 14);
 
-  // Wave indicator
+  // Wave indicator (top center, escalates)
   uctx.textAlign = 'center';
   uctx.fillStyle = '#c4b5fd';
   uctx.font = `${Math.min(14, W*0.025)}px sans-serif`;
   uctx.fillText(`Wave ${wave}`, W/2, 28);
 
-  // Score display - bottom left (high contrast)
+  // Score + combo (bottom-left, high-contrast per polished HUD)
   uctx.textAlign = 'left';
   uctx.fillStyle = '#f1e7ff';
   uctx.font = `bold ${Math.min(16, W*0.028)}px sans-serif`;
