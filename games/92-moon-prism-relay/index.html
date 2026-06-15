@@ -250,6 +250,8 @@ let particles = [];
 let trailParticles = [];
 let laneSwishes = [];      // living ribbon swish on lane change (physicality + house fabric)
 let deflectSlashes = [];   // bright crescent geometry slash on successful deflect
+let scorePops = [];        // rising +pts labels on collect/deflect — immediate high-energy scoring feedback
+let wavePop = null;        // brief centered wave-advance flourish (theatrical escalation)
 let spawnTimer = 0;
 let shardSpawnTimer = 0;
 let obstacleSpawnTimer = 0;
@@ -330,6 +332,8 @@ function resetGame() {
   trailParticles = [];
   laneSwishes = [];
   deflectSlashes = [];
+  scorePops = [];
+  wavePop = null;
   spawnTimer = 0;
   shardSpawnTimer = 0;
   obstacleSpawnTimer = 0;
@@ -451,6 +455,7 @@ function update(dt) {
       difficulty = 1 + (wave - 1) * 0.3;
       spawnParticles(player.x, player.y - 30, '#f0abfc', 20, 150);
       playPowerUp();
+      wavePop = { n: wave, life: 1.4 };
     }
 
     // Score from survival
@@ -647,6 +652,18 @@ function update(dt) {
     if (s.life <= 0) deflectSlashes.splice(i, 1);
   }
 
+  // Update rising score pops (collect/deflect feedback — high energy, immediately readable)
+  for (let i = scorePops.length - 1; i >= 0; i--) {
+    const p = scorePops[i];
+    p.y -= 42 * dt;
+    p.life -= dt * 1.15;
+    if (p.life <= 0) scorePops.splice(i, 1);
+  }
+  if (wavePop) {
+    wavePop.life -= dt;
+    if (wavePop.life <= 0) wavePop = null;
+  }
+
   // Spawning
   spawnTimer += dt;
   const shardInterval = Math.max(0.5, 2.5 - wave * 0.15);
@@ -668,6 +685,7 @@ function collectShard(shard) {
   comboMultiplier = 1 + Math.floor(combo / 5) * 0.5;
   const points = Math.floor(10 * comboMultiplier);
   score += points;
+  scorePops.push({ x: shard.x, y: shard.y - 8, val: points, life: 0.85, color: '#fde68a' });
   const prevGauge = moonGauge;
   moonGauge = Math.min(MOON_MAX, moonGauge + (3 + combo * 0.5));
   if (prevGauge < MOON_MAX && moonGauge >= MOON_MAX) {
@@ -762,6 +780,7 @@ function showComboText(comboCount) {
 function deflectHazard(obs, kind) {
   const bonus = 8;
   score += bonus;
+  scorePops.push({ x: obs.x, y: (obs.y || player.y) - 10, val: bonus, life: 0.65, color: '#93c5fd' });
   const prevG = moonGauge;
   moonGauge = Math.min(MOON_MAX, moonGauge + 5);
   if (prevG < MOON_MAX && moonGauge >= MOON_MAX) {
@@ -934,6 +953,8 @@ function draw() {
     drawLaneSwishes();
     drawDeflectSlashes();
     drawParticles();
+    drawScorePops();
+    drawWavePop();
     drawSuperEffects();
   }
 
@@ -1197,6 +1218,45 @@ function drawDeflectSlashes() {
     gctx.restore();
   }
   gctx.globalAlpha = 1;
+}
+
+function drawScorePops() {
+  // Rising +N labels for shard collects and successful deflects (arcade-satisfying, high-energy, no clutter)
+  gctx.textAlign = 'center';
+  for (const p of scorePops) {
+    const a = Math.max(0.15, p.life);
+    gctx.globalAlpha = a;
+    gctx.fillStyle = p.color;
+    gctx.font = `bold ${Math.min(13, W * 0.028)}px sans-serif`;
+    gctx.shadowColor = '#1e1135';
+    gctx.shadowBlur = 4;
+    gctx.fillText('+' + p.val, p.x, p.y);
+  }
+  gctx.globalAlpha = 1;
+  gctx.shadowBlur = 0;
+  gctx.textAlign = 'left';
+}
+
+function drawWavePop() {
+  if (!wavePop) return;
+  const a = Math.max(0.12, Math.min(1, wavePop.life / 0.6, (1.4 - wavePop.life) / 0.5 ));
+  uctx.save();
+  uctx.textAlign = 'center';
+  uctx.fillStyle = `rgba(253, 230, 138, ${a})`;
+  uctx.font = `bold ${Math.min(18, W * 0.038)}px sans-serif`;
+  uctx.shadowColor = '#c026ff';
+  uctx.shadowBlur = 12;
+  const y = H * 0.26;
+  uctx.fillText(`✦ WAVE ${wavePop.n} ✦`, W / 2, y);
+  // Subtle crescent underline (sacred geometry tie-in)
+  uctx.strokeStyle = `rgba(249, 168, 212, ${a * 0.85})`;
+  uctx.lineWidth = 1.5;
+  const tw = Math.min(110, W * 0.22);
+  uctx.beginPath();
+  uctx.moveTo(W/2 - tw, y + 6);
+  uctx.quadraticCurveTo(W/2, y + 14, W/2 + tw, y + 6);
+  uctx.stroke();
+  uctx.restore();
 }
 
 function drawParticles() {

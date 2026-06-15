@@ -32,12 +32,14 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - [x] 60fps capped loop, easing everywhere
 - [x] No external network; 42.8KB self-contained (post polish)
 - [x] Escalating waves, scoring/combo, super move (ribbons + "Moon Prism Power"), deflect feedback, restart all present and polished
-- [x] Deflect + ribbon super — jump/dash clears sparkle + chime; super draws flowing living ribbons (house style ritual) + orbiting shards
+- [x] Deflect + ribbon super — jump/dash clears sparkle + chime + rising blue +pts; super draws flowing living ribbons (house style ritual) + orbiting shards; collect shows gold +pts pop; wave advance shows "✦ WAVE N ✦" banner with crescent (theatrical escalation)
 
 ## Screenshots
 - `screenshot-start-overlay.png` — First screen with playable moonlit lanes visible under the start card (thematic high-contrast copy)
 - `screenshot-gameplay-verified.png` — Active play after autostart (score ✦, gauge pulse gold, wave, hazards/shards, player; ribbons visible if super triggered in slice) — real chromium virtual-time
 - `screenshot-polished-gameplay-fresh.png` — Post-ribbon/deflect/collect-sparkle polish verification render (42.8KB payload)
+- `screenshot-start-overlay-fresh2.png` — Fresh chromium live-scene start overlay (299k)
+- `screenshot-gameplay-polish-pops.png` — Post-edit (score pops + wave flourish) 7.5s virtual chromium gameplay; rising +pts on collect/deflect + wave banner exercised
 
 ## FactoryX Work Order Context
 - Work Order: work-order-1781501302993-7-1
@@ -48,6 +50,7 @@ The moonlit city lanes, scrolling parallax buildings, stars, and idle magical-gi
 - New shots: screenshot-start-overlay-fresh.png (293k), screenshot-gameplay-verified-fresh.png (48k) — added to work order dir alongside prior.
 - High score now actually persists (fix); restart with R key supported.
 - Payload 47.8k self-contained (new lane-swish ribbons, deflect crescents, gauge-ready bursts, expressive leans, restart polish). Preview entrypoint unchanged.
+- Final Grok pre-deadline pass: added rising score +pops (collect gold / deflect blue) + wave-advance "✦ WAVE N ✦" flourish with crescent. Real chromium 7.5s verif (0 game errors) + fresh gameplay screenshot with pops exercised. All checklists hold; ~49.9k still tiny. PR #81 ready for refresh with full context.
 - PR body refresh prepared with full Work Order context + prompt.
 - Final Grok polish pass (pre 14:28Z deadline): added living ribbon swishes on lane swaps, bright crescent slash geometry on deflects, ritual gauge-full particle burst + chime, player body leans on dash/jump, extra ribbon flicks + super ground aura, larger restart button + any-tap + hint + start-card best. Real chromium verif (0 game errors) + fresh screenshots captured. All checklists hold.
 

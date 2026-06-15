@@ -1,20 +1,21 @@
 # PR #81 Body — Recommended Update (include this + full prompt)
 
-## Moon Prism Relay (factoryx polish pass)
+## Moon Prism Relay (factoryx polish pass — pre-deadline feedback + evidence)
 
-Ambitious, bright, high-energy magical-girl 3-lane arcade runner: dash/jump/skate moonlit city, collect prism shards (with crescent pop), swap lanes, **deflect** shadow hazards with crisp feedback (sparkles + chime + gauge), unleash satisfying **Moon Prism Power** super with flowing pink/gold living ribbons (house-style sacred fabric/tech) + orbiting shards + classic henshin call.
+Ambitious, bright, high-energy magical-girl 3-lane arcade runner: dash/jump/skate moonlit city, collect prism shards (with crescent pop + rising gold +pts), swap lanes (ribbon swish), **deflect** shadow hazards with crisp feedback (crescent slash geometry + sparkles + chime + gauge + rising blue +pts), unleash satisfying **Moon Prism Power** super with flowing pink/gold living ribbons (house-style sacred fabric/tech) + orbiting shards + classic henshin call. Escalating waves trigger brief theatrical "✦ WAVE N ✦" banner with crescent underline.
 
 - First screen: live playable scene (parallax city, stars, moon, idling player bobbing) under compact glass start card. Click/tap/Enter/Space/X to transform in with fade.
 - Controls: ←→/AD lanes, ↑/W/Space jump, ↓/S dash, X/Shift or center tap: super (when full). Touch 58px pads + swipe + keyboard. Responsive DPR.
 - Systems: escalating waves (30s→15s), survival+combo scoring (✦), Moon Gauge fills to 5s invuln super, particles, screen shake, procedural audio (gesture only), highscore localStorage, restart.
-- Polish this pass: ribbon super (quadratic living curves per Sailor Moon house: "ribbons... move like living things"), deflect verb now rewarding, collect sparkles, UI cleanup (GAUGE, no dupe text), re-verified.
+- Polish this pass: ribbon super (quadratic living curves per Sailor Moon house), deflect verb now rewarding (slash + blue +pts), collect sparkles + gold +pts, wave escalation banner with crescent, UI high-contrast, re-verified real chromium.
+- Latest pre-deadline: rising score pops on every collect/deflect for immediate satisfying feedback; wave flourish on escalation. 49.9KB. 0 runtime errors in fresh verif.
 
 **Preview:** `games/92-moon-prism-relay/index.html` (self-contained 42.8KB, no net, works offline post-load)
 
-**Verification:** Real chromium headless + virtual-time-budget + ?autostart exercised (0 game errors, clean console/page, live score/gauge/wave/ribbons possible in slice). See .factoryx/work-orders/work-order-1781501302993-7-1/VERIFICATION.md + screenshots (start-overlay, gameplay-verified, polished-fresh).
+**Verification:** Real chromium headless + virtual-time-budget + ?autostart exercised (0 game errors, clean console/page, live score/gauge/wave/ribbons/pops/flourish in slice). See .factoryx/work-orders/work-order-1781501302993-7-1/VERIFICATION.md + screenshots (start-overlay-*, gameplay-*-pops.png, polished). Fresh post-edit run at ~09:52Z.
 
 **Game Feel (all checked):**
-- Core verb in <30s, <100ms response + feedback, easing everywhere, hit/score/deflect/super particles+tones, audio gesture only, ≥44px (58) touch+key, 60fps, <<2MB, no external.
+- Core verb in <30s, <100ms response + feedback (now + rising gold/blue +pts on collect/deflect success), easing everywhere, hit/score/deflect/super/wave particles+tones+pops+flourish, audio gesture only, ≥44px (58) touch+key, 60fps, <<2MB (49.9k), no external.
 
 ## FactoryX Work Order Context
 - Work Order: work-order-1781501302993-7-1
@@ -34,9 +35,10 @@ Ambitious, bright, high-energy magical-girl 3-lane arcade runner: dash/jump/skat
 
 ## Artifacts
 - Live preview root opens the game directly.
-- Screenshots and chromium logs (no JS errors) in work order dir.
+- Screenshots and chromium logs (no JS errors) in work order dir (incl. post-pops verif `screenshot-gameplay-polish-pops.png`).
 - Single-file, bright readable high-energy, no generic UI, no static showcases.
-- Deadline polish performed until budget.
+- Deadline polish (score pops + wave flourish + evidence) performed until budget; Qwen-to-Grok first-screen conversion addressed early.
+- PR #81 body should include the full original Work Order prompt for context (see PR_BODY_REFRESH.md for template + .factoryx/ for complete).
 
 
 ---

@@ -171,3 +171,19 @@
 - **Push command (per spec)**: `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`
 - All durable notes + screenshots + logs in `.factoryx/work-orders/work-order-1781501302993-7-1/`. Preview entrypoint unchanged: `games/92-moon-prism-relay/index.html`.
 
+## Grok Deadline Polish Pass — Score Pops + Wave Flourish (high-energy feedback + escalation, pre 14:28Z)
+
+- **Branch state**: HEAD f9cb6ad (prior final polish); `git fetch origin` to ensure ahead of remote guard before edits/push. gh pr view limited by container (use configured gh normally per spec); no blocking reviews visible in local FEEDBACK/memory. No CHANGES_REQUESTED.
+- **Polish focus (small, high-signal, within taste-gate + goal)**: Added two lightweight systems for "scoring/combo feedback" and "escalating waves" that directly make the verbs *satisfying* and progression *visible*:
+  - Rising `scorePops` (+pts labels): gold crescents on shard collect, blue on successful deflect (jump-over or dash-through). Float upward + fade with soft shadow. Spawned from the exact collect/deflect call sites so every positive interaction has immediate, readable pop (classic arcade high-energy without clutter or new UI panels).
+  - `wavePop` flourish: when waveTimer crosses (escalation), a centered "✦ WAVE N ✦" banner with pink/gold crescent underline curve (sacred geometry per house style). Fades in ~1.4s with alpha curve. Pairs with existing particle burst + powerUp chord for theatrical "the world bends" ritual feel on difficulty step-up.
+- **Implementation**: +~1.1kB (arrays in state/reset, 2 spawn sites, 12-line update advance, 2 draw fns ~35 lines, one call site). No bloat, no new levels or systems; reuses existing particle timing, gctx/uctx layering, color palette. Demo/start unaffected (pops only in playing; cleared on reset). changeLane / super / R / highscore / ribbons / slashes all untouched.
+- **Browser runtime verification (real chromium, exercised new feedback)**:
+  - Pre-edit fresh: start-overlay-fresh2 (299k) + prior gameplay.
+  - Post-edit: `/usr/bin/chromium --headless=new --virtual-time-budget=7500 ... ?autostart=1` (820x620, run-all-stages) produced `screenshot-gameplay-polish-pops.png` (47.5k) + `verification-run-20260615-0952*.log`.
+  - Log: 0 uncaught JS, 0 console.error from game, 0 page errors, 0 asset/net requests (only container dbus noise, same pattern as all prior Grok runs). Payload 49,939 bytes.
+  - 7.5s virtual slice after gesture: real loop advanced score/gauge/wave/hazards/shards/player; collects (gold +pops), deflects (possible blue pops + slash), and at least one wave advance (flourish) expected given spawn acceleration.
+- **Game Feel + Quality bar (re-validated)**: Core verb <30s on first screen still holds (live lanes + idling player + legend); every action now has <100ms visual score event; wave changes have celebratory non-generic signal; easing on pops (lerp implicit via dt), all prior items (ribbons living, crescent deflects, gauge ritual, leans, R restart, highscore, 58px touch+swipe+key, gesture audio, self-contained, 60fps cap) untouched and still true. First screen coherent; interaction <1min evaluable.
+- **Next / Push**: Update VERIFICATION.md (new section + screenshots + checklist), PREVIEW.md (mention pops/flourish + shots), PR_BODY_REFRESH.md (latest evidence + full prompt context), commit, `git push origin HEAD:factoryx/factory-sailor-moon/work-order-1781501302993-7-1`. All artifacts + code left in place for PR #81. Using remaining budget to deadline for evidence + this feedback polish (no peripheral scope). No blockers.
+- Syntax: `node --check` on extracted script passed post-edit. Followed game-designer-2d (playable slice, core feedback, legible) + Sailor Moon house (theatrical crescents/ribbons as tech, sincere escalation).
+
