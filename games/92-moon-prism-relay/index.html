@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Moon Prism Relay</title>
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width:100%; height:100%; overflow:hidden;
+  background:#0b0b2a;
+  touch-action:none;
+  -webkit-user-select:none; user-select:none;
+  font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+canvas#gameCanvas {
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  z-index:1; pointer-events:none;
+}
+canvas#uiCanvas {
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  z-index:2; pointer-events:auto;
+}
+#startScreen {
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:linear-gradient(180deg, #0b0b2a 0%, #1a0a3a 50%, #2d1b69 100%);
+}
+#startScreen h1 {
+  font-size:clamp(28px, 6vw, 56px); color:#f0abfc;
+  text-shadow:0 0 20px #c084fc, 0 0 40px #a855f7;
+  letter-spacing:3px; margin-bottom:8px;
+}
+#startScreen .subtitle {
+  font-size:clamp(12px, 2.5vw, 18px); color:#c4b5fd;
+  margin-bottom:32px; letter-spacing:1px;
+}
+#startScreen .controls {
+  font-size:clamp(10px, 2vw, 14px); color:rgba(200,180,255,0.7);
+  text-align:center; line-height:1.8; margin-bottom:24px;
+}
+#startBtn {
+  padding:14px 40px; font-size:clamp(16px, 3vw, 22px);
+  background:linear-gradient(135deg, #ec4899, #a855f7);
+  color:#fff; border:none; border-radius:30px; cursor:pointer;
+  box-shadow:0 0 20px rgba(236,72,153,0.5), 0 0 40px rgba(168,85,247,0.3);
+  transition:transform 0.2s, box-shadow 0.2s;
+  pointer-events:auto; letter-spacing:1px;
+}
+#startBtn:hover { transform:scale(1.05); box-shadow:0 0 30px rgba(236,72,153,0.7); }
+#startBtn:active { transform:scale(0.97); }
+#touchControls {
+  position:fixed; bottom:0; left:0; width:100%; z-index:5;
+  display:none; justify-content:space-between; padding:10px 8px;
+  pointer-events:none;
+}
+.touchBtn {
+  width:60px; height:60px; border-radius:50%;
+  background:rgba(168,85,247,0.35); border:2px solid rgba(236,72,153,0.5);
+  display:flex; align-items:center; justify-content:center;
+  color:#f0abfc; font-size:22px; pointer-events:auto;
+  -webkit-tap-highlight-color:transparent;
+}
+.touchBtn:active { background:rgba(236,72,153,0.5); }
+.touchBtnGroup { display:flex; gap:8px; }
+#comboDisplay {
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  z-index:8; font-size:clamp(36px,8vw,72px); font-weight:bold;
+  color:#f0abfc; text-shadow:0 0 30px #c084fc;
+  opacity:0; pointer-events:none; transition:opacity 0.3s;
+}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<canvas id="uiCanvas"></canvas>
+
+<div id="startScreen">
+  <h1>🌙 Moon Prism Relay 🌙</h1>
+  <div class="subtitle">Moonlight Racing — Prism Shard Runner</div>
+  <div class="controls">
+    ← → or swipe — switch lanes<br>
+    ↑ or swipe up — jump / moon leap<br>
+    ↓ or swipe down — dash / glide<br>
+    Collect prism shards. Dodge shadows.<br>
+    Fill the Moon Gauge for Moon Prism Power!
+  </div>
+  <button id="startBtn">✦ Start Transform ✦</button>
+</div>
+
+<div id="touchControls">
+  <div class="touchBtnGroup">
+    <div class="touchBtn" id="btnLeft">◀</div>
+    <div class="touchBtn" id="btnDown">▼</div>
+  </div>
+  <div class="touchBtnGroup">
+    <div class="touchBtn" id="btnUp">▲</div>
+    <div class="touchBtn" id="btnRight">▶</div>
+  </div>
+</div>
+
+<div id="comboDisplay"></div>
+
+<script>
+(function() {
+"use strict";
+
+// ========== CANVAS SETUP ==========
+const gameCanvas = document.getElementById('gameCanvas');
+const uiCanvas = document.getElementById('uiCanvas');
+const gctx = gameCanvas.getContext('2d');
+const uctx = uiCanvas.getContext('2d');
+
+let W, H, DPR;
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  gameCanvas.width = uiCanvas.width = W * DPR;
+  gameCanvas.height = uiCanvas.height = H * DPR;
+  gameCanvas.style.width = uiCanvas.style.width = W + 'px';
+  gameCanvas.style.height = uiCanvas.style.height = H + 'px';
+  gctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  uctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ========== AUDIO ENGINE ==========
+let audioCtx = null;
+let audioStarted = false;
+
+function ensureAudio() {
+  if (audioStarted) return;
+  audioStarted = true;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone(freq, dur, type, vol, delay) {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime + (delay || 0);
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.setValueAtTime(freq, t);
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(vol || 0.12, t + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(t);
+  osc.stop(t + dur);
+}
+
+function playCollect() {
+  playTone(880, 0.15, 'sine', 0.15);
+  playTone(1320, 0.12, 'sine', 0.08, 0.05);
+}
+
+function playHit() {
+  playTone(150, 0.3, 'sawtooth', 0.12);
+  playTone(80, 0.25, 'square', 0.06, 0.05);
+}
+
+function playJump() {
+  playTone(400, 0.15, 'sine', 0.08);
+  playTone(600, 0.12, 'sine', 0.06, 0.08);
+}
+
+function playDash() {
+  playTone(200, 0.2, 'triangle', 0.1);
+  playTone(300, 0.15, 'sine', 0.06, 0.1);
+}
+
+function playPowerUp() {
+  playTone(523, 0.15, 'sine', 0.15);
+  playTone(659, 0.15, 'sine', 0.12, 0.1);
+  playTone(784, 0.2, 'sine', 0.12, 0.2);
+  playTone(1047, 0.3, 'sine', 0.15, 0.3);
+}
+
+function playCombo(level) {
+  const base = 660 + level * 60;
+  playTone(base, 0.2, 'sine', 0.1);
+  playTone(base * 1.5, 0.15, 'sine', 0.08, 0.08);
+}
+
+// ========== GAME STATE ==========
+const LANES = [-1, 0, 1];
+const LANE_WIDTH_RATIO = 0.22;
+const PLAYER_SPEED_BASE = 300;
+const LANE_SWAP_SPEED = 12;
+const GRAVITY = 1200;
+const JUMP_FORCE = -520;
+const DASH_DURATION = 0.4;
+const DASH_BOOST = 2.5;
+
+let state = 'start'; // start, playing, gameover
+let score = 0;
+let combo = 0;
+let comboTimer = 0;
+let comboMultiplier = 1;
+let moonGauge = 0;
+const MOON_MAX = 100;
+let wave = 1;
+let waveTimer = 0;
+let waveDuration = 30;
+let gameTime = 0;
+let difficulty = 1;
+let screenShake = 0;
+let screenShakeX = 0, screenShakeY = 0;
+let superActive = false;
+let superTimer = 0;
+let superFlash = 0;
+let stars = [];
+let buildings = [];
+let groundBuildings = [];
+let obstacles = [];
+let shards = [];
+let particles = [];
+let trailParticles = [];
+let spawnTimer = 0;
+let shardSpawnTimer = 0;
+let obstacleSpawnTimer = 0;
+
+// Player
+let player = {
+  lane: 0,
+  targetLane: 0,
+  x: 0, y: 0,
+  vy: 0,
+  jumping: false,
+  dashing: false,
+  dashTimer: 0,
+  grounded: true,
+  width: 36,
+  height: 48,
+  invincible: false,
+  invincibleTimer: 0,
+  rotation: 0,
+  bodyHue: 330,
+  glowPulse: 0,
+  transformFlash: 0,
+};
+
+// ========== INIT SCENERY ==========
+function initScenery() {
+  stars = [];
+  for (let i = 0; i < 120; i++) {
+    stars.push({
+      x: Math.random() * W,
+      y: Math.random() * H * 0.55,
+      size: Math.random() * 2 + 0.5,
+      twinkle: Math.random() * Math.PI * 2,
+      speed: Math.random() * 0.3 + 0.1
+    });
+  }
+  buildings = [];
+  for (let i = 0; i < 20; i++) {
+    buildings.push({
+      x: i * (W / 8) - 100 + Math.random() * 50,
+      w: 30 + Math.random() * 60,
+      h: 60 + Math.random() * 120,
+      color: `hsl(${230 + Math.random()*20}, ${20+Math.random()*15}%, ${8+Math.random()*8}%)`,
+      windows: Math.floor(Math.random() * 5) + 2,
+      parallax: 0.3 + Math.random() * 0.2
+    });
+  }
+  groundBuildings = [];
+  for (let i = 0; i < 15; i++) {
+    groundBuildings.push({
+      x: i * (W / 5) - 80 + Math.random() * 40,
+      w: 40 + Math.random() * 50,
+      h: 30 + Math.random() * 50,
+      color: `hsl(${240 + Math.random()*15}, ${15+Math.random()*10}%, ${5+Math.random()*5}%)`,
+      windows: Math.floor(Math.random() * 4) + 1,
+      parallax: 0.6 + Math.random() * 0.2
+    });
+  }
+}
+
+function resetGame() {
+  score = 0;
+  combo = 0;
+  comboTimer = 0;
+  comboMultiplier = 1;
+  moonGauge = 0;
+  wave = 1;
+  waveTimer = 0;
+  gameTime = 0;
+  difficulty = 1;
+  screenShake = 0;
+  superActive = false;
+  superTimer = 0;
+  superFlash = 0;
+  obstacles = [];
+  shards = [];
+  particles = [];
+  trailParticles = [];
+  spawnTimer = 0;
+  shardSpawnTimer = 0;
+  obstacleSpawnTimer = 0;
+  player.lane = 0;
+  player.targetLane = 0;
+  player.x = W * 0.2;
+  const groundY = H * 0.78;
+  player.y = groundY - player.height;
+  player.vy = 0;
+  player.jumping = false;
+  player.dashing = false;
+  player.dashTimer = 0;
+  player.grounded = true;
+  player.invincible = false;
+  player.invincibleTimer = 0;
+  player.rotation = 0;
+  player.glowPulse = 0;
+  player.transformFlash = 0;
+}
+
+// ========== LANE HELPERS ==========
+function getLaneX(lane) {
+  const totalWidth = LANES.length * LANE_WIDTH_RATIO * W;
+  const startX = (W - totalWidth) / 2;
+  return startX + lane * LANE_WIDTH_RATIO * W + LANE_WIDTH_RATIO * W / 2;
+}
+
+function getGroundY() {
+  return H * 0.78;
+}
+
+// ========== SPAWNING ==========
+function spawnShard() {
+  const laneIdx = Math.floor(Math.random() * 3);
+  const lane = LANES[laneIdx];
+  shards.push({
+    x: W + 20,
+    lane: lane,
+    targetX: getLaneX(lane),
+    y: getGroundY() - 30 - Math.random() * 60,
+    size: 18,
+    rotation: 0,
+    glow: 0,
+    collected: false,
+    color: Math.random() > 0.5 ? '#f0abfc' : '#93c5fd',
+    hue: Math.random() > 0.5 ? 300 : 210
+  });
+}
+
+function spawnObstacle() {
+  const laneIdx = Math.floor(Math.random() * 3);
+  const lane = LANES[laneIdx];
+  const types = ['shadow', 'shadow', 'shadow'];
+  if (wave >= 2) types.push('shadow_ball');
+  if (wave >= 3) types.push('shadow_spike');
+  const type = types[Math.floor(Math.random() * types.length)];
+
+  let obs = {
+    x: W + 30,
+    lane: lane,
+    targetX: getLaneX(lane),
+    type: type,
+    hit: false
+  };
+
+  if (type === 'shadow') {
+    obs.y = getGroundY() - 36;
+    obs.w = 30;
+    obs.h = 36;
+    obs.eyes = Math.floor(Math.random()*3)+1;
+  } else if (type === 'shadow_ball') {
+    obs.y = getGroundY() - 120 - Math.random() * 40;
+    obs.w = 28;
+    obs.h = 28;
+  } else if (type === 'shadow_spike') {
+    obs.y = getGroundY() - 60;
+    obs.w = 24;
+    obs.h = 60;
+  }
+
+  obstacles.push(obs);
+}
+
+function spawnParticles(x, y, color, count, spread) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * spread + 40;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 30,
+      life: 1,
+      decay: 0.8 + Math.random() * 1.2,
+      size: 2 + Math.random() * 4,
+      color: color,
+      gravity: 200
+    });
+  }
+}
+
+// ========== UPDATE ==========
+let lastTime = 0;
+
+function update(dt) {
+  if (state !== 'playing') return;
+
+  gameTime += dt;
+  waveTimer += dt;
+  player.glowPulse += dt * 3;
+
+  // Wave escalation
+  if (waveTimer >= waveDuration) {
+    waveTimer = 0;
+    wave++;
+    waveDuration = Math.max(15, 30 - wave * 2);
+    difficulty = 1 + (wave - 1) * 0.3;
+    spawnParticles(player.x, player.y - 30, '#f0abfc', 20, 150);
+    playPowerUp();
+  }
+
+  // Score from survival
+  score += Math.floor(dt * 10 * difficulty);
+
+  // Combo timer
+  if (comboTimer > 0) {
+    comboTimer -= dt;
+    if (comboTimer <= 0) {
+      combo = 0;
+      comboMultiplier = 1;
+    }
+  }
+
+  // Screen shake decay
+  if (screenShake > 0) {
+    screenShake -= dt * 5;
+    screenShakeX = (Math.random() - 0.5) * screenShake * 8;
+    screenShakeY = (Math.random() - 0.5) * screenShake * 8;
+    if (screenShake < 0) { screenShake = 0; screenShakeX = 0; screenShakeY = 0; }
+  }
+
+  // Super mode
+  if (superActive) {
+    superTimer -= dt;
+    superFlash = Math.max(0, superFlash - dt * 3);
+    if (superTimer <= 0) {
+      superActive = false;
+      moonGauge = 0;
+    }
+  }
+
+  // Player invincibility
+  if (player.invincible) {
+    player.invincibleTimer -= dt;
+    player.transformFlash = Math.max(0, player.transformFlash - dt * 4);
+    if (player.invincibleTimer <= 0) player.invincible = false;
+  }
+
+  // Player lane swap
+  const targetX = getLaneX(player.targetLane);
+  const dx = targetX - player.x;
+  player.x += dx * LANE_SWAP_SPEED * dt * 10;
+  player.rotation = dx * 0.003;
+
+  // Player jump/dash physics
+  if (player.jumping) {
+    player.vy += GRAVITY * dt;
+    player.y += player.vy * dt;
+    const groundY = getGroundY() - player.height;
+    if (player.y >= groundY) {
+      player.y = groundY;
+      player.vy = 0;
+      player.jumping = false;
+      player.grounded = true;
+    }
+  }
+
+  // Player dash
+  if (player.dashing) {
+    player.dashTimer -= dt;
+    if (player.dashTimer <= 0) player.dashing = false;
+  }
+
+  // Spawn trail
+  if (player.dashing || gameTime < 5) {
+    trailParticles.push({
+      x: player.x - 15,
+      y: player.y + player.height / 2,
+      life: 1,
+      size: 3 + Math.random() * 4
+    });
+  }
+
+  // Update trail particles
+  for (let i = trailParticles.length - 1; i >= 0; i--) {
+    trailParticles[i].x -= (player.dashing ? PLAYER_SPEED_BASE * DASH_BOOST * difficulty : PLAYER_SPEED_BASE * 0.6) * dt;
+    trailParticles[i].life -= dt * 2.5;
+    if (trailParticles[i].life <= 0) trailParticles.splice(i, 1);
+  }
+
+  // Update stars
+  for (const star of stars) {
+    star.x -= star.speed * (player.dashing ? 3 : 1) * 60 * dt;
+    star.twinkle += dt * 2;
+    if (star.x < -5) star.x = W + 5;
+  }
+
+  // Update buildings (parallax)
+  const scrollSpeed = (player.dashing ? PLAYER_SPEED_BASE * DASH_BOOST : PLAYER_SPEED_BASE) * 0.6 * difficulty;
+  for (const b of buildings) {
+    b.x -= b.parallax * scrollSpeed * dt;
+    if (b.x + b.w < -20) b.x = W + 20 + Math.random() * 100;
+  }
+  for (const b of groundBuildings) {
+    b.x -= b.parallax * scrollSpeed * dt * 0.7;
+    if (b.x + b.w < -20) b.x = W + 20 + Math.random() * 80;
+  }
+
+  // Update obstacles
+  const moveSpeed = scrollSpeed * (player.dashing ? DASH_BOOST : 1);
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    const obs = obstacles[i];
+    obs.x -= moveSpeed * dt;
+    if (obs.x < -60) { obstacles.splice(i, 1); continue; }
+
+    // Collision check
+    if (!obs.hit && !player.invincible && !superActive) {
+      const px = player.x - player.width/2, py = player.y;
+      const ox = obs.x - obs.w/2, oy = obs.y;
+      if (px < ox + obs.w && px + player.width > ox &&
+          py < oy + obs.h && py + player.height > oy) {
+        // Check if jumping over shadow or dashing through
+        if (obs.type === 'shadow' && player.jumping && player.y < oy - 10) {
+          // jumped over!
+        } else if (obs.type === 'shadow_ball' && player.dashing) {
+          // dashing through
+        } else {
+          obs.hit = true;
+          hitPlayer();
+        }
+      }
+    }
+  }
+
+  // Update shards
+  for (let i = shards.length - 1; i >= 0; i--) {
+    const shard = shards[i];
+    shard.x -= moveSpeed * dt;
+    shard.rotation += dt * 3;
+    shard.glow = (Math.sin(shard.rotation * 2) + 1) * 0.5;
+    if (shard.x < -30) { shards.splice(i, 1); continue; }
+
+    // Collection check
+    if (!shard.collected) {
+      const dx2 = player.x - shard.x;
+      const dy2 = (player.y + player.height/2) - shard.y;
+      const dist = Math.sqrt(dx2*dx2 + dy2*dy2);
+      if (dist < 35) {
+        shard.collected = true;
+        collectShard(shard);
+        shards.splice(i, 1);
+      }
+    }
+  }
+
+  // Update particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += p.gravity * dt;
+    p.life -= p.decay * dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  // Spawning
+  spawnTimer += dt;
+  const shardInterval = Math.max(0.5, 2.5 - wave * 0.15);
+  const obstacleInterval = Math.max(0.6, 2.0 - wave * 0.12);
+
+  if (spawnTimer >= shardInterval) {
+    spawnTimer = 0;
+    spawnShard();
+  }
+  if (obstacleSpawnTimer >= obstacleInterval) {
+    obstacleSpawnTimer = 0;
+    spawnObstacle();
+  }
+}
+
+function collectShard(shard) {
+  combo++;
+  comboTimer = 2.5;
+  comboMultiplier = 1 + Math.floor(combo / 5) * 0.5;
+  const points = Math.floor(10 * comboMultiplier);
+  score += points;
+  moonGauge = Math.min(MOON_MAX, moonGauge + (3 + combo * 0.5));
+
+  spawnParticles(shard.x, shard.y, shard.color, 12, 120);
+  playCollect();
+  if (combo > 0 && combo % 5 === 0) {
+    playCombo(Math.min(combo / 5, 10));
+    showComboText(combo);
+  }
+
+  // Check super activation
+  if (moonGauge >= MOON_MAX && !superActive) {
+    activateSuper();
+  }
+}
+
+function activateSuper() {
+  superActive = true;
+  superTimer = 5;
+  superFlash = 1;
+  moonGauge = 0;
+  player.invincible = true;
+  player.invincibleTimer = 5.5;
+  player.transformFlash = 1;
+  spawnParticles(player.x, player.y + player.height/2, '#f0abfc', 40, 250);
+  spawnParticles(player.x, player.y + player.height/2, '#e9d5ff', 30, 200);
+  playPowerUp();
+}
+
+function hitPlayer() {
+  screenShake = 1;
+  playHit();
+  spawnParticles(player.x, player.y + player.height/2, '#ef4444', 15, 150);
+  combo = 0;
+  comboTimer = 0;
+  comboMultiplier = 1;
+  moonGauge = Math.max(0, moonGauge - 15);
+  player.invincible = true;
+  player.invincibleTimer = 1.5;
+  player.transformFlash = 0.5;
+
+  if (moonGauge <= 0) {
+    // Health lost - game over
+    state = 'gameover';
+  }
+}
+
+function showComboText(comboCount) {
+  const el = document.getElementById('comboDisplay');
+  el.textContent = comboCount + 'x COMBO!';
+  el.style.opacity = 1;
+  setTimeout(() => { el.style.opacity = 0; }, 1200);
+}
+
+// ========== DRAW ==========
+function draw() {
+  uctx.clearRect(0, 0, W, H);
+  gctx.clearRect(0, 0, W, H);
+
+  // Screen shake offset
+  gctx.save();
+  gctx.translate(screenShakeX, screenShakeY);
+
+  // Sky gradient
+  const skyGrad = gctx.createLinearGradient(0, 0, 0, H);
+  skyGrad.addColorStop(0, '#0b0b2a');
+  skyGrad.addColorStop(0.4, '#1a1040');
+  skyGrad.addColorStop(0.7, '#2d1b69');
+  skyGrad.addColorStop(1, '#0f172a');
+  gctx.fillStyle = skyGrad;
+  gctx.fillRect(0, 0, W, H);
+
+  // Moon
+  const moonX = W * 0.78, moonY = H * 0.12, moonR = Math.min(W, H) * 0.08;
+  gctx.save();
+  gctx.shadowColor = '#fde68a';
+  gctx.shadowBlur = 40 + Math.sin(gameTime) * 10;
+  gctx.fillStyle = '#fef3c7';
+  gctx.beginPath();
+  gctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+  gctx.fill();
+  gctx.restore();
+  // Crescent shadow
+  gctx.fillStyle = '#0b0b2a';
+  gctx.beginPath();
+  gctx.arc(moonX + moonR * 0.3, moonY - moonR * 0.1, moonR * 0.85, 0, Math.PI * 2);
+  gctx.fill();
+
+  // Stars
+  for (const star of stars) {
+    const alpha = 0.4 + Math.sin(star.twinkle) * 0.4;
+    gctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    gctx.beginPath();
+    gctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+    gctx.fill();
+  }
+
+  // Background buildings (parallax layer 1)
+  for (const b of buildings) {
+    gctx.fillStyle = b.color;
+    gctx.fillRect(b.x, getGroundY() - b.h * 0.6, b.w, b.h * 0.6);
+    // windows
+    const winCols = 3, winRows = Math.floor(b.h * 0.6 / 18);
+    for (let wy = 0; wy < winRows; wy++) {
+      for (let wx = 0; wx < winCols; wx++) {
+        if (Math.sin(wx*7+wy*13+b.x*0.01) > 0) {
+          gctx.fillStyle = 'rgba(250,204,21,0.35)';
+          gctx.fillRect(b.x + 4 + wx * (b.w-8)/winCols,
+                        getGroundY() - b.h*0.6 + 8 + wy*18,
+                        6, 8);
+        }
+      }
+    }
+  }
+
+  // Ground buildings (parallax layer 2)
+  for (const b of groundBuildings) {
+    gctx.fillStyle = b.color;
+    gctx.fillRect(b.x, getGroundY() - b.h, b.w, b.h);
+    const winCols = Math.max(1, Math.floor(b.w / 16));
+    for (let wy = 0; wy < 3; wy++) {
+      for (let wx = 0; wx < winCols; wx++) {
+        if (Math.sin(wx*11+wy*7+b.x*0.02) > 0.2) {
+          gctx.fillStyle = 'rgba(250,204,21,0.4)';
+          gctx.fillRect(b.x + 3 + wx * (b.w-6)/winCols,
+                        getGroundY() - b.h + 6 + wy*16,
+                        5, 7);
+        }
+      }
+    }
+  }
+
+  // Ground
+  const groundY = getGroundY();
+  gctx.fillStyle = '#1a1a3e';
+  gctx.fillRect(0, groundY, W, H - groundY);
+  // Lane markings
+  for (const lane of LANES) {
+    const lx = getLaneX(lane);
+    gctx.strokeStyle = 'rgba(168,85,247,0.15)';
+    gctx.lineWidth = 2;
+    gctx.setLineDash([20, 20]);
+    gctx.lineDashOffset = -gameTime * 60;
+    gctx.beginPath();
+    gctx.moveTo(lx, groundY + 5);
+    gctx.lineTo(lx, H);
+    gctx.stroke();
+    gctx.setLineDash([]);
+  }
+  // Ground line
+  gctx.strokeStyle = 'rgba(236,72,153,0.3)';
+  gctx.lineWidth = 2;
+  gctx.beginPath();
+  gctx.moveTo(0, groundY);
+  gctx.lineTo(W, groundY);
+  gctx.stroke();
+
+  if (state === 'playing' || state === 'gameover') {
+    drawPlayer();
+    drawShards();
+    drawObstacles();
+    drawTrailParticles();
+    drawParticles();
+    drawSuperEffects();
+  }
+
+  gctx.restore();
+
+  // UI (on uiCanvas, no shake)
+  if (state === 'playing') drawUI();
+}
+
+function drawPlayer() {
+  const px = player.x, py = player.y;
+  const pw = player.width, ph = player.height;
+
+  gctx.save();
+  gctx.translate(px, py + ph/2);
+  gctx.rotate(player.rotation);
+
+  // Glow effect
+  const glowSize = 25 + Math.sin(player.glowPulse) * 5;
+  const glowColor = superActive ? '#f0abfc' : (player.invincible ? '#fde68a' : '#c084fc');
+  gctx.shadowColor = glowColor;
+  gctx.shadowBlur = superActive ? 30 : glowSize;
+
+  // Transformation flash
+  if (player.transformFlash > 0) {
+    gctx.fillStyle = `rgba(255,255,255,${player.transformFlash * 0.7})`;
+    gctx.fillRect(-pw-10, -ph-10, pw*2+20, ph*2+20);
+  }
+
+  // Body — sleek magical girl silhouette
+  // Cape/coat
+  gctx.fillStyle = '#ec4899';
+  gctx.beginPath();
+  gctx.moveTo(-pw*0.35, -ph*0.1);
+  gctx.quadraticCurveTo(-pw*0.55, ph*0.15, -pw*0.4, ph*0.5);
+  gctx.lineTo(pw*0.4, ph*0.5);
+  gctx.quadraticCurveTo(pw*0.55, ph*0.15, pw*0.35, -ph*0.1);
+  gctx.closePath();
+  gctx.fill();
+
+  // Head
+  gctx.fillStyle = '#fce7f3';
+  gctx.beginPath();
+  gctx.arc(0, -ph*0.28, pw*0.3, 0, Math.PI*2);
+  gctx.fill();
+
+  // Hair
+  gctx.fillStyle = superActive ? '#fde68a' : '#a855f7';
+  gctx.beginPath();
+  gctx.arc(0, -ph*0.32, pw*0.32, Math.PI, Math.PI*2);
+  gctx.fill();
+  // Long hair flowing back
+  gctx.beginPath();
+  gctx.moveTo(-pw*0.25, -ph*0.25);
+  gctx.quadraticCurveTo(-pw*0.6, -ph*0.1, -pw*0.7, ph*0.15);
+  gctx.quadraticCurveTo(-pw*0.5, ph*0.3, -pw*0.3, ph*0.2);
+  gctx.lineTo(-pw*0.25, -ph*0.1);
+  gctx.fill();
+
+  // Tiara/crescent
+  gctx.fillStyle = superActive ? '#fde68a' : '#e2e8f0';
+  gctx.beginPath();
+  gctx.arc(0, -ph*0.38, 6, 0, Math.PI*2);
+  gctx.fill();
+
+  // Eyes
+  gctx.fillStyle = superActive ? '#fde68a' : '#ec4899';
+  gctx.beginPath();
+  gctx.ellipse(-5, -ph*0.28, 3, 3.5, 0, 0, Math.PI*2);
+  gctx.fill();
+  gctx.beginPath();
+  gctx.ellipse(5, -ph*0.28, 3, 3.5, 0, 0, Math.PI*2);
+  gctx.fill();
+  // Eye shine
+  gctx.fillStyle = '#fff';
+  gctx.beginPath();
+  gctx.arc(-4, -ph*0.29, 1.2, 0, Math.PI*2);
+  gctx.fill();
+  gctx.beginPath();
+  gctx.arc(6, -ph*0.29, 1.2, 0, Math.PI*2);
+  gctx.fill();
+
+  // Legs / movement animation
+  const legPhase = Math.sin(gameTime * 8);
+  gctx.fillStyle = '#fce7f3';
+  gctx.fillRect(-6, ph*0.35, 5, ph*0.18 + legPhase*3);
+  gctx.fillRect(2, ph*0.35, 5, ph*0.18 - legPhase*3);
+
+  // Bracelet (Moon stick hint)
+  gctx.fillStyle = '#e2e8f0';
+  gctx.fillRect(pw*0.3, -ph*0.05, 4, 8);
+
+  gctx.restore();
+}
+
+function drawShards() {
+  for (const s of shards) {
+    gctx.save();
+    gctx.translate(s.x, s.y);
+    gctx.rotate(s.rotation);
+
+    // Glow
+    gctx.shadowColor = s.color;
+    gctx.shadowBlur = 12 + s.glow * 10;
+
+    // Diamond shape
+    gctx.fillStyle = s.color;
+    gctx.beginPath();
+    gctx.moveTo(0, -s.size);
+    gctx.lineTo(s.size*0.7, 0);
+    gctx.lineTo(0, s.size);
+    gctx.lineTo(-s.size*0.7, 0);
+    gctx.closePath();
+    gctx.fill();
+
+    // Inner shine
+    gctx.fillStyle = 'rgba(255,255,255,0.6)';
+    gctx.beginPath();
+    gctx.moveTo(0, -s.size*0.5);
+    gctx.lineTo(s.size*0.3, 0);
+    gctx.lineTo(0, s.size*0.3);
+    gctx.lineTo(-s.size*0.3, 0);
+    gctx.closePath();
+    gctx.fill();
+
+    gctx.restore();
+  }
+}
+
+function drawObstacles() {
+  for (const obs of obstacles) {
+    gctx.save();
+    gctx.translate(obs.x, obs.y + obs.h/2);
+
+    if (obs.type === 'shadow') {
+      // Shadow blob creature
+      gctx.shadowColor = '#4c1d95';
+      gctx.shadowBlur = 15;
+      gctx.fillStyle = '#1e1040';
+      gctx.beginPath();
+      gctx.ellipse(0, 0, obs.w/2, obs.h/2, 0, 0, Math.PI*2);
+      gctx.fill();
+      // Shadow spikes
+      for (let i = 0; i < 5; i++) {
+        const angle = (i / 5) * Math.PI * 2 + gameTime * 2;
+        const sx = Math.cos(angle) * obs.w * 0.6;
+        const sy = Math.sin(angle) * obs.h * 0.5;
+        gctx.beginPath();
+        gctx.moveTo(sx - 3, sy);
+        gctx.lineTo(sx + Math.cos(angle)*8, sy + Math.sin(angle)*10);
+        gctx.lineTo(sx + 3, sy);
+        gctx.fill();
+      }
+      // Eyes
+      gctx.shadowBlur = 0;
+      for (let e = 0; e < obs.eyes; e++) {
+        const ex = -8 + e * 8;
+        gctx.fillStyle = '#ef4444';
+        gctx.beginPath();
+        gctx.arc(ex, -4, 3, 0, Math.PI*2);
+        gctx.fill();
+        gctx.fillStyle = '#fbbf24';
+        gctx.beginPath();
+        gctx.arc(ex, -4, 1.5, 0, Math.PI*2);
+        gctx.fill();
+      }
+    } else if (obs.type === 'shadow_ball') {
+      gctx.shadowColor = '#4c1d95';
+      gctx.shadowBlur = 20;
+      gctx.fillStyle = '#1e1040';
+      gctx.beginPath();
+      gctx.arc(0, 0, obs.w/2, 0, Math.PI*2);
+      gctx.fill();
+      // Orbital rings
+      gctx.strokeStyle = 'rgba(139,92,246,0.5)';
+      gctx.lineWidth = 2;
+      gctx.beginPath();
+      gctx.ellipse(0, 0, obs.w/1.2, obs.h/3, gameTime, 0, Math.PI*2);
+      gctx.stroke();
+      // Eye
+      gctx.fillStyle = '#ef4444';
+      gctx.beginPath();
+      gctx.arc(0, 0, 4, 0, Math.PI*2);
+      gctx.fill();
+    } else if (obs.type === 'shadow_spike') {
+      gctx.shadowColor = '#4c1d95';
+      gctx.shadowBlur = 12;
+      gctx.fillStyle = '#1e1040';
+      for (let i = 0; i < 3; i++) {
+        const sx = (i - 1) * 10;
+        gctx.beginPath();
+        gctx.moveTo(sx, obs.h/2);
+        gctx.lineTo(sx - 8, -obs.h/2);
+        gctx.lineTo(sx + 8, -obs.h/2);
+        gctx.closePath();
+        gctx.fill();
+      }
+      gctx.fillStyle = '#ef4444';
+      gctx.beginPath();
+      gctx.arc(0, -obs.h/2 + 5, 4, 0, Math.PI*2);
+      gctx.fill();
+    }
+
+    gctx.restore();
+  }
+}
+
+function drawTrailParticles() {
+  for (const p of trailParticles) {
+    const alpha = p.life * 0.5;
+    const color = superActive ? `rgba(240,171,252,${alpha})` : `rgba(192,132,252,${alpha})`;
+    gctx.fillStyle = color;
+    gctx.beginPath();
+    gctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
+    gctx.fill();
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    gctx.fillStyle = p.color;
+    gctx.globalAlpha = Math.max(0, p.life);
+    gctx.beginPath();
+    gctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
+    gctx.fill();
+  }
+  gctx.globalAlpha = 1;
+}
+
+function drawSuperEffects() {
+  if (!superActive) return;
+  // Flash overlay
+  if (superFlash > 0) {
+    uctx.fillStyle = `rgba(250,204,21,${superFlash * 0.3})`;
+    uctx.fillRect(0, 0, W, H);
+  }
+  // Orbiting prism shards
+  for (let i = 0; i < 6; i++) {
+    const angle = gameTime * 2 + (i / 6) * Math.PI * 2;
+    const radius = 55 + Math.sin(gameTime * 3 + i) * 15;
+    const sx = player.x + Math.cos(angle) * radius;
+    const sy = player.y + player.height/2 + Math.sin(angle) * radius * 0.6;
+    uctx.save();
+    uctx.translate(sx, sy);
+    uctx.rotate(gameTime * 2 + i);
+    uctx.fillStyle = i % 2 === 0 ? '#f0abfc' : '#e9d5ff';
+    uctx.shadowColor = '#f0abfc';
+    uctx.shadowBlur = 15;
+    uctx.beginPath();
+    uctx.moveTo(0, -8);
+    uctx.lineTo(7, 0);
+    uctx.lineTo(0, 8);
+    uctx.lineTo(-7, 0);
+    uctx.closePath();
+    uctx.fill();
+    uctx.restore();
+  }
+  // Text
+  uctx.save();
+  uctx.font = `bold ${Math.min(W*0.06, 32)}px sans-serif`;
+  uctx.textAlign = 'center';
+  uctx.fillStyle = '#f0abfc';
+  uctx.shadowColor = '#a855f7';
+  uctx.shadowBlur = 20;
+  uctx.fillText('✦ MOON PRISM POWER! ✦', W/2, H * 0.2);
+  uctx.restore();
+}
+
+function drawUI() {
+  // Score
+  uctx.fillStyle = '#e2e8f0';
+  uctx.font = `bold ${Math.min(W*0.04, 22)}px sans-serif`;
+  uctx.textAlign = 'left';
+  uctx.fillText(`Score: ${score}`, 16, 30);
+
+  // Combo
+  if (combo > 0) {
+    const comboSize = Math.min(W * 0.035, 20) + Math.min(combo, 10);
+    uctx.fillStyle = combo >= 10 ? '#fde68a' : combo >= 5 ? '#f0abfc' : '#c4b5fd';
+    uctx.font = `bold ${comboSize}px sans-serif`;
+    uctx.textAlign = 'left';
+    uctx.fillText(`${combo}x Combo`, 16, 55);
+  }
+
+  // Moon Gauge
+  const gaugeW = Math.min(W * 0.4, 200);
+  const gaugeH = 14;
+  const gaugeX = W - gaugeW - 16;
+  const gaugeY = 16;
+  uctx.fillStyle = 'rgba(168,85,247,0.3)';
+  uctx.beginPath();
+  uctx.roundRect ? uctx.roundRect(gaugeX, gaugeY, gaugeW, gaugeH, 7) : uctx.fillRect(gaugeX, gaugeY, gaugeW, gaugeH);
+  uctx.fill();
+
+  const fill = moonGauge / MOON_MAX;
+  if (fill > 0) {
+    const grad = uctx.createLinearGradient(gaugeX, gaugeY, gaugeX + gaugeW * fill, gaugeY);
+    grad.addColorStop(0, '#ec4899');
+    grad.addColorStop(1, '#a855f7');
+    uctx.fillStyle = grad;
+    uctx.beginPath();
+    uctx.roundRect ? uctx.roundRect(gaugeX, gaugeY, gaugeW * fill, gaugeH, 7) : uctx.fillRect(gaugeX, gaugeY, gaugeW * fill, gaugeH);
+    uctx.fill();
+  }
+  uctx.fillStyle = '#e2e8f0';
+  uctx.font = `${Math.min(11, W*0.02)}px sans-serif`;
+  uctx.textAlign = 'right';
+  uctx.fillText('MOON PRISM GAGE', gaugeX + gaugeW, gaugeY + gaugeH + 14);
+
+  // Wave indicator
+  uctx.textAlign = 'center';
+  uctx.fillStyle = '#c4b5fd';
+  uctx.font = `${Math.min(14, W*0.025)}px sans-serif`;
+  uctx.fillText(`Wave ${wave}`, W/2, 28);
+
+  // Super ready flash
+  if (moonGauge >= MOON_MAX) {
+    uctx.fillStyle = `rgba(240,171,252,${0.5+Math.sin(gameTime*6)*0.5})`;
+    uctx.font = `bold ${Math.min(18, W*0.03)}px sans-serif`;
+    uctx.textAlign = 'center';
+    uctx.fillText('✦ TAP TO ACTIVATE MOON PRISM POWER! ✦', W/2, 55);
+  }
+}
+
+// ========== GAME OVER SCREEN ==========
+function drawGameOver() {
+  uctx.fillStyle = 'rgba(11,11,42,0.7)';
+  uctx.fillRect(0, 0, W, H);
+
+  uctx.textAlign = 'center';
+  uctx.fillStyle = '#f0abfc';
+  uctx.font = `bold ${Math.min(36, W*0.08)}px sans-serif`;
+  uctx.shadowColor = '#a855f7';
+  uctx.shadowBlur = 20;
+  uctx.fillText('Game Over', W/2, H*0.35);
+  uctx.shadowBlur = 0;
+
+  uctx.fillStyle = '#e2e8f0';
+  uctx.font = `${Math.min(22, W*0.05)}px sans-serif`;
+  uctx.fillText(`Final Score: ${score}`, W/2, H*0.45);
+
+  uctx.fillStyle = '#c4b5fd';
+  uctx.font = `${Math.min(16, W*0.035)}px sans-serif`;
+  uctx.fillText(`Waves Survived: ${wave}`, W/2, H*0.52);
+
+  const btnW = Math.min(200, W * 0.45);
+  const btnH = 44;
+  const btnX = W/2 - btnW/2;
+  const btnY = H*0.6;
+  uctx.fillStyle = 'linear-gradient(135deg, #ec4899, #a855f7)';
+  uctx.fillStyle = '#ec4899';
+  uctx.beginPath();
+  uctx.roundRect ? uctx.roundRect(btnX, btnY, btnW, btnH, 22) : uctx.fillRect(btnX, btnY, btnW, btnH);
+  uctx.fill();
+  uctx.fillStyle = '#fff';
+  uctx.font = `bold ${Math.min(18, W*0.04)}px sans-serif`;
+  uctx.fillText('✦ Try Again ✦', W/2, btnY + btnH/2 + 6);
+}
+
+// ========== INPUT ==========
+const keys = {};
+
+document.addEventListener('keydown', (e) => {
+  if (state === 'start') return;
+  if (state === 'gameover') {
+    if (e.key === 'Enter' || e.key === ' ') {
+      ensureAudio();
+      resetGame();
+      state = 'playing';
+      document.getElementById('startScreen').style.display = 'none';
+    }
+    return;
+  }
+  if (state !== 'playing') return;
+
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+    if (player.targetLane > -1) player.targetLane--;
+  } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+    if (player.targetLane < 1) player.targetLane++;
+  } else if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') && player.grounded) {
+    player.vy = JUMP_FORCE;
+    player.jumping = true;
+    player.grounded = false;
+    playJump();
+  } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+    player.dashing = true;
+    player.dashTimer = DASH_DURATION;
+    playDash();
+  }
+
+  // Super activation
+  if (e.key === 'x' || e.key === 'X' || e.key === 'Shift') {
+    if (moonGauge >= MOON_MAX && !superActive) activateSuper();
+  }
+
+  e.preventDefault();
+});
+
+// Touch controls
+let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+
+document.addEventListener('touchstart', (e) => {
+  if (state === 'start') return;
+  if (state === 'gameover') {
+    // Check if tapping the restart button area
+    const t = e.touches[0];
+    const btnW = Math.min(200, W * 0.45);
+    const btnX = W/2 - btnW/2;
+    const btnY = H*0.6;
+    if (t.clientX >= btnX && t.clientX <= btnX + btnW && t.clientY >= btnY && t.clientY <= btnY + 44) {
+      ensureAudio();
+      resetGame();
+      state = 'playing';
+      document.getElementById('startScreen').style.display = 'none';
+    }
+    return;
+  }
+  if (state !== 'playing') return;
+
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  touchStartTime = Date.now();
+
+  // Super activation tap on center of screen
+  if (moonGauge >= MOON_MAX && !superActive) {
+    activateSuper();
+    e.preventDefault();
+    return;
+  }
+}, { passive: false });
+
+document.addEventListener('touchmove', (e) => {
+  if (state !== 'playing') return;
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('touchend', (e) => {
+  if (state !== 'playing') return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+  const dt = Date.now() - touchStartTime;
+
+  if (dt < 300) {
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30) {
+      if (dx < 0 && player.targetLane > -1) player.targetLane--;
+      else if (dx > 0 && player.targetLane < 1) player.targetLane++;
+    } else if (Math.abs(dy) > 30) {
+      if (dy < 0 && player.grounded) {
+        player.vy = JUMP_FORCE;
+        player.jumping = true;
+        player.grounded = false;
+        playJump();
+      } else if (dy > 0) {
+        player.dashing = true;
+        player.dashTimer = DASH_DURATION;
+        playDash();
+      }
+    }
+  }
+}, { passive: false });
+
+// Touch buttons
+document.getElementById('btnLeft')?.addEventListener('pointerdown', () => {
+  if (state === 'playing' && player.targetLane > -1) { player.targetLane--; }
+});
+document.getElementById('btnRight')?.addEventListener('pointerdown', () => {
+  if (state === 'playing' && player.targetLane < 1) { player.targetLane++; }
+});
+document.getElementById('btnUp')?.addEventListener('pointerdown', () => {
+  if (state === 'playing' && player.grounded) {
+    player.vy = JUMP_FORCE; player.jumping = true; player.grounded = false; playJump();
+  }
+});
+document.getElementById('btnDown')?.addEventListener('pointerdown', () => {
+  if (state === 'playing') {
+    player.dashing = true; player.dashTimer = DASH_DURATION; playDash();
+  }
+});
+
+// Start button
+document.getElementById('startBtn').addEventListener('click', () => {
+  ensureAudio();
+  resetGame();
+  state = 'playing';
+  document.getElementById('startScreen').style.display = 'none';
+  const touchControls = document.getElementById('touchControls');
+  if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+    touchControls.style.display = 'flex';
+  }
+});
+
+// Click on game area for super activation on mobile
+uiCanvas?.addEventListener('pointerdown', (e) => {
+  if (state === 'gameover') {
+    ensureAudio();
+    resetGame();
+    state = 'playing';
+    document.getElementById('startScreen').style.display = 'none';
+    return;
+  }
+  if (moonGauge >= MOON_MAX && !superActive && state === 'playing') {
+    activateSuper();
+  }
+});
+
+// ========== GAME LOOP ==========
+function gameLoop(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  let dt = (timestamp - lastTime) / 1000;
+  lastTime = timestamp;
+  dt = Math.min(dt, 0.05); // Cap delta to prevent spiral
+
+  update(dt);
+  draw();
+
+  if (state === 'gameover') drawGameOver();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ========== INIT ==========
+initScenery();
+requestAnimationFrame(gameLoop);
+
+})();
+</script>
+</body>
+</html>
