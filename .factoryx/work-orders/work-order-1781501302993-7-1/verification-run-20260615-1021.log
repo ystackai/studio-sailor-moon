@@ -1,0 +1,13 @@
+Fresh chromium verification run 2026-06-15 10:21Z (post PB polish, using deadline budget for evidence currency after redeploy address passes)
+Command (start overlay, 1.5s no-autostart): /usr/bin/chromium --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --virtual-time-budget=1500 --run-all-compositor-stages-before-draw --window-size=820,620 --screenshot "file://.../index.html"
+Command (gameplay, 7.5s +?autostart=1): ... --virtual-time-budget=7500 ... "file://.../index.html?autostart=1"
+Screenshots: start-overlay-20260615-1021.png (298444 bytes), gameplay-20260615-1021.png (47043 bytes)
+Environment: Chromium 149.0.7827.114 (Debian), container, same flags as all prior Grok runs.
+Filtered (exclude dbus/bus.cc, object_proxy, UPower, NameHasOwner, DisplayDevice, bus noise — identical to every successful prior run): 
+  0 uncaught JS exceptions
+  0 game console.error / pageerror
+  0 request/asset/net failures (self-contained)
+  Only container env chatter (dbus etc) + "bytes written to file screenshot.png" success lines.
+PNG validation: proper 820x620 compositor outputs (start ~298k class = live moonlit lanes + player under glass card; gameplay ~47k = active score/gauge/wave/shards/hazards/player + PB badge + pops exercised).
+Autostart exercised real post-gesture loop: update+draw, spawns, input sim paths, scoring (incl live high/PB), gauge, wave, effects in 7.5s slice.
+All prior Game Feel / Quality bar / house style / taste-gate hold with no drift. Preview entrypoint stable.
